@@ -216,3 +216,28 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# macOS resource forks
+._*
+
+# Spotlight
+.Spotlight-V100
+
+# Trash
+.Trashes
+
+# Files that might appear on external disks
+.DocumentRevisions-V100
+.fseventsd
+.VolumeIcon.icns
+.TemporaryItems
+.apdisk
+
+
+# Private/local project files
+/private/
