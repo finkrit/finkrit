@@ -7,10 +7,12 @@ import numpy as np
 from numpy.typing import NDArray
 
 
+from packages.finq.anal.returns import calculate_returns, ReturnCalculationMethod
+from packages.finq.anal.risk import portfolio_variance
 from packages.finq.asset import Asset
 from packages.finq.data import DataRegistry
 from packages.finq.datatype import PriceHistory
-from packages.finq.anal.returns import calculate_returns, ReturnCalculationMethod
+from packages.finq.portfolio import PortfolioData
 
 
 def volatility_from_returns(
@@ -73,4 +75,24 @@ def volatility_asset(
     start = start or end - timedelta(days=365)
     history = registry.history(asset, start=start, end=end, interval=interval)
     return volatility(history, method=method, annualized=annualized, periods_per_year=periods_per_year)
+
+
+
+def portfolio_volatility(
+    portfolio_data: PortfolioData,
+    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
+    annualized: bool = True,
+    periods_per_year: int = 252,
+) -> float:
+    """
+    Compute the volatility of a portfolio.
+    """
+
+    return float(np.sqrt(
+        portfolio_variance(
+            portfolio_data,
+            method=method,
+            annualized=annualized,
+            periods_per_year=periods_per_year,
+        )))
 
