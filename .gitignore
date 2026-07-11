@@ -240,4 +240,5 @@ __marimo__/
 
 
 # Private/local project files
-/private/
+/private/bazel-*
+.bazel/
