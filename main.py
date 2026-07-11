@@ -1,13 +1,14 @@
 # finkrit/main.py
 from concurrent.futures import ThreadPoolExecutor
 
-from packages.finq.anal.returns import calculate_returns
 from packages.finq.asset import Stock
+from packages.finq.anal.returns import calculate_returns
+from packages.finq.anal.risk import beta_from_returns, variance, volatility
 from packages.finq.data.providers import YFinanceProvider
 from packages.finq.data.registry import DataRegistry
-from packages.finq.anal.risk import beta_from_returns, variance, volatility
 from packages.finq.datatype import Currency, Exchange, MarketIndex
 from packages.finq.portfolio import Portfolio, Position, PortfolioSnapshot
+from packages.finq.anal.risk.covariance import covariance, covariance_matrix
 
 
 
@@ -175,6 +176,22 @@ def main():
             f"{asset_variance:>15.4f}"
             f"{asset_volatility:>15.2%}"
             )
+        
+    print("\nCovariance Matrix")
+    print("-" * 80)
+
+    cov = covariance_matrix(portfolio_data)
+
+    print(f"{'':<8}", end="")
+    for asset in portfolio_data.assets:
+        print(f"{asset.ticker:>10}", end="")
+    print()
+
+    for asset, row in zip(portfolio_data.assets, cov):
+        print(f"{asset.ticker:<8}", end="")
+        for value in row:
+            print(f"{value:>10.5f}", end="")
+        print()
 
 
 if __name__ == "__main__":
