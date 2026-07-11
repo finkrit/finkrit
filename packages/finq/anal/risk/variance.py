@@ -7,10 +7,12 @@ from datetime import date, timedelta
 import numpy as np
 from numpy.typing import NDArray
 
+from packages.finq.anal.risk.covariance import covariance_matrix
 from packages.finq.anal.returns import ReturnCalculationMethod, calculate_returns
 from packages.finq.asset import Asset
 from packages.finq.data import DataRegistry
 from packages.finq.datatype import PriceHistory
+from packages.finq.portfolio import PortfolioData
 
 
 def variance_from_returns(
@@ -91,4 +93,37 @@ def variance_asset(
         annualized=annualized,
         periods_per_year=periods_per_year,
     )
+
+
+def portfolio_variance(
+    portfolio_data: PortfolioData,
+    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
+    annualized: bool = True,
+    periods_per_year: int = 252,
+) -> float:
+    """
+    Compute the variance of a portfolio.
+
+    Parameters
+    ----------
+    portfolio_data
+        Portfolio market data.
+
+    Returns
+    -------
+    float
+        Portfolio variance.
+    """
+
+    covariance = covariance_matrix(
+        portfolio_data,
+        method=method,
+        annualized=annualized,
+        periods_per_year=periods_per_year,
+    )
+
+    weights = portfolio_data.weight_vector
+
+    # σp2​=w⊤Σw
+    return float(weights.T @ covariance @ weights)
 
