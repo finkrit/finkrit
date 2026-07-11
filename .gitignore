@@ -240,5 +240,11 @@ __marimo__/
 
 
 # Private/local project files
-/private/bazel-*
+/private/
+
+# Bazel build outputs (symlinks created at workspace root)
+/bazel-*
 .bazel/
+
+# Virtual environment
+.finkritvenv/
