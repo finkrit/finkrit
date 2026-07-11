@@ -5,7 +5,7 @@ from packages.finq.data.interfaces import HistoryProvider, SnapshotProvider
 from packages.finq.datatype import PriceHistory
 
 
-from datetime import date
+from datetime import date, timedelta
 from loguru import logger
 import numpy as np
 import pandas as pd
@@ -20,7 +20,12 @@ class YFinanceProvider(HistoryProvider, SnapshotProvider):
         end: date | None = None,
         interval: str = "1d",
     ) -> PriceHistory:
-        
+
+        if end is None:
+            end = date.today()
+        if start is None:
+            start = end - timedelta(days=365)
+
         logger.info(f"Fetching history for asset: {asset.ticker}")
 
         df = yf.download(

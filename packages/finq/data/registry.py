@@ -1,9 +1,13 @@
 # finkrit/packages/finq/data/registry.py
 
+from __future__ import annotations
+
 from datetime import date
+
 from packages.finq.asset import Asset
 from packages.finq.data.interfaces import HistoryProvider, SnapshotProvider
 from packages.finq.datatype import PriceHistory
+from packages.finq.portfolio import Portfolio, PortfolioData
 
 class DataRegistry:
 
@@ -19,7 +23,7 @@ class DataRegistry:
 
     def history(
         self,
-        asset: Asset,
+        target: Asset | Portfolio,
         start: date | None = None,
         end: date | None = None,
         interval: str = "1d",
@@ -27,11 +31,26 @@ class DataRegistry:
         if self._history_provider is None:
             raise RuntimeError("History provider has not been registered.")
 
-        return self._history_provider.history(
-            asset=asset,
-            start=start,
-            end=end,
-            interval=interval,
+        if isinstance(target, Asset):
+            return self._history_provider.history(
+                asset=target,
+                start=start,
+                end=end,
+                interval=interval,
+            )
+
+        if isinstance(target, Portfolio):
+            return PortfolioData.from_registry(
+                portfolio=target,
+                registry=self,
+                start=start,
+                end=end,
+                interval=interval,
+            )
+
+        raise TypeError(
+            f"Unsupported type '{type(obj).__name__}'. "
+            "Expected Asset or Portfolio."
         )
 
     def snapshot(self, asset: Asset):
