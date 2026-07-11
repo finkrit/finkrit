@@ -122,4 +122,48 @@ class PriceHistory:
                 volume=other.volume[other_idx],
             ),
         )
-        
+    
+    @staticmethod
+    def align_many(
+        histories: list["PriceHistory"],
+    ) -> list["PriceHistory"]:
+        """
+        Align multiple price histories on their common observation dates.
+
+        Parameters
+        ----------
+        histories : list[PriceHistory]
+            Price histories to align.
+
+        Returns
+        -------
+        list[PriceHistory]
+            Aligned histories in the same order as the input.
+        """
+
+        if len(histories) == 0:
+            return []
+
+        # Compute common dates across all histories
+        common_dates = histories[0].dates
+
+        for history in histories[1:]:
+            common_dates = np.intersect1d(common_dates, history.dates)
+
+        aligned = []
+
+        for history in histories:
+            idx = np.isin(history.dates, common_dates)
+            aligned.append(
+                PriceHistory(
+                    dates=history.dates[idx],
+                    open=history.open[idx],
+                    high=history.high[idx],
+                    low=history.low[idx],
+                    close=history.close[idx],
+                    volume=history.volume[idx],
+                )
+            )
+
+        return aligned
+            
