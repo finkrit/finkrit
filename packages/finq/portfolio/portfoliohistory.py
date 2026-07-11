@@ -1,9 +1,18 @@
 # finkrit/packages/finq/portfolio/portfoliohistory.py
 
+from __future__ import annotations
+
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from datetime import date
 
 import numpy as np
 from numpy.typing import NDArray
+
+
+from packages.finq.data.registry import DataRegistry
+from packages.finq.portfolio.portfolio import Portfolio
+from packages.finq.datatype import PriceHistory
 
 
 @dataclass(frozen=True, slots=True)
@@ -15,6 +24,7 @@ class PortfolioHistory:
     portfolio using the current holdings.
     """
 
+    portfolio: Portfolio
     dates: NDArray[np.datetime64]
     value: NDArray[np.float64]
 
@@ -53,14 +63,54 @@ class PortfolioHistory:
         return self.n_periods
 
     def __getitem__(self, item):
-        return PortfolioHistory(
-            dates=self.dates[item],
-            value=self.value[item],
-        )
+        return PortfolioHistory(portfolio=self.portfolio, dates=self.dates[item], value=self.value[item])
 
     def __repr__(self):
         if self.empty:
             return "PortfolioHistory(empty)"
-
         return f"PortfolioHistory({self.start} -> {self.end}, {self.n_periods} observations)"
+    
+
+    @classmethod
+    def from_portfolio(
+        cls,
+        portfolio: Portfolio,
+        registry: DataRegistry,
+        start: date | None = None,
+        end: date | None = None,
+        interval: str = "1d",
+        max_workers: int | None = None,
+    ) -> "PortfolioHistory":
+
+        if len(portfolio.positions) == 0:
+            raise ValueError("Portfolio contains no positions.")
+
+        def _fetch(position):
+            history = registry.history(
+                asset=position.asset,
+                start=start,
+                end=end,
+                interval=interval,
+            )
+            return position, history
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            results = list(executor.map(_fetch, portfolio.positions))
+
+        positions = [r[0] for r in results]
+        histories = [r[1] for r in results]
+
+        # Align histories
+        histories = PriceHistory.align_many(histories)
+        if not histories or histories[0].empty:
+            raise ValueError("Portfolio histories have no overlapping dates.")
+
+        # Aggregate values
+        values = np.zeros(len(histories[0]), dtype=np.float64)
+
+        for position, history in zip(positions, histories):
+            values += history.close * position.quantity
+
+        return cls(portfolio=portfolio, dates=histories[0].dates, value=values)
+    
     
