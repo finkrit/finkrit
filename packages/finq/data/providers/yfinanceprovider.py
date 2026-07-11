@@ -6,6 +6,7 @@ from packages.finq.datatype import PriceHistory
 
 
 from datetime import date
+from loguru import logger
 import numpy as np
 import pandas as pd
 import yfinance as yf
@@ -19,6 +20,8 @@ class YFinanceProvider(HistoryProvider, SnapshotProvider):
         end: date | None = None,
         interval: str = "1d",
     ) -> PriceHistory:
+        
+        logger.info(f"Fetching history for asset: {asset.ticker}")
 
         df = yf.download(
             tickers=asset.ticker,
@@ -34,6 +37,7 @@ class YFinanceProvider(HistoryProvider, SnapshotProvider):
                 f"No historical data found for '{asset.ticker}'."
             )
 
+        logger.info(f"Done fetching history for asset: {asset.ticker}")
         return self._to_price_history(df)
 
 
@@ -54,8 +58,11 @@ class YFinanceProvider(HistoryProvider, SnapshotProvider):
     
 
     def snapshot(self, asset: Asset):
+        logger.info(f"Fetching snapshot for asset: {asset.ticker}")
+        
         info = yf.Ticker(asset.ticker).fast_info
 
+        logger.info(f"Done fetching snapshot for asset: {asset.ticker}")
         return AssetSnapshot(
             asset=asset,
             last_price=info.last_price,

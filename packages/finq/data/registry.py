@@ -1,7 +1,9 @@
 # finkrit/packages/finq/data/registry.py
-from packages.finq.data.interfaces import HistoryProvider, SnapshotProvider
+
 from datetime import date
 from packages.finq.asset import Asset
+from packages.finq.data.interfaces import HistoryProvider, SnapshotProvider
+from packages.finq.datatype import PriceHistory
 
 class DataRegistry:
 
@@ -21,7 +23,7 @@ class DataRegistry:
         start: date | None = None,
         end: date | None = None,
         interval: str = "1d",
-    ):
+    ) -> PriceHistory:
         if self._history_provider is None:
             raise RuntimeError("History provider has not been registered.")
 
@@ -37,3 +39,5 @@ class DataRegistry:
             raise RuntimeError("Snapshot provider has not been registered.")
 
         return self._snapshot_provider.snapshot(asset)
+    
+    
