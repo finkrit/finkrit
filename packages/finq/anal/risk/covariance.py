@@ -7,15 +7,19 @@ from datetime import date, timedelta
 import numpy as np
 from numpy.typing import NDArray
 
-from packages.finq.anal.returns import ReturnCalculationMethod, calculate_returns
+from packages.finq.anal.returns import (
+    ReturnCalculationMethod,
+    calculate_returns,
+)
 from packages.finq.asset import Asset
 from packages.finq.data import DataRegistry
 from packages.finq.datatype import PriceHistory
+from packages.finq.portfolio import PortfolioData
 
 
 def covariance_from_returns(
     asset_returns: NDArray[np.float64],
-    benchmark_returns: NDArray[np.float64],
+    other_asset_returns: NDArray[np.float64],
     annualized: bool = True,
     periods_per_year: int = 252,
 ) -> float:
@@ -23,7 +27,7 @@ def covariance_from_returns(
     Compute the covariance between two aligned return series.
     """
 
-    covariance = np.cov(asset_returns, benchmark_returns, ddof=1)[0, 1]
+    covariance = np.cov(asset_returns, other_asset_returns, ddof=1)[0, 1]
     if annualized:
         covariance *= periods_per_year
 
@@ -32,7 +36,7 @@ def covariance_from_returns(
 
 def covariance_from_prices(
     asset_prices: NDArray[np.float64],
-    benchmark_prices: NDArray[np.float64],
+    other_asset_prices: NDArray[np.float64],
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     annualized: bool = True,
     periods_per_year: int = 252,
@@ -42,11 +46,11 @@ def covariance_from_prices(
     """
 
     asset_returns = calculate_returns(asset_prices, method=method)
+    other_asset_returns = calculate_returns(other_asset_prices, method=method)
 
-    benchmark_returns = calculate_returns(benchmark_prices, method=method)
     return covariance_from_returns(
         asset_returns,
-        benchmark_returns,
+        other_asset_returns,
         annualized=annualized,
         periods_per_year=periods_per_year,
     )
@@ -54,7 +58,7 @@ def covariance_from_prices(
 
 def covariance(
     asset_history: PriceHistory,
-    benchmark_history: PriceHistory,
+    other_asset_history: PriceHistory,
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     annualized: bool = True,
     periods_per_year: int = 252,
@@ -63,22 +67,20 @@ def covariance(
     Compute covariance from two price histories.
     """
 
-    asset_history, benchmark_history = asset_history.align(
-        benchmark_history
-    )
+    asset_history, other_asset_history = asset_history.align(other_asset_history)
 
     return covariance_from_prices(
         asset_history.close,
-        benchmark_history.close,
+        other_asset_history.close,
         method=method,
         annualized=annualized,
         periods_per_year=periods_per_year,
     )
 
 
-def covariance_asset(
+def covariance_assets(
     asset: Asset,
-    benchmark: Asset,
+    other_asset: Asset,
     registry: DataRegistry,
     start: date | None = None,
     end: date | None = None,
@@ -101,8 +103,8 @@ def covariance_asset(
         interval=interval,
     )
 
-    benchmark_history = registry.history(
-        benchmark,
+    other_asset_history = registry.history(
+        other_asset,
         start=start,
         end=end,
         interval=interval,
@@ -110,8 +112,49 @@ def covariance_asset(
 
     return covariance(
         asset_history,
-        benchmark_history,
+        other_asset_history,
         method=method,
+        annualized=annualized,
+        periods_per_year=periods_per_year,
+    )
+
+
+def covariance_matrix_from_returns(
+    returns: NDArray[np.float64],
+    annualized: bool = True,
+    periods_per_year: int = 252,
+) -> NDArray[np.float64]:
+    """
+    Compute the covariance matrix of multiple aligned return series.
+
+    Parameters
+    ----------
+    returns
+        Array of shape (n_assets, n_periods).
+    """
+
+    covariance = np.cov(returns, rowvar=True, ddof=1)
+
+    if annualized:
+        covariance *= periods_per_year
+
+    return covariance
+
+
+def covariance_matrix(
+    portfolio_data: PortfolioData,
+    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
+    annualized: bool = True,
+    periods_per_year: int = 252,
+) -> NDArray[np.float64]:
+    """
+    Compute the covariance matrix of all assets in a portfolio.
+    """
+
+    returns = portfolio_data.return_matrix(method)
+
+    return covariance_matrix_from_returns(
+        returns,
         annualized=annualized,
         periods_per_year=periods_per_year,
     )

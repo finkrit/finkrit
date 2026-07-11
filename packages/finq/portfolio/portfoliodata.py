@@ -197,4 +197,7 @@ class PortfolioData:
 
         return calculate_returns(self[asset].close, method=method)
     
+    def asset_history(self, asset: Asset) -> PriceHistory:
+        return self[asset]
+
 
