@@ -1,6 +1,13 @@
 # finkrit/packages/finq/datatype/market.py
-from enum import Enum
+from __future__ import annotations
 
+from enum import Enum
+from typing import TYPE_CHECKING
+
+from packages.finq.datatype.currency import Currency
+
+if TYPE_CHECKING:
+    from packages.finq.asset import Stock
 
 class Exchange(Enum):
     NYSE = "NYSE"
@@ -44,4 +51,13 @@ class MarketIndex(Enum):
     def __init__(self, ticker: str, description: str):
         self.ticker = ticker
         self.description = description
+
+    def as_asset(self) -> Stock:
+        from packages.finq.asset import Stock
+        return Stock(
+            ticker=self.ticker,
+            currency=Currency.USD,
+            company_name=self.description,
+            exchange=None
+        )
 
