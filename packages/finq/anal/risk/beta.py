@@ -1,5 +1,4 @@
 # finkrit/packages/finq/analytics/risk.py
-# finkrit/packages/finq/analytics/risk.py
 
 from __future__ import annotations
 
@@ -27,18 +26,11 @@ def beta_from_returns(
     """
     Compute beta from two aligned return series.
     """
-
-    covariance = np.cov(
-        asset_returns,
-        benchmark_returns,
-        ddof=1,
-    )
-
+    covariance = np.cov(asset_returns, benchmark_returns, ddof=1)
     market_variance = covariance[1, 1]
 
     if market_variance == 0:
         return float("nan")
-
     return covariance[0, 1] / market_variance
 
 
@@ -67,14 +59,8 @@ def beta(
 
     Histories are automatically aligned on common dates.
     """
-
     asset_history, benchmark_history = asset_history.align(benchmark_history)
-
-    return beta_from_prices(
-        asset_history.close,
-        benchmark_history.close,
-        method=method,
-    )
+    return beta_from_prices(asset_history.close, benchmark_history.close, method=method,)
 
 
 def beta_asset(
@@ -89,23 +75,11 @@ def beta_asset(
     """
     Compute beta directly from assets.
     """
-
     end = end or date.today()
     start = start or end - timedelta(days=365)
 
-    asset_history = registry.history(
-        asset,
-        start=start,
-        end=end,
-        interval=interval
-    )
-
-    benchmark_history = registry.history(
-        benchmark,
-        start=start,
-        end=end,
-        interval=interval
-    )
+    asset_history = registry.history(asset, start=start, end=end, interval=interval)
+    benchmark_history = registry.history(benchmark, start=start,end=end, interval=interval)
 
     return beta(asset_history, benchmark_history, method=method)
 
