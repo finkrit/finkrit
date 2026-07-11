@@ -4,11 +4,12 @@ from concurrent.futures import ThreadPoolExecutor
 from packages.finq.asset import Stock
 from packages.finq.anal.returns import calculate_returns
 from packages.finq.anal.risk import beta_from_returns, variance, volatility
+from packages.finq.anal.risk.correlation import correlation_matrix
 from packages.finq.data.providers import YFinanceProvider
 from packages.finq.data.registry import DataRegistry
 from packages.finq.datatype import Currency, Exchange, MarketIndex
 from packages.finq.portfolio import Portfolio, Position, PortfolioSnapshot
-from packages.finq.anal.risk.covariance import covariance, covariance_matrix
+from packages.finq.anal.risk.covariance import covariance_matrix
 
 
 
@@ -193,6 +194,22 @@ def main():
             print(f"{value:>10.5f}", end="")
         print()
 
+
+    print("\nCorrelation Matrix")
+    print("-" * (10 + 10 * portfolio_data.n_assets))
+
+    corr = correlation_matrix(portfolio_data)
+
+    print(f"{'':<8}", end="")
+    for asset in portfolio_data.assets:
+        print(f"{asset.ticker:>10}", end="")
+    print()
+
+    for asset, row in zip(portfolio_data.assets, corr):
+        print(f"{asset.ticker:<8}", end="")
+        for value in row:
+            print(f"{value:>10.3f}", end="")
+        print()
 
 if __name__ == "__main__":
     main()
