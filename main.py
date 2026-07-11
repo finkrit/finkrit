@@ -1,13 +1,15 @@
 # finkrit/main.py
 from concurrent.futures import ThreadPoolExecutor
 
+from packages.finq.anal.returns import calculate_returns
 from packages.finq.asset import Stock
 from packages.finq.data.providers import YFinanceProvider
 from packages.finq.data.registry import DataRegistry
-from packages.finq.anal.risk import beta_from_returns
+from packages.finq.anal.risk import beta_from_returns, volatility
 from packages.finq.datatype import Currency, Exchange, MarketIndex
 from packages.finq.portfolio import Portfolio, Position, PortfolioSnapshot
-from packages.finq.anal.returns import calculate_returns
+
+
 
 
 def main():
@@ -152,24 +154,26 @@ def main():
 
     print("\nStock Betas (vs S&P 500)")
     print("-" * 35)
-    print(f"{'Ticker':<8}{'Beta':>10}")
+    print(f"{'Ticker':<8}{'Beta':>10}{'Volatility':>15}")
     print("-" * 35)
+    
 
     for asset in portfolio.assets:
         asset_history = portfolio_data.asset_history(asset)
         asset_history, benchmark_history = asset_history.align(benchmark)
         asset_returns = calculate_returns(asset_history.close)
         benchmark_returns = calculate_returns(benchmark_history.close)
-        asset_beta = beta_from_returns(
-            asset_returns,
-            benchmark_returns,
-        )
+        
+        asset_beta = beta_from_returns(asset_returns, benchmark_returns)
+        asset_volatility = volatility(asset_history)
 
         print(
             f"{asset.ticker:<8}"
             f"{asset_beta:>10.3f}"
-        )
+            f"{asset_volatility:>15.2%}"
+            )
 
 
 if __name__ == "__main__":
     main()
+    
