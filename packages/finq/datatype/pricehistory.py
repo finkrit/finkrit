@@ -95,6 +95,8 @@ class PriceHistory:
         tuple[PriceHistory, PriceHistory]
             Two new PriceHistory objects containing only the dates
             present in both histories.
+
+        TODO: also check if the dates are contiguous. if there are missing dates (most providers should be fine without this check)
         """
 
         common_dates = np.intersect1d(self.dates, other.dates)
