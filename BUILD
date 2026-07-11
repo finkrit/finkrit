@@ -5,6 +5,7 @@ py_binary(
     srcs = ["main.py"],
     deps = [
         "//packages/finq/asset",
+        "//packages/finq/anal",
         "//packages/finq/data:data",
         "//packages/finq/data/providers:providers",
         "//packages/finq/portfolio",

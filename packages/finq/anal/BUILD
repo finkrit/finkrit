@@ -7,7 +7,6 @@ py_library(
         "//packages/finq:finq",
         "//packages/finq/datatype",
         "//packages/finq/asset",
-        "//packages/finq/data",
         "@pip//numpy",
     ],
     visibility = ["//visibility:public"],

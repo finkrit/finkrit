@@ -17,6 +17,8 @@ py_library(
         ":data_init",
         "//packages/finq/asset",
         "//packages/finq/data/interfaces",
+        "//packages/finq/datatype",
+        "//packages/finq/portfolio",
     ],
     visibility = ["//visibility:public"],
 )
