@@ -6,6 +6,7 @@ py_binary(
     deps = [
         "//packages/finq/asset",
         "//packages/finq/anal:anal",
+        "//packages/finq/anal/risk:risk",
         "//packages/finq/data:data",
         "//packages/finq/data/providers:providers",
         "//packages/finq/portfolio",

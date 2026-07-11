@@ -5,7 +5,7 @@ from packages.finq.anal.returns import calculate_returns
 from packages.finq.asset import Stock
 from packages.finq.data.providers import YFinanceProvider
 from packages.finq.data.registry import DataRegistry
-from packages.finq.anal.risk import beta_from_returns, volatility
+from packages.finq.anal.risk import beta_from_returns, variance, volatility
 from packages.finq.datatype import Currency, Exchange, MarketIndex
 from packages.finq.portfolio import Portfolio, Position, PortfolioSnapshot
 
@@ -153,9 +153,9 @@ def main():
     )
 
     print("\nStock Betas (vs S&P 500)")
-    print("-" * 35)
-    print(f"{'Ticker':<8}{'Beta':>10}{'Volatility':>15}")
-    print("-" * 35)
+    print("-" * 70)
+    print(f"{'Ticker':<8}{'Beta':>10}{'Volatility':>15}{'Variance':>15}")
+    print("-" * 70)
     
 
     for asset in portfolio.assets:
@@ -165,11 +165,14 @@ def main():
         benchmark_returns = calculate_returns(benchmark_history.close)
         
         asset_beta = beta_from_returns(asset_returns, benchmark_returns)
+        asset_variance = variance(asset_history)
         asset_volatility = volatility(asset_history)
+        
 
         print(
             f"{asset.ticker:<8}"
             f"{asset_beta:>10.3f}"
+            f"{asset_variance:>15.4f}"
             f"{asset_volatility:>15.2%}"
             )
 

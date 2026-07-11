@@ -1,15 +1,14 @@
 load("@rules_python//python:defs.bzl", "py_library")
 
 py_library(
-    name = "providers",
+    name = "risk",
     srcs = glob(["*.py"]),
     deps = [
-        "//packages/finq/data:data_init",
-        "//packages/finq/data/interfaces",
-        "//packages/finq/asset",
+        "//packages/finq:finq",
+        "//packages/finq/anal:anal",
         "//packages/finq/datatype",
-        "@pip//yfinance",
-        "@pip//loguru",
+        "//packages/finq/asset",
+        "@pip//numpy",
     ],
     visibility = ["//visibility:public"],
 )
