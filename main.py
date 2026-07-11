@@ -1,10 +1,13 @@
 # finkrit/main.py
+from concurrent.futures import ThreadPoolExecutor
 
 from packages.finq.asset import Stock
 from packages.finq.data.providers import YFinanceProvider
 from packages.finq.data.registry import DataRegistry
-from packages.finq.datatype import Currency, Exchange
+from packages.finq.anal.risk import beta_from_returns
+from packages.finq.datatype import Currency, Exchange, MarketIndex
 from packages.finq.portfolio import Portfolio, Position, PortfolioSnapshot
+from packages.finq.anal.returns import calculate_returns
 
 
 def main():
@@ -98,16 +101,16 @@ def main():
         Position(asset=jp_morgan, quantity=10, average_cost=198.40),
     ])
 
-    asset_snapshots = {
-        asset: registry.snapshot(asset)
-        for asset in portfolio.assets
-    }
+    with ThreadPoolExecutor() as executor:
+        snapshots = list(executor.map(registry.snapshot, portfolio.assets))
+
+    asset_snapshots = dict(zip(portfolio.assets, snapshots))
 
     snapshot = PortfolioSnapshot(
         portfolio=portfolio,
         _snapshots=asset_snapshots,
     )
-
+    
     print("Portfolio Snapshot")
     print("-" * 90)
 
@@ -122,11 +125,8 @@ def main():
     print("-" * 90)
 
     for position in portfolio.positions:
-
         asset_snapshot = snapshot[position.asset]
-
         market_value = position.quantity * asset_snapshot.last_price
-
         print(
             f"{position.asset.ticker:<8}"
             f"{position.quantity:>8.2f}"
@@ -143,6 +143,32 @@ def main():
         print(f"Unrealized P&L  : ${snapshot.unrealized_pnl:,.2f}")
 
     print(f"Daily P&L       : ${snapshot.daily_pnl:,.2f}")
+
+    portfolio_data = registry.history(portfolio)
+
+    benchmark = registry.history(
+        MarketIndex.SP500.as_asset(),
+    )
+
+    print("\nStock Betas (vs S&P 500)")
+    print("-" * 35)
+    print(f"{'Ticker':<8}{'Beta':>10}")
+    print("-" * 35)
+
+    for asset in portfolio.assets:
+        asset_history = portfolio_data.asset_history(asset)
+        asset_history, benchmark_history = asset_history.align(benchmark)
+        asset_returns = calculate_returns(asset_history.close)
+        benchmark_returns = calculate_returns(benchmark_history.close)
+        asset_beta = beta_from_returns(
+            asset_returns,
+            benchmark_returns,
+        )
+
+        print(
+            f"{asset.ticker:<8}"
+            f"{asset_beta:>10.3f}"
+        )
 
 
 if __name__ == "__main__":
