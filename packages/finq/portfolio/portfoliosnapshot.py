@@ -29,11 +29,7 @@ class PortfolioSnapshot:
 
     @property
     def cost_basis(self) -> float:
-        return sum(
-            position.quantity * position.average_cost
-            for position in self.portfolio.positions
-            if position.average_cost is not None
-        )
+        return sum(position.cost_basis for position in self.portfolio.positions if position.average_cost is not None)
 
     @property
     def unrealized_pnl(self) -> float | None:
