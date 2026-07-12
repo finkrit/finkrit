@@ -1,4 +1,3 @@
-# # finkrit/packages/finq/portfolio/portfoliosnapshot.py
 from dataclasses import dataclass, field
 
 from packages.finq.asset import Asset, AssetSnapshot
@@ -20,23 +19,36 @@ class PortfolioSnapshot:
     def __getitem__(self, asset: Asset) -> AssetSnapshot:
         return self._snapshots[asset]
 
+    def items(self):
+        return self._snapshots.items()
+
     @property
     def market_value(self) -> float:
         return sum(
-            position.quantity * self[position.asset].last_price
+            position.market_value(self[position.asset].last_price)
             for position in self.portfolio.positions
         )
 
     @property
     def cost_basis(self) -> float:
-        return sum(position.cost_basis for position in self.portfolio.positions if position.average_cost is not None)
+        return sum(
+            position.cost_basis
+            for position in self.portfolio.positions
+        )
 
     @property
-    def unrealized_pnl(self) -> float | None:
-        if any(p.average_cost is None for p in self.portfolio.positions):
-            return None
+    def unrealized_pnl(self) -> float:
+        return sum(
+            position.unrealized_pnl(self[position.asset].last_price)
+            for position in self.portfolio.positions
+        )
 
-        return self.market_value - self.cost_basis
+    @property
+    def unrealized_return(self) -> float:
+        if self.cost_basis == 0:
+            return 0.0
+
+        return self.unrealized_pnl / self.cost_basis
 
     @property
     def daily_pnl(self) -> float:
@@ -47,3 +59,19 @@ class PortfolioSnapshot:
             ) * position.quantity
             for position in self.portfolio.positions
         )
+
+    @property
+    def n_assets(self) -> int:
+        return len(self.portfolio.positions)
+
+    def __len__(self) -> int:
+        return self.n_assets
+
+    def __repr__(self) -> str:
+        return (
+            f"PortfolioSnapshot("
+            f"{self.n_assets} assets, "
+            f"value=${self.market_value:,.2f})"
+        )
+    
+    
