@@ -10,6 +10,7 @@ from numpy.typing import NDArray
 from packages.finq.asset import Asset
 from packages.finq.data import DataRegistry
 from packages.finq.datatype import PriceHistory
+from packages.finq.portfolio import PortfolioData
 
 
 def drawdown_from_wealth(
@@ -168,4 +169,28 @@ def maximum_drawdown_asset(
     )
 
     return maximum_drawdown(history)
+
+
+def portfolio_drawdown(
+    portfolio_data: PortfolioData,
+) -> NDArray[np.float64]:
+    """
+    Compute the drawdown series of a portfolio.
+    """
+
+    return drawdown_from_prices(
+        portfolio_data.value,
+    )
+
+
+def portfolio_maximum_drawdown(
+    portfolio_data: PortfolioData,
+) -> float:
+    """
+    Compute the maximum drawdown of a portfolio.
+    """
+
+    return maximum_drawdown_from_drawdown(
+        portfolio_drawdown(portfolio_data)
+    )
 
