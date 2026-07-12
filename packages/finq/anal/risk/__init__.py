@@ -17,5 +17,6 @@ from packages.finq.anal.risk.drawdown import (drawdown,
                                               portfolio_drawdown, 
                                               portfolio_maximum_drawdown
                                               )
+from packages.finq.anal.risk.semivariance import semivariance, semivariance_asset, semivariance_from_prices, semivariance_from_returns, portfolio_semivariance
 from packages.finq.anal.risk.variance import variance, variance_asset, variance_from_prices, variance_from_returns, portfolio_variance
 from packages.finq.anal.risk.volatility import volatility, volatility_asset, volatility_from_prices, volatility_from_returns, portfolio_volatility

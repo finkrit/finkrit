@@ -1,4 +1,7 @@
 # finkrit/packages/finq/anal/risk/downside_deviation.py
+"""
+downside deviation is calculated = sqrt(semi-variance)
+"""
 
 from __future__ import annotations
 
@@ -11,6 +14,15 @@ from packages.finq.anal.returns import (
     ReturnCalculationMethod,
     calculate_returns,
 )
+
+from packages.finq.anal.risk.semivariance import (
+    portfolio_semivariance,
+    semivariance,
+    semivariance_asset,
+    semivariance_from_prices,
+    semivariance_from_returns,
+)
+
 from packages.finq.asset import Asset
 from packages.finq.data import DataRegistry
 from packages.finq.datatype import PriceHistory
@@ -27,16 +39,14 @@ def downside_deviation_from_returns(
     Compute the downside deviation of a return series.
     """
 
-    downside = np.minimum(returns - target, 0.0)
-
-    downside_deviation = np.sqrt(
-        np.mean(np.square(downside))
-    )
-
-    if annualized:
-        downside_deviation *= np.sqrt(periods_per_year)
-
-    return float(downside_deviation)
+    return float(np.sqrt(
+        semivariance_from_returns(
+            returns,
+            target=target,
+            annualized=annualized,
+            periods_per_year=periods_per_year,
+        )
+    ))
 
 
 def downside_deviation_from_prices(
@@ -50,17 +60,15 @@ def downside_deviation_from_prices(
     Compute downside deviation from a price series.
     """
 
-    returns = calculate_returns(
-        prices,
-        method=method,
-    )
-
-    return downside_deviation_from_returns(
-        returns,
-        target=target,
-        annualized=annualized,
-        periods_per_year=periods_per_year,
-    )
+    return float(np.sqrt(
+        semivariance_from_prices(
+            prices,
+            method=method,
+            target=target,
+            annualized=annualized,
+            periods_per_year=periods_per_year,
+        )
+    ))
 
 
 def downside_deviation(
@@ -74,13 +82,15 @@ def downside_deviation(
     Compute downside deviation from a PriceHistory.
     """
 
-    return downside_deviation_from_prices(
-        history.close,
-        method=method,
-        target=target,
-        annualized=annualized,
-        periods_per_year=periods_per_year,
-    )
+    return float(np.sqrt(
+        semivariance(
+            history,
+            method=method,
+            target=target,
+            annualized=annualized,
+            periods_per_year=periods_per_year,
+        )
+    ))
 
 
 def downside_deviation_asset(
@@ -98,23 +108,19 @@ def downside_deviation_asset(
     Compute downside deviation directly from an asset.
     """
 
-    end = end or date.today()
-    start = start or end - timedelta(days=365)
-
-    history = registry.history(
-        asset,
-        start=start,
-        end=end,
-        interval=interval,
-    )
-
-    return downside_deviation(
-        history,
-        method=method,
-        target=target,
-        annualized=annualized,
-        periods_per_year=periods_per_year,
-    )
+    return float(np.sqrt(
+        semivariance_asset(
+            asset,
+            registry,
+            start=start,
+            end=end,
+            interval=interval,
+            method=method,
+            target=target,
+            annualized=annualized,
+            periods_per_year=periods_per_year,
+        )
+    ))
 
 
 def portfolio_downside_deviation(
@@ -128,14 +134,13 @@ def portfolio_downside_deviation(
     Compute downside deviation of a portfolio.
     """
 
-    returns = portfolio_data.portfolio_returns(
-        method=method,
-    )
-
-    return downside_deviation_from_returns(
-        returns,
-        target=target,
-        annualized=annualized,
-        periods_per_year=periods_per_year,
-    )
+    return float(np.sqrt(
+        portfolio_semivariance(
+            portfolio_data,
+            method=method,
+            target=target,
+            annualized=annualized,
+            periods_per_year=periods_per_year,
+        )
+    ))
 
