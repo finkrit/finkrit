@@ -11,6 +11,9 @@ from packages.finq.anal.risk import (
     portfolio_conditional_value_at_risk, 
     portfolio_downside_deviation, 
     portfolio_semivariance, 
+    portfolio_value_at_risk,
+    portfolio_variance,
+    portfolio_volatility,
     variance, 
     volatility)
 from packages.finq.anal.risk.correlation import correlation_matrix
@@ -23,11 +26,6 @@ from packages.finq.anal.risk.drawdown import (
     portfolio_drawdown,
     portfolio_maximum_drawdown,
 )
-from packages.finq.anal.risk.valueatrisk import portfolio_value_at_risk
-from packages.finq.anal.risk.variance import portfolio_variance
-from packages.finq.anal.risk.volatility import portfolio_volatility
-
-
 
 
 def main():
@@ -299,6 +297,7 @@ def main():
     print("\nPortfolio Risk Contributions")
     print("-" * 60)
 
+
     mctr = marginal_contribution_to_risk(portfolio_data)
     cctr = component_contribution_to_risk(portfolio_data)
 
@@ -313,7 +312,7 @@ def main():
 
     for asset, weight, marginal, component in zip(
         portfolio_data.assets,
-        portfolio_data.weights,
+        portfolio_data.weight_vector,
         mctr,
         cctr,
     ):
