@@ -4,17 +4,19 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from packages.finq.asset import Stock, Lot
 from packages.finq.anal.returns import calculate_returns
-from packages.finq.anal.risk import beta_from_returns, variance, volatility
+from packages.finq.anal.risk import beta_from_returns, portfolio_downside_deviation, portfolio_semivariance, variance, volatility
 from packages.finq.anal.risk.correlation import correlation_matrix
 from packages.finq.data.providers import YFinanceProvider
 from packages.finq.data.registry import DataRegistry
-from packages.finq.datatype import Currency, Exchange, MarketIndex
+from packages.finq.datatype import Currency, Exchange, MarketIndex, VaREstimationMethod
 from packages.finq.portfolio import Portfolio, Position, PortfolioSnapshot
 from packages.finq.anal.risk.covariance import covariance_matrix
+
 from packages.finq.anal.risk.drawdown import (
     portfolio_drawdown,
     portfolio_maximum_drawdown,
 )
+from packages.finq.anal.risk.valueatrisk import portfolio_value_at_risk
 from packages.finq.anal.risk.variance import portfolio_variance
 from packages.finq.anal.risk.volatility import portfolio_volatility
 
@@ -242,7 +244,34 @@ def main():
     for dt, dd in zip(portfolio_data.dates, drawdown):
         print(f"{str(dt)[:10]:<12} {dd:>15.2%}")
 
+    portfolio_semivar = portfolio_semivariance(portfolio_data)
+    portfolio_downside_dev = portfolio_downside_deviation(portfolio_data)
+
+    print(f"Semi-Variance      : {portfolio_semivar:.6f}")
+    print(f"Downside Deviation : {portfolio_downside_dev:.2%}")
+
+    print("\nPortfolio Value at Risk")
+    print("-" * 40)
+
+    historical_var = portfolio_value_at_risk(
+        portfolio_data,
+        method=VaREstimationMethod.HISTORICAL,
+    )
+
+    parametric_var = portfolio_value_at_risk(
+        portfolio_data,
+        method=VaREstimationMethod.PARAMETRIC,
+    )
+
+    monte_carlo_var = portfolio_value_at_risk(
+        portfolio_data,
+        method=VaREstimationMethod.MONTE_CARLO,
+    )
+
+    print(f"Historical VaR : {historical_var:.2%}")
+    print(f"Parametric VaR : {parametric_var:.2%}")
+    print(f"Monte Carlo VaR: {monte_carlo_var:.2%}")
+
 if __name__ == "__main__":
     main()
-    
     
