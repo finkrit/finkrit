@@ -144,12 +144,8 @@ class PortfolioData:
     
     @property
     def weight_vector(self) -> NDArray[np.float64]:
-        total = self.value[-1]
-
-        return np.array([
-            self.latest_prices[position.asset] * position.quantity / total
-            for position in self.portfolio.positions
-        ])
+        weights = self.weights
+        return np.array([weights[asset] for asset in self.assets], dtype=np.float64)
     
     @property
     def start(self) -> np.datetime64:

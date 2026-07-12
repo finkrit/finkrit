@@ -21,10 +21,10 @@ def marginal_contribution_to_risk(portfolio_data: PortfolioData) -> NDArray[np.f
     """
 
     covariance = covariance_matrix(portfolio_data)
-    weights = portfolio_data.weights
+    weights = portfolio_data.weight_vector
     volatility = portfolio_volatility(portfolio_data)
 
     if volatility == 0.0:
         raise ValueError("Portfolio volatility is zero.")
-    return covariance @ weights/volatility
+    return (covariance @ weights) / volatility
 

@@ -21,4 +21,4 @@ def component_contribution_to_risk(
         Component contribution to risk for each asset.
     """
 
-    return (portfolio_data.weights * marginal_contribution_to_risk(portfolio_data))
+    return portfolio_data.weight_vector * marginal_contribution_to_risk(portfolio_data)
