@@ -8,7 +8,7 @@ from numpy.typing import NDArray
 
 
 from packages.finq.anal.returns import calculate_returns, ReturnCalculationMethod
-from packages.finq.anal.risk import portfolio_variance
+from packages.finq.anal.risk.variance import portfolio_variance
 from packages.finq.asset import Asset
 from packages.finq.data import DataRegistry
 from packages.finq.datatype import PriceHistory
