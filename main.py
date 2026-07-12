@@ -1,7 +1,8 @@
 # finkrit/main.py
 from concurrent.futures import ThreadPoolExecutor
 
-from packages.finq.asset import Stock
+from datetime import date
+from packages.finq.asset import Stock, Lot
 from packages.finq.anal.returns import calculate_returns
 from packages.finq.anal.risk import beta_from_returns, variance, volatility
 from packages.finq.anal.risk.correlation import correlation_matrix
@@ -10,7 +11,8 @@ from packages.finq.data.registry import DataRegistry
 from packages.finq.datatype import Currency, Exchange, MarketIndex
 from packages.finq.portfolio import Portfolio, Position, PortfolioSnapshot
 from packages.finq.anal.risk.covariance import covariance_matrix
-
+from packages.finq.anal.risk.variance import portfolio_variance
+from packages.finq.anal.risk.volatility import portfolio_volatility
 
 
 
@@ -93,16 +95,16 @@ def main():
     )
 
     portfolio = Portfolio([
-        Position(asset=apple, quantity=15, average_cost=185.50),
-        Position(asset=microsoft, quantity=8, average_cost=420.10),
-        Position(asset=tesla, quantity=5, average_cost=240.75),
-        Position(asset=amazon, quantity=12, average_cost=175.30),
-        Position(asset=nvidia, quantity=6, average_cost=950.00),
-        Position(asset=alphabet, quantity=10, average_cost=165.80),
-        Position(asset=meta, quantity=4, average_cost=510.20),
-        Position(asset=netflix, quantity=3, average_cost=640.50),
-        Position(asset=broadcom, quantity=2, average_cost=1450.00),
-        Position(asset=jp_morgan, quantity=10, average_cost=198.40),
+        Position(asset=apple, lots=(Lot(asset=apple, quantity=15, cost_per_share=185.50, acquired=date(2024, 1, 15)),)),
+        Position(asset=microsoft, lots=(Lot(asset=microsoft, quantity=8, cost_per_share=420.10, acquired=date(2024, 2, 12)),)),
+        Position(asset=tesla, lots=(Lot(asset=tesla, quantity=5, cost_per_share=240.75, acquired=date(2024, 3, 5)),)),
+        Position(asset=amazon, lots=(Lot(asset=amazon, quantity=12, cost_per_share=175.30, acquired=date(2024, 2, 20)),)),
+        Position(asset=nvidia, lots=(Lot(asset=nvidia, quantity=6, cost_per_share=950.00, acquired=date(2024, 4, 8)),)),
+        Position(asset=alphabet, lots=(Lot(asset=alphabet, quantity=10, cost_per_share=165.80, acquired=date(2024, 1, 30)),)),
+        Position(asset=meta, lots=(Lot(asset=meta, quantity=4, cost_per_share=510.20, acquired=date(2024, 5, 15)),)),
+        Position(asset=netflix, lots=(Lot(asset=netflix, quantity=3, cost_per_share=640.50, acquired=date(2024, 6, 10)),)),
+        Position(asset=broadcom, lots=(Lot(asset=broadcom, quantity=2, cost_per_share=1450.00, acquired=date(2024, 7, 1)),)),
+        Position(asset=jp_morgan, lots=(Lot(asset=jp_morgan, quantity=10, cost_per_share=198.40, acquired=date(2024, 3, 18)),)),
     ])
 
     with ThreadPoolExecutor() as executor:
@@ -130,7 +132,7 @@ def main():
 
     for position in portfolio.positions:
         asset_snapshot = snapshot[position.asset]
-        market_value = position.quantity * asset_snapshot.last_price
+        market_value = position.market_value(asset_snapshot.last_price)
         print(
             f"{position.asset.ticker:<8}"
             f"{position.quantity:>8.2f}"
@@ -210,6 +212,15 @@ def main():
         for value in row:
             print(f"{value:>10.3f}", end="")
         print()
+
+    print("\nPortfolio Risk")
+    print("-" * 40)
+
+    portfolio_var = portfolio_variance(portfolio_data)
+    portfolio_vol = portfolio_volatility(portfolio_data)
+
+    print(f"Portfolio Variance   : {portfolio_var:.6f}")
+    print(f"Portfolio Volatility : {portfolio_vol:.2%}")
 
 if __name__ == "__main__":
     main()
