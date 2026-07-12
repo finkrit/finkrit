@@ -11,8 +11,13 @@ from packages.finq.data.registry import DataRegistry
 from packages.finq.datatype import Currency, Exchange, MarketIndex
 from packages.finq.portfolio import Portfolio, Position, PortfolioSnapshot
 from packages.finq.anal.risk.covariance import covariance_matrix
+from packages.finq.anal.risk.drawdown import (
+    portfolio_drawdown,
+    portfolio_maximum_drawdown,
+)
 from packages.finq.anal.risk.variance import portfolio_variance
 from packages.finq.anal.risk.volatility import portfolio_volatility
+
 
 
 
@@ -222,6 +227,22 @@ def main():
     print(f"Portfolio Variance   : {portfolio_var:.6f}")
     print(f"Portfolio Volatility : {portfolio_vol:.2%}")
 
+    print("\nPortfolio Drawdown")
+    print("-" * 40)
+
+    drawdown = portfolio_drawdown(portfolio_data)
+    max_drawdown = portfolio_maximum_drawdown(portfolio_data)
+
+    print(f"Maximum Drawdown : {max_drawdown:.2%}")
+    print()
+
+    print(f"{'Date':<12}{'Drawdown':>15}")
+    print("-" * 30)
+
+    for dt, dd in zip(portfolio_data.dates, drawdown):
+        print(f"{str(dt)[:10]:<12} {dd:>15.2%}")
+
 if __name__ == "__main__":
     main()
+    
     
