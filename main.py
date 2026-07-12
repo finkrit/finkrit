@@ -6,6 +6,8 @@ from packages.finq.asset import Stock, Lot
 from packages.finq.anal.returns import calculate_returns
 from packages.finq.anal.risk import (
     beta_from_returns, 
+    component_contribution_to_risk,
+    marginal_contribution_to_risk,
     portfolio_conditional_value_at_risk, 
     portfolio_downside_deviation, 
     portfolio_semivariance, 
@@ -292,15 +294,38 @@ def main():
         f"(${historical_cvar_value:,.2f})"
     )
 
-    print(
-        f"Parametric CVaR : {parametric_cvar:.2%} "
-        f"(${parametric_cvar_value:,.2f})"
-    )
+    print(f"Parametric CVaR : {parametric_cvar:.2%} (${parametric_cvar_value:,.2f})")
+    print(f"Monte Carlo CVaR: {monte_carlo_cvar:.2%} (${monte_carlo_cvar_value:,.2f})")
+    print("\nPortfolio Risk Contributions")
+    print("-" * 60)
+
+    mctr = marginal_contribution_to_risk(portfolio_data)
+    cctr = component_contribution_to_risk(portfolio_data)
 
     print(
-        f"Monte Carlo CVaR: {monte_carlo_cvar:.2%} "
-        f"(${monte_carlo_cvar_value:,.2f})"
+        f"{'Ticker':<10}"
+        f"{'Weight':>12}"
+        f"{'MCTR':>15}"
+        f"{'CCTR':>15}"
     )
+
+    print("-" * 60)
+
+    for asset, weight, marginal, component in zip(
+        portfolio_data.assets,
+        portfolio_data.weights,
+        mctr,
+        cctr,
+    ):
+        print(
+            f"{asset.ticker:<10}"
+            f"{weight:>12.2%}"
+            f"{marginal:>15.4%}"
+            f"{component:>15.4%}"
+        )
+    print("-" * 60)
+    print(f"{'Portfolio Volatility':<22}{portfolio_volatility(portfolio_data):>15.4%}")
+    print(f"{'Sum of CCTR':<22}{cctr.sum():>15.4%}")
 
 if __name__ == "__main__":
     main()
