@@ -4,14 +4,19 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from packages.finq.asset import Stock, Lot
 from packages.finq.anal.returns import calculate_returns
-from packages.finq.anal.risk import beta_from_returns, portfolio_downside_deviation, portfolio_semivariance, variance, volatility
+from packages.finq.anal.risk import (
+    beta_from_returns, 
+    portfolio_conditional_value_at_risk, 
+    portfolio_downside_deviation, 
+    portfolio_semivariance, 
+    variance, 
+    volatility)
 from packages.finq.anal.risk.correlation import correlation_matrix
 from packages.finq.data.providers import YFinanceProvider
 from packages.finq.data.registry import DataRegistry
 from packages.finq.datatype import Currency, Exchange, MarketIndex, VaREstimationMethod
 from packages.finq.portfolio import Portfolio, Position, PortfolioSnapshot
 from packages.finq.anal.risk.covariance import covariance_matrix
-
 from packages.finq.anal.risk.drawdown import (
     portfolio_drawdown,
     portfolio_maximum_drawdown,
@@ -271,6 +276,31 @@ def main():
     print(f"Historical VaR : {historical_var:.2%}")
     print(f"Parametric VaR : {parametric_var:.2%}")
     print(f"Monte Carlo VaR: {monte_carlo_var:.2%}")
+
+    print("\nPortfolio Conditional Value at Risk")
+    print("-" * 40)
+
+    historical_cvar = portfolio_conditional_value_at_risk(portfolio_data, method=VaREstimationMethod.HISTORICAL)
+    parametric_cvar = portfolio_conditional_value_at_risk(portfolio_data, method=VaREstimationMethod.PARAMETRIC)
+    monte_carlo_cvar = portfolio_conditional_value_at_risk(portfolio_data, method=VaREstimationMethod.MONTE_CARLO,)
+    historical_cvar_value = historical_cvar * snapshot.market_value
+    parametric_cvar_value = parametric_cvar * snapshot.market_value
+    monte_carlo_cvar_value = monte_carlo_cvar * snapshot.market_value
+
+    print(
+        f"Historical CVaR : {historical_cvar:.2%} "
+        f"(${historical_cvar_value:,.2f})"
+    )
+
+    print(
+        f"Parametric CVaR : {parametric_cvar:.2%} "
+        f"(${parametric_cvar_value:,.2f})"
+    )
+
+    print(
+        f"Monte Carlo CVaR: {monte_carlo_cvar:.2%} "
+        f"(${monte_carlo_cvar_value:,.2f})"
+    )
 
 if __name__ == "__main__":
     main()
