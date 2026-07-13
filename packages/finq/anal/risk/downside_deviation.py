@@ -5,15 +5,12 @@ downside deviation is calculated = sqrt(semi-variance)
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 import numpy as np
 from numpy.typing import NDArray
 
-from packages.finq.anal.returns import (
-    ReturnCalculationMethod,
-    calculate_returns,
-)
+from packages.finq.anal.returns import ReturnCalculationMethod
 
 from packages.finq.anal.risk.semivariance import (
     portfolio_semivariance,
