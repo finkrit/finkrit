@@ -5,15 +5,19 @@ import numpy as np
 import pytest
 
 
+from unittest.mock import MagicMock
+
 from packages.finq.anal.risk.correlation import (
      correlation,
     correlation_from_returns,
     correlation_from_prices,
     correlation_matrix,
-
-    )
+    correlation_matrix_from_returns,
+    correlation_assets,
+)
 from packages.finq.datatype import ReturnCalculationMethod
-from tests.fixtures import make_price_history, RETURNS_A, RETURNS_B, PRICES
+from tests.fixtures import make_price_history, make_stock
+from tests.fixtures import RETURNS_A, RETURNS_B, PRICES
 
 
 class TestCorrelationFromReturns:
@@ -57,7 +61,7 @@ class TestCorrelationHistory:
         )
 
     @pytest.mark.parametrize("method", list(ReturnCalculationMethod))
-    def test_all_return_methods(self, method):
+    def test_all_return_methods_in_range(self, method):
         h1 = make_price_history(PRICES.tolist())
         h2 = make_price_history((PRICES * 1.1).tolist())
         assert -1.0 <= correlation(h1, h2, method=method) <= 1.0
@@ -74,9 +78,8 @@ class TestCorrelationFromPrices:
         assert scaled == pytest.approx(corr, abs=1e-12)
 
     @pytest.mark.parametrize("method", list(ReturnCalculationMethod))
-    def test_all_return_methods(self, method):
-        corr = correlation_from_prices(PRICES, PRICES, method=method)
-        assert corr == pytest.approx(1.0, abs=1e-9)
+    def test_all_return_methods_self_is_one(self, method):
+        assert correlation_from_prices(PRICES, PRICES, method=method) == pytest.approx(1.0, abs=1e-9)
 
 
 class TestCorrelationMatrix:
@@ -100,6 +103,56 @@ class TestCorrelationMatrix:
         np.testing.assert_allclose(mat, mat.T, atol=1e-12)
 
     @pytest.mark.parametrize("method", list(ReturnCalculationMethod))
-    def test_all_return_methods(self, two_stock_portfolio_data, method):
+    def test_all_return_methods_diagonal_is_one(self, two_stock_portfolio_data, method):
         mat = correlation_matrix(two_stock_portfolio_data, method=method)
         np.testing.assert_allclose(np.diag(mat), 1.0, atol=1e-9)
+
+
+class TestCorrelationMatrixFromReturns:
+
+    def test_shape(self):
+        returns = np.vstack([RETURNS_A, RETURNS_B])
+        mat = correlation_matrix_from_returns(returns)
+        assert mat.shape == (2, 2)
+
+    def test_diagonal_is_one(self):
+        returns = np.vstack([RETURNS_A, RETURNS_B])
+        mat = correlation_matrix_from_returns(returns)
+        np.testing.assert_allclose(np.diag(mat), 1.0, atol=1e-9)
+
+    def test_symmetric(self):
+        returns = np.vstack([RETURNS_A, RETURNS_B])
+        mat = correlation_matrix_from_returns(returns)
+        np.testing.assert_allclose(mat, mat.T, atol=1e-12)
+
+    def test_values_in_range(self):
+        returns = np.vstack([RETURNS_A, RETURNS_B])
+        mat = correlation_matrix_from_returns(returns)
+        assert np.all(mat >= -1.0) and np.all(mat <= 1.0)
+
+
+class TestCorrelationAssets:
+
+    def _make_registry(self, history):
+        registry = MagicMock()
+        registry.history.return_value = history
+        return registry
+
+    def test_self_correlation_is_one(self):
+        h = make_price_history(PRICES.tolist())
+        registry = self._make_registry(h)
+        stock = make_stock()
+        assert correlation_assets(stock, stock, registry) == pytest.approx(1.0, abs=1e-9)
+
+    def test_returns_float(self):
+        h = make_price_history(PRICES.tolist())
+        registry = self._make_registry(h)
+        stock = make_stock()
+        assert isinstance(correlation_assets(stock, stock, registry), float)
+
+    def test_calls_registry_history(self):
+        h = make_price_history(PRICES.tolist())
+        registry = self._make_registry(h)
+        stock = make_stock()
+        correlation_assets(stock, stock, registry)
+        assert registry.history.called
