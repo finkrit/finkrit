@@ -19,8 +19,7 @@ from packages.finq.portfolio import PortfolioData
 
 def correlation_from_returns(
     asset_returns: NDArray[np.float64],
-    other_asset_returns: NDArray[np.float64],
-) -> float:
+    other_asset_returns: NDArray[np.float64]) -> float:
     """
     Compute the correlation between two aligned return series.
     """
@@ -31,8 +30,7 @@ def correlation_from_returns(
 def correlation_from_prices(
     asset_prices: NDArray[np.float64],
     other_asset_prices: NDArray[np.float64],
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
-) -> float:
+    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG) -> float:
     """
     Compute correlation from two aligned price series.
     """
@@ -46,8 +44,7 @@ def correlation_from_prices(
 def correlation(
     asset_history: PriceHistory,
     other_asset_history: PriceHistory,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
-) -> float:
+    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG) -> float:
     """
     Compute correlation from two price histories.
     """
@@ -66,8 +63,7 @@ def correlation_assets(
     start: date | None = None,
     end: date | None = None,
     interval: str = "1d",
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
-) -> float:
+    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG) -> float:
     """
     Compute correlation directly from two assets.
     """
@@ -97,8 +93,7 @@ def correlation_assets(
 
 
 def correlation_matrix_from_returns(
-    returns: NDArray[np.float64],
-) -> NDArray[np.float64]:
+    returns: NDArray[np.float64]) -> NDArray[np.float64]:
     """
     Compute the correlation matrix of multiple aligned return series.
 
@@ -113,8 +108,7 @@ def correlation_matrix_from_returns(
 
 def correlation_matrix(
     portfolio_data: PortfolioData,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
-) -> NDArray[np.float64]:
+    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG) -> NDArray[np.float64]:
     """
     Compute the correlation matrix of all assets in a portfolio.
     """
