@@ -3,26 +3,27 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from packages.finq.anal.risk.variance import (
     variance_from_returns,
     variance_from_prices,
     variance,
+    variance_asset,
     portfolio_variance)
 from packages.finq.anal.returns import calculate_returns
-from tests.fixtures import make_price_history
+from tests.fixtures import make_price_history, make_stock
 from tests.fixtures import RETURNS_A, PRICES, FLAT_PRICES
 
 
 class TestVarianceFromReturns:
 
-    def test_matches_numpy(self):
+    def test_matches_numpy_var(self):
         expected = np.var(RETURNS_A, ddof=1)
         actual = variance_from_returns(RETURNS_A, annualized=False)
         assert actual == pytest.approx(expected)
 
-    def test_non_negative(self):
+    def test_non_negative_result(self):
         assert variance_from_returns(RETURNS_A) >= 0.0
 
     def test_zero_for_flat_returns(self):
@@ -71,7 +72,7 @@ class TestVarianceFromReturns:
 
 class TestVarianceFromPrices:
 
-    def test_non_negative(self):
+    def test_non_negative_prices(self):
         assert variance_from_prices(PRICES) >= 0.0
 
     def test_consistent_with_returns_version(self):
@@ -83,14 +84,38 @@ class TestVarianceFromPrices:
     def test_flat_prices_have_zero_variance(self):
         assert variance_from_prices(FLAT_PRICES, annualized=False) == pytest.approx(0.0)
 
-    def test_matches_numpy(self):
-        
-
+    def test_matches_numpy_prices(self):
         returns = calculate_returns(PRICES)
         expected = np.var(returns, ddof=1)
         actual = variance_from_prices(PRICES, annualized=False)
-
         assert actual == pytest.approx(expected)
+
+
+class TestVarianceAsset:
+
+    def _make_registry(self, history):
+        registry = MagicMock()
+        registry.history.return_value = history
+        return registry
+
+    def test_returns_float(self):
+        h = make_price_history(PRICES.tolist())
+        result = variance_asset(make_stock(), self._make_registry(h))
+        assert isinstance(result, float)
+
+    def test_non_negative(self):
+        h = make_price_history(PRICES.tolist())
+        assert variance_asset(make_stock(), self._make_registry(h)) >= 0.0
+
+    def test_matches_history_version(self):
+        h = make_price_history(PRICES.tolist())
+        assert variance_asset(make_stock(), self._make_registry(h), annualized=False) == pytest.approx(variance(h, annualized=False), rel=1e-9)
+
+    def test_calls_registry_history(self):
+        h = make_price_history(PRICES.tolist())
+        registry = self._make_registry(h)
+        variance_asset(make_stock(), registry)
+        assert registry.history.called
 
 
 class TestVarianceHistory:
