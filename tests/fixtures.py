@@ -40,12 +40,48 @@ def make_price_history(
     )
 
 
-# Flat prices → zero returns (useful for edge-case tests)
-FLAT_PRICES = [100.0] * 10
-# Linearly rising prices
-RISING_PRICES = [100.0 + i for i in range(10)]
-# Prices that reproduce known β = 1  (asset == benchmark)
-MARKET_PRICES = [100.0, 101.0, 99.0, 102.0, 98.0, 103.0, 97.0, 104.0, 96.0, 105.0]
+# ---------------------------------------------------------------------------
+# Deterministic price series (seeded — no randomness between runs)
+# ---------------------------------------------------------------------------
+
+# ~60 trading days of realistic prices starting at 100
+_rng = np.random.default_rng(42)
+_log_returns_60 = _rng.normal(0.0004, 0.012, 60)
+MARKET_PRICES: np.ndarray = np.round(
+    100.0 * np.exp(np.cumsum(np.insert(_log_returns_60, 0, 0.0))), 4
+)  # shape (61,)
+
+# Flat prices → zero returns (edge-case tests)
+FLAT_PRICES: np.ndarray = np.full(60, 100.0, dtype=np.float64)
+
+# Linearly rising prices (monotone, no drawdown)
+RISING_PRICES: np.ndarray = 100.0 + np.arange(60, dtype=np.float64)
+
+# Falling-then-recovering series for drawdown tests
+_mid = 60 // 2
+PEAK_FALL_PRICES: np.ndarray = np.concatenate([
+    np.linspace(100.0, 80.0, _mid),   # fall 20 %
+    np.linspace(80.0, 95.0, 60 - _mid),  # partial recovery
+])
+
+# ---------------------------------------------------------------------------
+# Shared return arrays (used across analytics tests)
+# ---------------------------------------------------------------------------
+
+# 60 deterministic daily returns
+RETURNS_A: np.ndarray = np.diff(np.log(MARKET_PRICES))          # shape (60,)
+# β of RETURNS_B vs RETURNS_A ≈ 1.5
+RETURNS_B: np.ndarray = RETURNS_A * 1.5
+
+# Convenience alias used by some tests
+PRICES: np.ndarray = MARKET_PRICES
+
+# ---------------------------------------------------------------------------
+# Date constants for long-term / short-term lot tests
+# ---------------------------------------------------------------------------
+
+LONG_TERM_DATE  = date(2020, 1, 1)   # well over 365 days ago
+SHORT_TERM_DATE = date.today()        # acquired today → 0 days
 
 
 # ---------------------------------------------------------------------------
