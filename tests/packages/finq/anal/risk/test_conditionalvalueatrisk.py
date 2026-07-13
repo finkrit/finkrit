@@ -106,7 +106,7 @@ class TestCVaRFromReturns:
 
 class TestCVaRFromPrices:
 
-    def test_positive(self):
+    def test_positive_prices(self):
         prices = np.cumprod(1 + _RETURNS_LARGE) * 100
         assert conditional_value_at_risk_from_prices(prices) > 0.0
 
@@ -199,3 +199,5 @@ class TestPortfolioCVaR:
         c99 = portfolio_conditional_value_at_risk(two_stock_portfolio_data, confidence=0.99)
 
         assert c99 >= c95
+
+        
