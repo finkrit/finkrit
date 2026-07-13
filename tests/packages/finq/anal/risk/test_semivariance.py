@@ -3,23 +3,24 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from packages.finq.anal.risk.semivariance import (
     semivariance_from_returns,
     semivariance_from_prices,
     semivariance,
+    semivariance_asset,
     portfolio_semivariance,
 )
 from packages.finq.anal.risk.variance import variance_from_returns
 from packages.finq.anal.returns import calculate_returns
-from tests.fixtures import make_price_history
+from tests.fixtures import make_price_history, make_stock
 from tests.fixtures import RETURNS_A, PRICES, FLAT_PRICES
 
 
 class TestSemivarianceFromReturns:
 
-    def test_non_negative(self):
+    def test_non_negative_returns(self):
         assert semivariance_from_returns(RETURNS_A, annualized=False) >= 0.0
 
     def test_le_full_variance(self):
@@ -68,7 +69,7 @@ class TestSemivarianceFromReturns:
 
 class TestSemivarianceFromPrices:
 
-    def test_non_negative(self):
+    def test_non_negative_prices(self):
         assert semivariance_from_prices(PRICES) >= 0.0
 
     def test_flat_prices_have_zero_semivariance(self):
@@ -96,7 +97,7 @@ class TestSemivarianceHistory:
 
 class TestPortfolioSemivariance:
 
-    def test_non_negative(self, two_stock_portfolio_data):
+    def test_non_negative_portfolio(self, two_stock_portfolio_data):
         assert portfolio_semivariance(two_stock_portfolio_data) >= 0.0
 
     def test_le_portfolio_variance(self, two_stock_portfolio_data):
@@ -111,4 +112,30 @@ class TestPortfolioSemivariance:
         result = portfolio_semivariance(two_stock_portfolio_data)
         assert result == pytest.approx(0.123)
         mock_semivariance.assert_called_once()
+
+
+class TestSemivarianceAsset:
+
+    def _make_registry(self, history):
+        registry = MagicMock()
+        registry.history.return_value = history
+        return registry
+
+    def test_returns_float(self):
+        h = make_price_history(PRICES.tolist())
+        assert isinstance(semivariance_asset(make_stock(), self._make_registry(h)), float)
+
+    def test_non_negative(self):
+        h = make_price_history(PRICES.tolist())
+        assert semivariance_asset(make_stock(), self._make_registry(h)) >= 0.0
+
+    def test_matches_history_version(self):
+        h = make_price_history(PRICES.tolist())
+        assert semivariance_asset(make_stock(), self._make_registry(h), annualized=False) == pytest.approx(semivariance(h, annualized=False), rel=1e-9)
+
+    def test_calls_registry_history(self):
+        h = make_price_history(PRICES.tolist())
+        registry = self._make_registry(h)
+        semivariance_asset(make_stock(), registry)
+        assert registry.history.called
 
