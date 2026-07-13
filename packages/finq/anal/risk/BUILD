@@ -6,9 +6,11 @@ py_library(
     deps = [
         "//packages/finq:finq",
         "//packages/finq/anal:anal",
+        "//packages/finq/data:data",
         "//packages/finq/datatype",
         "//packages/finq/asset",
         "@pip//numpy",
+        "@pip//scipy",
     ],
     visibility = ["//visibility:public"],
 )
