@@ -13,9 +13,7 @@ from packages.finq.datatype import PriceHistory
 from packages.finq.portfolio import PortfolioData
 
 
-def drawdown_from_wealth(
-    wealth: NDArray[np.float64],
-) -> NDArray[np.float64]:
+def drawdown_from_wealth(wealth: NDArray[np.float64]) -> NDArray[np.float64]:
     """
     Compute the drawdown series from a wealth index.
 
@@ -106,9 +104,7 @@ def maximum_drawdown_from_wealth(
     Compute the maximum drawdown from a wealth series.
     """
 
-    return maximum_drawdown_from_drawdown(
-        drawdown_from_wealth(wealth)
-    )
+    return maximum_drawdown_from_drawdown(drawdown_from_wealth(wealth))
 
 
 def maximum_drawdown_from_returns(
@@ -118,9 +114,7 @@ def maximum_drawdown_from_returns(
     Compute the maximum drawdown from a return series.
     """
 
-    return maximum_drawdown_from_drawdown(
-        drawdown_from_returns(returns)
-    )
+    return maximum_drawdown_from_drawdown(drawdown_from_returns(returns))
 
 
 def maximum_drawdown_from_prices(
@@ -130,9 +124,7 @@ def maximum_drawdown_from_prices(
     Compute the maximum drawdown from a price series.
     """
 
-    return maximum_drawdown_from_drawdown(
-        drawdown_from_prices(prices)
-    )
+    return maximum_drawdown_from_drawdown(drawdown_from_prices(prices))
 
 
 def maximum_drawdown(
@@ -142,9 +134,7 @@ def maximum_drawdown(
     Compute the maximum drawdown from a PriceHistory.
     """
 
-    return maximum_drawdown_from_drawdown(
-        drawdown(history)
-    )
+    return maximum_drawdown_from_drawdown(drawdown(history))
 
 
 def maximum_drawdown_asset(
@@ -152,8 +142,7 @@ def maximum_drawdown_asset(
     registry: DataRegistry,
     start: date | None = None,
     end: date | None = None,
-    interval: str = "1d",
-) -> float:
+    interval: str = "1d") -> float:
     """
     Compute the maximum drawdown directly from an asset.
     """
@@ -178,19 +167,14 @@ def portfolio_drawdown(
     Compute the drawdown series of a portfolio.
     """
 
-    return drawdown_from_prices(
-        portfolio_data.value,
-    )
+    return drawdown_from_prices(portfolio_data.value)
 
 
 def portfolio_maximum_drawdown(
-    portfolio_data: PortfolioData,
-) -> float:
+    portfolio_data: PortfolioData) -> float:
     """
     Compute the maximum drawdown of a portfolio.
     """
 
-    return maximum_drawdown_from_drawdown(
-        portfolio_drawdown(portfolio_data)
-    )
+    return maximum_drawdown_from_drawdown(portfolio_drawdown(portfolio_data))
 
