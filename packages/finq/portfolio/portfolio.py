@@ -1,34 +1,76 @@
 # finkrit/packages/finq/portfolio/portfolio.py
-
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from datetime import date
-
-import numpy as np
-from numpy.typing import NDArray
+from decimal import Decimal
+from typing import Any, Iterator
 
 from packages.finq.asset import Asset
-from packages.finq.portfolio import Lot, Position
+from packages.finq.portfolio.account import Account
+from packages.finq.portfolio.lot import Lot
+from packages.finq.portfolio.position import Position
 
 
+@dataclass(slots=True)
 class Portfolio:
     """
-    A collection of positions.
+    Represents a collection of investment accounts managed together.
     """
 
-    def __init__(self, positions: list[Position]):
-        self._positions = positions
+    id: str
+    name: str
+
+    accounts: list[Account] = field(default_factory=list)
+
+    # Higher-level objects (RIA platform)
+    user: Any | None = None
+    
+    notes: str | None = None
+
+    # ------------------------------------------------------------------
+    # Account Management
+    # ------------------------------------------------------------------
+
+    def add_account(self, account: Account) -> Account:
+        existing = self.get_account(account.id)
+
+        if existing is not None:
+            return existing
+
+        self.accounts.append(account)
+        return account
+
+    def remove_account(self, account_id: str) -> Account | None:
+        account = self.get_account(account_id)
+
+        if account is None:
+            return None
+
+        self.accounts.remove(account)
+        return account
+
+    def get_account(self, account_id: str) -> Account | None:
+        return next((a for a in self.accounts if a.id == account_id), None)
+
+    def has_account(self, account_id: str) -> bool:
+        return self.get_account(account_id) is not None
+
+    # ------------------------------------------------------------------
+    # Derived Collections
+    # ------------------------------------------------------------------
 
     @property
     def positions(self) -> tuple[Position, ...]:
-        return tuple(self._positions)
+        return tuple(
+            position
+            for account in self.accounts
+            for position in account
+        )
 
     @property
     def assets(self) -> tuple[Asset, ...]:
-        return tuple(
-            position.asset
-            for position in self.positions
-        )
+        return tuple(position.asset for position in self.positions)
 
     @property
     def lots(self) -> tuple[Lot, ...]:
@@ -38,104 +80,71 @@ class Portfolio:
             for lot in position.lots
         )
 
-    @property
-    def quantities(self) -> NDArray[np.float64]:
-        return np.asarray(
-            [position.quantity for position in self.positions],
-            dtype=np.float64,
-        )
+    # ------------------------------------------------------------------
+    # Aggregate Properties
+    # ------------------------------------------------------------------
 
     @property
-    def quantity(self) -> float:
-        return sum(
-            position.quantity
-            for position in self.positions
-        )
+    def cost_basis(self) -> Decimal:
+        return sum((account.cost_basis for account in self.accounts), start=Decimal("0"))
 
     @property
-    def cost_basis(self) -> float:
-        return sum(
-            position.cost_basis
-            for position in self.positions
-        )
+    def account_count(self) -> int:
+        return len(self.accounts)
 
     @property
-    def n_positions(self) -> int:
+    def position_count(self) -> int:
         return len(self.positions)
 
     @property
-    def n_assets(self) -> int:
+    def asset_count(self) -> int:
         return len(self.assets)
 
     @property
-    def n_lots(self) -> int:
+    def lot_count(self) -> int:
         return len(self.lots)
 
     @property
+    def is_empty(self) -> bool:
+        return not self.accounts
+
+    @property
     def long_term_lots(self) -> tuple[Lot, ...]:
-        return tuple(
-            lot
-            for lot in self.lots
-            if lot.is_long_term
-        )
+        return tuple(lot for lot in self.lots if lot.is_long_term)
 
     @property
     def short_term_lots(self) -> tuple[Lot, ...]:
-        return tuple(
-            lot
-            for lot in self.lots
-            if not lot.is_long_term
-        )
-
-    @property
-    def long_term_quantity(self) -> float:
-        return sum(
-            lot.quantity
-            for lot in self.long_term_lots
-        )
-
-    @property
-    def short_term_quantity(self) -> float:
-        return sum(
-            lot.quantity
-            for lot in self.short_term_lots
-        )
+        return tuple(lot for lot in self.lots if not lot.is_long_term)
 
     @property
     def earliest_acquired(self) -> date:
-        return min(
-            lot.acquired
-            for lot in self.lots
-        )
+        return min(lot.acquired for lot in self.lots)
 
     @property
     def latest_acquired(self) -> date:
-        return max(
-            lot.acquired
-            for lot in self.lots
-        )
+        return max(lot.acquired for lot in self.lots)
 
-    def add_position(self, position: Position) -> None:
-        """
-        Add a position to the portfolio.
-        """
-        self._positions.append(position)
+    # ------------------------------------------------------------------
+    # Collection Interface
+    # ------------------------------------------------------------------
+
+    def __iter__(self) -> Iterator[Account]:
+        return iter(self.accounts)
 
     def __len__(self) -> int:
-        return self.n_positions
+        return len(self.accounts)
 
-    def __iter__(self):
-        return iter(self._positions)
+    def __contains__(self, account: Account) -> bool:
+        return account in self.accounts
 
-    def __getitem__(self, index: int) -> Position:
-        return self._positions[index]
+    def __str__(self) -> str:
+        return self.name
 
     def __repr__(self) -> str:
         return (
             f"Portfolio("
-            f"{self.n_positions} positions, "
-            f"{self.n_assets} assets, "
-            f"{self.n_lots} lots)"
+            f"name={self.name!r}, "
+            f"accounts={self.account_count}, "
+            f"positions={self.position_count})"
         )
-    
     
