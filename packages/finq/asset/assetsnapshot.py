@@ -1,3 +1,4 @@
+# finkrit/packages/finq/asset/assetsnapshot.py
 from datetime import datetime
 
 from dataclasses import dataclass

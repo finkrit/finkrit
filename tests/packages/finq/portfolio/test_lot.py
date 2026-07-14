@@ -1,3 +1,4 @@
+# finkrit/tests/packages/finq/portfolio/test_lot.py
 from __future__ import annotations
 
 from datetime import date, timedelta

@@ -1,3 +1,4 @@
+# finkrit/packages/finq/datatype/risk.py
 from enum import Enum
 
 class VaREstimationMethod(Enum):

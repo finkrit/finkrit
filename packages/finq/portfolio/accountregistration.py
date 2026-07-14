@@ -1,3 +1,4 @@
+# finkrit/packages/finq/portfolio/accountregistration.py
 from __future__ import annotations
 
 from dataclasses import dataclass

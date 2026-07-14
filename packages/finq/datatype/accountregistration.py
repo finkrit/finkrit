@@ -1,3 +1,4 @@
+# finkrit/packages/finq/datatype/accountregistration.py
 from enum import StrEnum
 
 class AccountRegistrationType(StrEnum):

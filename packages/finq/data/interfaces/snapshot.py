@@ -1,3 +1,4 @@
+# finkrit/packages/finq/data/interfaces/snapshot.py
 from abc import ABC, abstractmethod
 
 from packages.finq.asset import Asset
