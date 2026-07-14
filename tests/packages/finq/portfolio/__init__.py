@@ -1,1 +1,1 @@
-# finkrit/tests/packages/finq/portfolio/__init__.py
+# finkrit/tests/packages/finkritq/portfolio/__init__.py

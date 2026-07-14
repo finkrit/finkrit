@@ -1,10 +1,10 @@
-# finkrit/tests/packages/finq/portfolio/test_custodian.py
+# finkrit/tests/packages/finkritq/portfolio/test_custodian.py
 from __future__ import annotations
 
 import pytest
 
-from packages.finq.portfolio.custodian import Custodian
-from packages.finq.datatype import CustodianType
+from packages.finkritq.portfolio.custodian import Custodian
+from packages.finkritq.datatype import CustodianType
 
 
 class TestCustodian:

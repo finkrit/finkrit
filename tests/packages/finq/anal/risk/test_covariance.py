@@ -6,15 +6,15 @@ import pytest
 
 from unittest.mock import MagicMock
 
-from packages.finq.anal.risk.covariance import (
+from packages.finkritq.anal.risk.covariance import (
     covariance_from_returns,
     covariance_from_prices,
     covariance_matrix,
     covariance_matrix_from_returns,
     covariance_assets,
 )
-from packages.finq.anal.risk.covariance import covariance
-from packages.finq.anal.returns import calculate_returns
+from packages.finkritq.anal.risk.covariance import covariance
+from packages.finkritq.anal.returns import calculate_returns
 from tests.fixtures import make_price_history, make_stock, make_price_history
 from tests.fixtures import RETURNS_A, RETURNS_B, PRICES
 

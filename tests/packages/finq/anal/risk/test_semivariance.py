@@ -5,15 +5,15 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 
-from packages.finq.anal.risk.semivariance import (
+from packages.finkritq.anal.risk.semivariance import (
     semivariance_from_returns,
     semivariance_from_prices,
     semivariance,
     semivariance_asset,
     portfolio_semivariance,
 )
-from packages.finq.anal.risk.variance import variance_from_returns
-from packages.finq.anal.returns import calculate_returns
+from packages.finkritq.anal.risk.variance import variance_from_returns
+from packages.finkritq.anal.returns import calculate_returns
 from tests.fixtures import make_price_history, make_stock
 from tests.fixtures import RETURNS_A, PRICES, FLAT_PRICES
 
@@ -101,12 +101,12 @@ class TestPortfolioSemivariance:
         assert portfolio_semivariance(two_stock_portfolio_data) >= 0.0
 
     def test_le_portfolio_variance(self, two_stock_portfolio_data):
-        from packages.finq.anal.risk.variance import portfolio_variance
+        from packages.finkritq.anal.risk.variance import portfolio_variance
         sv  = portfolio_semivariance(two_stock_portfolio_data)
         var = portfolio_variance(two_stock_portfolio_data)
         assert sv <= var + 1e-10
 
-    @patch("packages.finq.anal.risk.semivariance.semivariance_from_returns")
+    @patch("packages.finkritq.anal.risk.semivariance.semivariance_from_returns")
     def test_delegates_to_semivariance_from_returns(self, mock_semivariance, two_stock_portfolio_data):
         mock_semivariance.return_value = 0.123
         result = portfolio_semivariance(two_stock_portfolio_data)

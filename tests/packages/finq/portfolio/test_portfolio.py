@@ -1,9 +1,9 @@
-# finkrit/tests/packages/finq/portfolio/test_portfolio.py
+# finkrit/tests/packages/finkritq/portfolio/test_portfolio.py
 from __future__ import annotations
 
 from decimal import Decimal
 
-from packages.finq.portfolio import Portfolio
+from packages.finkritq.portfolio import Portfolio
 
 
 class TestPortfolio:

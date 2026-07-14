@@ -1,4 +1,4 @@
-# finkrit/tests/packages/finq/anal/risk/conftest.py
+# finkrit/tests/packages/finkritq/anal/risk/conftest.py
 """
 Shared pytest fixtures for the risk test sub-suite.
 All fixtures are deterministic — no network calls.
@@ -8,7 +8,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from packages.finq.portfolio import PortfolioData
+from packages.finkritq.portfolio import PortfolioData
 from tests.fixtures import (
     make_price_history,
     make_two_stock_portfolio,

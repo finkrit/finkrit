@@ -1,14 +1,14 @@
-# finkrit/tests/packages/finq/anal/returns/test_returns.py
+# finkrit/tests/packages/finkritq/anal/returns/test_returns.py
 """
-Tests for packages.finq.anal.returns — calculate_returns().
+Tests for packages.finkritq.anal.returns — calculate_returns().
 """
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from packages.finq.anal.returns import calculate_returns
-from packages.finq.datatype import ReturnCalculationMethod
+from packages.finkritq.anal.returns import calculate_returns
+from packages.finkritq.datatype import ReturnCalculationMethod
 from tests.fixtures import (
     FLAT_PRICES,
     RISING_PRICES,

@@ -1,1 +1,1 @@
-# finkrit/tests/packages/finq/portfolio/test_position.py
+# finkrit/tests/packages/finkritq/portfolio/test_position.py

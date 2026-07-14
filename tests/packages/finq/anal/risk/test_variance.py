@@ -5,13 +5,13 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 
-from packages.finq.anal.risk.variance import (
+from packages.finkritq.anal.risk.variance import (
     variance_from_returns,
     variance_from_prices,
     variance,
     variance_asset,
     portfolio_variance)
-from packages.finq.anal.returns import calculate_returns
+from packages.finkritq.anal.returns import calculate_returns
 from tests.fixtures import make_price_history, make_stock
 from tests.fixtures import RETURNS_A, PRICES, FLAT_PRICES
 
@@ -143,7 +143,7 @@ class TestPortfolioVariance:
         pv = portfolio_variance(two_stock_portfolio_data)
         assert np.isscalar(pv) or pv.ndim == 0
 
-    @patch("packages.finq.anal.risk.variance.covariance_matrix")
+    @patch("packages.finkritq.anal.risk.variance.covariance_matrix")
     def test_identity_covariance(self, mock_covariance, two_stock_portfolio_data):
         mock_covariance.return_value = np.eye(2)
         weights = two_stock_portfolio_data.weight_vector
@@ -152,13 +152,13 @@ class TestPortfolioVariance:
 
         assert actual == pytest.approx(expected)
 
-    @patch("packages.finq.anal.risk.variance.covariance_matrix")
+    @patch("packages.finkritq.anal.risk.variance.covariance_matrix")
     def test_zero_covariance(self, mock_covariance, two_stock_portfolio_data):
         mock_covariance.return_value = np.zeros((2, 2))
 
         assert portfolio_variance(two_stock_portfolio_data) == pytest.approx(0.0)
 
-    @patch("packages.finq.anal.risk.variance.covariance_matrix")
+    @patch("packages.finkritq.anal.risk.variance.covariance_matrix")
     def test_matches_manual_matrix_calculation(self, mock_covariance, two_stock_portfolio_data):
         covariance = np.array(
             [

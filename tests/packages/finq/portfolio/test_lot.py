@@ -1,4 +1,4 @@
-# finkrit/tests/packages/finq/portfolio/test_lot.py
+# finkrit/tests/packages/finkritq/portfolio/test_lot.py
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -6,7 +6,7 @@ from decimal import Decimal
 
 import pytest
 
-from packages.finq.portfolio import Lot
+from packages.finkritq.portfolio import Lot
 
 
 class TestLot:

@@ -5,9 +5,9 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 
-from packages.finq.anal.returns import calculate_returns
-from packages.finq.anal.risk.variance import variance_from_returns, portfolio_variance
-from packages.finq.anal.risk.volatility import (
+from packages.finkritq.anal.returns import calculate_returns
+from packages.finkritq.anal.risk.variance import variance_from_returns, portfolio_variance
+from packages.finkritq.anal.risk.volatility import (
     volatility_from_returns,
     volatility_from_prices,
     volatility,
@@ -109,12 +109,12 @@ class TestPortfolioVolatility:
         pvol = portfolio_volatility(two_stock_portfolio_data)
         assert pvol == pytest.approx(np.sqrt(pvar), rel=1e-9)
 
-    @patch("packages.finq.anal.risk.volatility.portfolio_variance")
+    @patch("packages.finkritq.anal.risk.volatility.portfolio_variance")
     def test_square_root_of_variance(self, mock_variance, two_stock_portfolio_data):
         mock_variance.return_value = 0.09
         assert portfolio_volatility(two_stock_portfolio_data) == pytest.approx(0.3)
 
-    @patch("packages.finq.anal.risk.volatility.portfolio_variance")
+    @patch("packages.finkritq.anal.risk.volatility.portfolio_variance")
     def test_zero_variance_gives_zero_volatility(self, mock_variance, two_stock_portfolio_data):
         mock_variance.return_value = 0.0
         assert portfolio_volatility(two_stock_portfolio_data) == pytest.approx(0.0)

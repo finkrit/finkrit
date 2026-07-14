@@ -4,14 +4,14 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from packages.finq.anal.risk.downside_deviation import (
+from packages.finkritq.anal.risk.downside_deviation import (
     downside_deviation_from_returns,
     downside_deviation_from_prices,
     downside_deviation,
     portfolio_downside_deviation,
 )
-from packages.finq.anal.risk.semivariance import semivariance_from_returns
-from packages.finq.datatype import ReturnCalculationMethod
+from packages.finkritq.anal.risk.semivariance import semivariance_from_returns
+from packages.finkritq.datatype import ReturnCalculationMethod
 from tests.fixtures import make_price_history, RETURNS_A, PRICES
 
 
@@ -54,7 +54,7 @@ class TestDownsideDeviationFromPrices:
         assert downside_deviation_from_prices(np.array([100.0, 101.0, 102.0, 103.0, 104.0]), annualized=False) == pytest.approx(0.0)
 
     def test_matches_returns(self):
-        from packages.finq.anal.returns import calculate_returns
+        from packages.finkritq.anal.returns import calculate_returns
         assert downside_deviation_from_prices(PRICES, annualized=False) == pytest.approx(downside_deviation_from_returns(calculate_returns(PRICES), annualized=False), rel=1e-9)
 
     @pytest.mark.parametrize("method", list(ReturnCalculationMethod))
@@ -96,7 +96,7 @@ class TestPortfolioDownsideDeviation:
         assert portfolio_downside_deviation(two_stock_portfolio_data) >= 0.0
 
     def test_equals_sqrt_portfolio_semivariance(self, two_stock_portfolio_data):
-        from packages.finq.anal.risk.semivariance import portfolio_semivariance
+        from packages.finkritq.anal.risk.semivariance import portfolio_semivariance
         assert portfolio_downside_deviation(two_stock_portfolio_data) == pytest.approx(np.sqrt(portfolio_semivariance(two_stock_portfolio_data)), rel=1e-9)
 
     def test_matches_value_series(self, two_stock_portfolio_data):
@@ -173,7 +173,7 @@ class TestDownsideDeviationFromPrices:
         assert downside_deviation_from_prices(prices, annualized=False) == pytest.approx(0.0)
 
     def test_matches_returns(self):
-        from packages.finq.anal.returns import calculate_returns
+        from packages.finkritq.anal.returns import calculate_returns
 
         returns = calculate_returns(PRICES)
         dd_prices = downside_deviation_from_prices(PRICES, annualized=False)
@@ -264,7 +264,7 @@ class TestPortfolioDownsideDeviation:
         assert portfolio_downside_deviation(two_stock_portfolio_data) >= 0.0
 
     def test_equals_sqrt_portfolio_semivariance(self, two_stock_portfolio_data):
-        from packages.finq.anal.risk.semivariance import portfolio_semivariance
+        from packages.finkritq.anal.risk.semivariance import portfolio_semivariance
 
         sv = portfolio_semivariance(two_stock_portfolio_data)
         dd = portfolio_downside_deviation(two_stock_portfolio_data)

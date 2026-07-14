@@ -1,1 +1,1 @@
-# finkrit/tests/packages/finq/anal/returns/__init__.py
+# finkrit/tests/packages/finkritq/anal/returns/__init__.py

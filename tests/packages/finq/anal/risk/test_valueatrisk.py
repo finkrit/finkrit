@@ -4,13 +4,13 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from packages.finq.anal.risk.valueatrisk import (
+from packages.finkritq.anal.risk.valueatrisk import (
     value_at_risk,
     value_at_risk_from_returns,
     value_at_risk_from_prices,
     portfolio_value_at_risk,
 )
-from packages.finq.datatype import VaREstimationMethod, ReturnCalculationMethod
+from packages.finkritq.datatype import VaREstimationMethod, ReturnCalculationMethod
 from tests.fixtures import make_price_history
 
 _RNG = np.random.default_rng(42)
@@ -62,7 +62,7 @@ class TestVaRFromPrices:
         assert value_at_risk_from_prices(_PRICES_LARGE, return_method=return_method) > 0.0
 
     def test_matches_returns(self):
-        from packages.finq.anal.returns import calculate_returns
+        from packages.finkritq.anal.returns import calculate_returns
         assert value_at_risk_from_prices(_PRICES_LARGE, method=VaREstimationMethod.HISTORICAL) == pytest.approx(value_at_risk_from_returns(calculate_returns(_PRICES_LARGE), method=VaREstimationMethod.HISTORICAL), rel=1e-9)
 
     def test_higher_confidence_gives_higher_var(self):

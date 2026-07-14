@@ -1,20 +1,20 @@
-# finkrit/tests/packages/finq/anal/risk/test_conditionalvalueatrisk.py
+# finkrit/tests/packages/finkritq/anal/risk/test_conditionalvalueatrisk.py
 from __future__ import annotations
 
 import numpy as np
 import pytest
 
-from packages.finq.anal.risk.conditionalvalueatrisk import (
+from packages.finkritq.anal.risk.conditionalvalueatrisk import (
     conditional_value_at_risk,
     conditional_value_at_risk_from_returns,
     conditional_value_at_risk_from_prices,
     portfolio_conditional_value_at_risk,
 )
-from packages.finq.anal.risk.valueatrisk import (
+from packages.finkritq.anal.risk.valueatrisk import (
     value_at_risk_from_returns,
     value_at_risk_from_prices,
 )
-from packages.finq.datatype import (
+from packages.finkritq.datatype import (
     ReturnCalculationMethod,
     VaREstimationMethod,
 )
@@ -122,7 +122,7 @@ class TestCVaRFromPrices:
         assert conditional_value_at_risk_from_prices(prices, return_method=return_method) > 0.0
 
     def test_matches_returns(self):
-        from packages.finq.anal.returns import calculate_returns
+        from packages.finkritq.anal.returns import calculate_returns
 
         prices = np.cumprod(1 + _RETURNS_LARGE) * 100
         returns = calculate_returns(prices)
@@ -181,7 +181,7 @@ class TestPortfolioCVaR:
         assert portfolio_conditional_value_at_risk(two_stock_portfolio_data, method=method) > 0.0
 
     def test_cvar_ge_var(self, two_stock_portfolio_data):
-        from packages.finq.anal.risk.valueatrisk import portfolio_value_at_risk
+        from packages.finkritq.anal.risk.valueatrisk import portfolio_value_at_risk
 
         var = portfolio_value_at_risk(two_stock_portfolio_data)
         cvar = portfolio_conditional_value_at_risk(two_stock_portfolio_data)

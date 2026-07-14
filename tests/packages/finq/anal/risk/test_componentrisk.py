@@ -4,8 +4,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from packages.finq.anal.risk.componentrisk import component_contribution_to_risk
-from packages.finq.anal.risk.volatility import portfolio_volatility
+from packages.finkritq.anal.risk.componentrisk import component_contribution_to_risk
+from packages.finkritq.anal.risk.volatility import portfolio_volatility
 
 
 class TestComponentContributionToRisk:
@@ -33,7 +33,7 @@ class TestComponentContributionToRisk:
         assert cctr.sum() == pytest.approx(pvol, rel=1e-6)
 
     def test_equals_weight_times_marginal(self, two_stock_portfolio_data):
-        from packages.finq.anal.risk.marginalrisk import marginal_contribution_to_risk
+        from packages.finkritq.anal.risk.marginalrisk import marginal_contribution_to_risk
 
         weights = two_stock_portfolio_data.weight_vector
         mctr = marginal_contribution_to_risk(two_stock_portfolio_data)

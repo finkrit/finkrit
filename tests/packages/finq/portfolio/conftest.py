@@ -1,4 +1,4 @@
-# finkrit/tests/packages/finq/portfolio/conftest.py
+# finkrit/tests/packages/finkritq/portfolio/conftest.py
 """
 Shared pytest fixtures for portfolio tests.
 """
@@ -9,10 +9,10 @@ from decimal import Decimal
 
 import pytest
 
-from packages.finq.asset import Stock
-from packages.finq.datatype import AccountRegistrationType, Currency, CustodianType, Exchange
-from packages.finq.portfolio import Account, Lot, Portfolio, Position
-from packages.finq.portfolio.custodian import Custodian
+from packages.finkritq.asset import Stock
+from packages.finkritq.datatype import AccountRegistrationType, Currency, CustodianType, Exchange
+from packages.finkritq.portfolio import Account, Lot, Portfolio, Position
+from packages.finkritq.portfolio.custodian import Custodian
 from tests.fixtures import (
     LONG_TERM_DATE,
     SHORT_TERM_DATE,

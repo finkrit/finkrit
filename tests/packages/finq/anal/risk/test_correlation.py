@@ -7,7 +7,7 @@ import pytest
 
 from unittest.mock import MagicMock
 
-from packages.finq.anal.risk.correlation import (
+from packages.finkritq.anal.risk.correlation import (
      correlation,
     correlation_from_returns,
     correlation_from_prices,
@@ -15,7 +15,7 @@ from packages.finq.anal.risk.correlation import (
     correlation_matrix_from_returns,
     correlation_assets,
 )
-from packages.finq.datatype import ReturnCalculationMethod
+from packages.finkritq.datatype import ReturnCalculationMethod
 from tests.fixtures import make_price_history, make_stock
 from tests.fixtures import RETURNS_A, RETURNS_B, PRICES
 

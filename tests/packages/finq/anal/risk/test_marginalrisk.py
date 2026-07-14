@@ -4,8 +4,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from packages.finq.anal.risk.marginalrisk import marginal_contribution_to_risk
-from packages.finq.anal.risk.volatility import portfolio_volatility
+from packages.finkritq.anal.risk.marginalrisk import marginal_contribution_to_risk
+from packages.finkritq.anal.risk.volatility import portfolio_volatility
 
 
 class TestMarginalContributionToRisk:

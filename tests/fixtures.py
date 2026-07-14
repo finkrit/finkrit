@@ -9,16 +9,16 @@ from decimal import Decimal
 
 import numpy as np
 
-from packages.finq.asset import Stock
-from packages.finq.datatype import (
+from packages.finkritq.asset import Stock
+from packages.finkritq.datatype import (
     AccountRegistrationType,
     Currency,
     CustodianType,
     Exchange,
     PriceHistory,
 )
-from packages.finq.portfolio import Account, Lot, Portfolio, Position
-from packages.finq.portfolio.custodian import Custodian
+from packages.finkritq.portfolio import Account, Lot, Portfolio, Position
+from packages.finkritq.portfolio.custodian import Custodian
 
 
 # ---------------------------------------------------------------------------

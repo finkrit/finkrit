@@ -1,19 +1,19 @@
-# finkrit/tests/packages/finq/portfolio/test_account.py
+# finkrit/tests/packages/finkritq/portfolio/test_account.py
 from __future__ import annotations
 
 from datetime import date
 
 import pytest
 
-from packages.finq.datatype import AccountRegistrationType, Currency
-from packages.finq.portfolio.account import Account
+from packages.finkritq.datatype import AccountRegistrationType, Currency
+from packages.finkritq.portfolio.account import Account
 
 
 from datetime import date
 
 import pytest
 
-from packages.finq.portfolio import Account
+from packages.finkritq.portfolio import Account
 
 
 class TestAccount:

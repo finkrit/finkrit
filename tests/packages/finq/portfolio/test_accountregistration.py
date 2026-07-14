@@ -1,10 +1,10 @@
-# finkrit/tests/packages/finq/portfolio/test_accountregistration.py
+# finkrit/tests/packages/finkritq/portfolio/test_accountregistration.py
 from __future__ import annotations
 
 import pytest
 
-from packages.finq.portfolio.accountregistration import AccountRegistration
-from packages.finq.datatype import AccountRegistrationType
+from packages.finkritq.portfolio.accountregistration import AccountRegistration
+from packages.finkritq.datatype import AccountRegistrationType
 
 
 class TestAccountRegistration:

@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from packages.finq.anal.risk.drawdown import (
+from packages.finkritq.anal.risk.drawdown import (
     drawdown_from_prices,
     drawdown_from_returns,
     drawdown_from_wealth,

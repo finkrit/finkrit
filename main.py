@@ -3,9 +3,9 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from decimal import Decimal
 
-from packages.finq.asset import Stock
-from packages.finq.anal.returns import calculate_returns
-from packages.finq.anal.risk import (
+from packages.finkritq.asset import Stock
+from packages.finkritq.anal.returns import calculate_returns
+from packages.finkritq.anal.risk import (
     beta_from_returns,
     component_contribution_to_risk,
     marginal_contribution_to_risk,
@@ -18,15 +18,15 @@ from packages.finq.anal.risk import (
     variance,
     volatility,
 )
-from packages.finq.anal.risk.correlation import correlation_matrix
-from packages.finq.anal.risk.covariance import covariance_matrix
-from packages.finq.anal.risk.drawdown import (
+from packages.finkritq.anal.risk.correlation import correlation_matrix
+from packages.finkritq.anal.risk.covariance import covariance_matrix
+from packages.finkritq.anal.risk.drawdown import (
     portfolio_drawdown,
     portfolio_maximum_drawdown,
 )
-from packages.finq.data.providers import YFinanceProvider
-from packages.finq.data.registry import DataRegistry
-from packages.finq.datatype import (
+from packages.finkritq.data.providers import YFinanceProvider
+from packages.finkritq.data.registry import DataRegistry
+from packages.finkritq.datatype import (
     AccountRegistrationType,
     Currency,
     CustodianType,
@@ -34,8 +34,8 @@ from packages.finq.datatype import (
     MarketIndex,
     VaREstimationMethod,
 )
-from packages.finq.portfolio import Account, Lot, Portfolio, Position
-from packages.finq.portfolio.custodian import Custodian
+from packages.finkritq.portfolio import Account, Lot, Portfolio, Position
+from packages.finkritq.portfolio.custodian import Custodian
 
 
 def _make_position(
@@ -260,7 +260,7 @@ def main():
 if __name__ == "__main__":
     main()
 
-from packages.finq.anal.risk import (
+from packages.finkritq.anal.risk import (
     beta_from_returns, 
     component_contribution_to_risk,
     marginal_contribution_to_risk,
@@ -272,13 +272,13 @@ from packages.finq.anal.risk import (
     portfolio_volatility,
     variance, 
     volatility)
-from packages.finq.anal.risk.correlation import correlation_matrix
-from packages.finq.data.providers import YFinanceProvider
-from packages.finq.data.registry import DataRegistry
-from packages.finq.datatype import Currency, Exchange, MarketIndex, VaREstimationMethod
-from packages.finq.portfolio import Portfolio, Position, PortfolioSnapshot
-from packages.finq.anal.risk.covariance import covariance_matrix
-from packages.finq.anal.risk.drawdown import (
+from packages.finkritq.anal.risk.correlation import correlation_matrix
+from packages.finkritq.data.providers import YFinanceProvider
+from packages.finkritq.data.registry import DataRegistry
+from packages.finkritq.datatype import Currency, Exchange, MarketIndex, VaREstimationMethod
+from packages.finkritq.portfolio import Portfolio, Position, PortfolioSnapshot
+from packages.finkritq.anal.risk.covariance import covariance_matrix
+from packages.finkritq.anal.risk.drawdown import (
     portfolio_drawdown,
     portfolio_maximum_drawdown,
 )

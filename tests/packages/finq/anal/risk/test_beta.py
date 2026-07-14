@@ -4,12 +4,12 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from packages.finq.anal.risk.beta import (
+from packages.finkritq.anal.risk.beta import (
     beta,
     beta_from_prices,
     beta_from_returns,
 )
-from packages.finq.datatype import ReturnCalculationMethod
+from packages.finkritq.datatype import ReturnCalculationMethod
 from tests.fixtures import make_price_history, MARKET_PRICES
 from tests.fixtures import RETURNS_A, RETURNS_B, PRICES
 
