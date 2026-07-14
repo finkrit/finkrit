@@ -8,8 +8,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from packages.finq.asset import Asset
-from packages.finq.asset.lot import Lot
-from packages.finq.portfolio.position import Position
+from packages.finq.portfolio import Lot, Position
 
 
 class Portfolio:

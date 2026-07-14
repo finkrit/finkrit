@@ -9,9 +9,8 @@ from datetime import date
 import numpy as np
 
 from packages.finq.asset import Stock
-from packages.finq.asset.lot import Lot
 from packages.finq.datatype import Currency, Exchange, PriceHistory
-from packages.finq.portfolio import Portfolio, Position
+from packages.finq.portfolio import Lot, Portfolio, Position
 
 
 # ---------------------------------------------------------------------------

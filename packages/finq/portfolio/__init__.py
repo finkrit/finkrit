@@ -1,11 +1,13 @@
 # finkrit/packages/finq/portfolio/__init__.py
-from packages.finq.portfolio.portfolio import Portfolio
-from packages.finq.portfolio.portfoliodata import PortfolioData
-from packages.finq.portfolio.portfoliosnapshot import PortfolioSnapshot
-from packages.finq.portfolio.position import Position
-from packages.finq.portfolio.positionsnapshot import PositionSnapshot
+from .portfolio import Portfolio
+from .portfoliodata import PortfolioData
+from .portfoliosnapshot import PortfolioSnapshot
+from .position import Position
+from .positionsnapshot import PositionSnapshot
+from .lot import Lot
 
 __all__ = [
+    "Lot",
     "Portfolio",
     "PortfolioData",
     "PortfolioSnapshot",

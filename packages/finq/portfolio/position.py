@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from packages.finq.asset import Asset
-from packages.finq.asset.lot import Lot
+from packages.finq.portfolio import Lot
 
 
 @dataclass(frozen=True, slots=True)
