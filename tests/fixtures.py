@@ -5,12 +5,20 @@ Shared test fixtures — deterministic, no network calls.
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 
 import numpy as np
 
 from packages.finq.asset import Stock
-from packages.finq.datatype import Currency, Exchange, PriceHistory
-from packages.finq.portfolio import Lot, Portfolio, Position
+from packages.finq.datatype import (
+    AccountRegistrationType,
+    Currency,
+    CustodianType,
+    Exchange,
+    PriceHistory,
+)
+from packages.finq.portfolio import Account, Lot, Portfolio, Position
+from packages.finq.portfolio.custodian import Custodian
 
 
 # ---------------------------------------------------------------------------
@@ -96,21 +104,67 @@ def make_stock(ticker: str = "TST") -> Stock:
     )
 
 
-def make_position(stock: Stock, quantity: float = 10.0, cost: float = 100.0) -> Position:
+def make_custodian() -> Custodian:
+    return Custodian(type=CustodianType.SCHWAB)
+
+
+def make_account(
+    account_id: str = "acct-1",
+    account_number: str = "1234",
+    name: str = "Test Account",
+) -> Account:
+    return Account(
+        id=account_id,
+        account_number=account_number,
+        name=name,
+        custodian=make_custodian(),
+        account_registration_type=AccountRegistrationType.INDIVIDUAL,
+    )
+
+
+def make_position(
+    stock: Stock,
+    account: Account | None = None,
+    quantity: Decimal = Decimal("10"),
+    cost: Decimal = Decimal("100"),
+    position_id: str = "pos-1",
+    lot_id: str = "lot-1",
+    acquired: date = LONG_TERM_DATE,
+) -> Position:
+    """
+    Build a properly wired Position + Lot pair.
+    Uses a sentinel lot to satisfy Lot.__post_init__, then replaces
+    the lot's position reference via slots-compatible assignment.
+    """
+    if account is None:
+        account = make_account()
+
+    # 1. Build position with a placeholder lots tuple (will be replaced)
+    pos = Position.__new__(Position)
+    pos.id = position_id
+    pos.account = account
+    pos.asset = stock
+    pos.notes = None
+    pos.last_price = None
+
+    # 2. Build the lot pointing at the real position
     lot = Lot(
-        asset=stock,
+        id=lot_id,
+        position=pos,
         quantity=quantity,
         cost_per_share=cost,
-        acquired=date(2024, 1, 2),
+        acquired=acquired,
     )
-    return Position(asset=stock, lots=(lot,))
+    pos.lots = (lot,)
+    return pos
 
 
 def make_two_stock_portfolio() -> tuple[Portfolio, Stock, Stock]:
     a = make_stock("AAA")
     b = make_stock("BBB")
-    portfolio = Portfolio([
-        make_position(a, quantity=10, cost=100),
-        make_position(b, quantity=5, cost=200),
-    ])
+    account = make_account()
+    pos_a = make_position(a, account=account, quantity=Decimal("10"), cost=Decimal("100"), position_id="pos-a", lot_id="lot-a")
+    pos_b = make_position(b, account=account, quantity=Decimal("5"),  cost=Decimal("200"), position_id="pos-b", lot_id="lot-b")
+    account.positions = [pos_a, pos_b]
+    portfolio = Portfolio(id="port-1", name="Test Portfolio", accounts=[account])
     return portfolio, a, b
