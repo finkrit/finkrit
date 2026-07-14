@@ -1,20 +1,32 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from packages.finq.asset import Asset
-from packages.finq.portfolio import Lot
+from packages.finq.portfolio.lot import Lot
+
+if TYPE_CHECKING:
+    from packages.finq.portfolio.account import Account
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True)
 class Position:
     """
-    A position representing all open lots of a single asset.
+    Represents a position in a single asset within an account.
     """
 
+    id: str
+    account: Account
     asset: Asset
     lots: tuple[Lot, ...]
 
-    def __post_init__(self):
+    notes: str | None = None
+    last_price: Decimal | None = None
+
+    def __post_init__(self) -> None:
         if not self.lots:
             raise ValueError("Position requires at least one lot.")
 
@@ -22,19 +34,29 @@ class Position:
             raise ValueError("All lots must belong to the same asset.")
 
     @property
-    def quantity(self) -> float:
-        return sum(lot.quantity for lot in self.lots)
+    def quantity(self) -> Decimal:
+        return sum((lot.quantity for lot in self.lots), start=Decimal("0"))
 
     @property
-    def cost_basis(self) -> float:
-        return sum(lot.cost_basis for lot in self.lots)
+    def cost_basis(self) -> Decimal:
+        return sum((lot.cost_basis for lot in self.lots), start=Decimal("0"))
 
     @property
-    def average_cost(self) -> float:
-        return self.cost_basis / self.quantity
+    def market_value(self) -> Decimal:
+        if self.last_price is None:
+            return self.cost_basis
+        return self.quantity * self.last_price
 
     @property
-    def n_lots(self) -> int:
+    def unrealized_gain(self) -> Decimal:
+        return self.market_value - self.cost_basis
+
+    @property
+    def average_cost(self) -> Decimal:
+        return Decimal("0") if self.quantity == 0 else self.cost_basis / self.quantity
+
+    @property
+    def lot_count(self) -> int:
         return len(self.lots)
 
     @property
@@ -49,19 +71,12 @@ class Position:
     def is_long_term(self) -> bool:
         return all(lot.is_long_term for lot in self.lots)
 
-    def market_value(self, last_price: float) -> float:
-        return self.quantity * last_price
-
-    def unrealized_pnl(self, last_price: float) -> float:
-        return self.market_value(last_price) - self.cost_basis
-
-    def unrealized_return(self, last_price: float) -> float:
-        return self.unrealized_pnl(last_price) / self.cost_basis
-
     def __len__(self) -> int:
-        return self.n_lots
+        return self.lot_count
+
+    def __str__(self) -> str:
+        return f"{self.asset.ticker} ({self.quantity})"
 
     def __repr__(self) -> str:
-        return (f"Position({self.asset.ticker}, {self.quantity:g} shares, {self.n_lots} lots)")
-    
+        return (f"Position(asset={self.asset.ticker!r}, quantity={self.quantity}, lots={self.lot_count})")
     
