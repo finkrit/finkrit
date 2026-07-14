@@ -1,3 +1,4 @@
+# finkrit/packages/finq/portfolio/portfoliodata.py
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
@@ -96,10 +97,7 @@ class PortfolioData:
 
         values = np.zeros(len(self), dtype=np.float64)
         for position in self.portfolio.positions:
-            values += (
-                self[position.asset].close
-                * position.quantity
-            )
+            values += (self[position.asset].close * float(position.quantity))
 
         return values
     
@@ -133,7 +131,7 @@ class PortfolioData:
     def weights(self) -> dict[Asset, float]:
 
         values = {
-            position.asset: self.latest_prices[position.asset] * position.quantity
+            position.asset: self.latest_prices[position.asset] * float(position.quantity)
             for position in self.portfolio.positions
             }
         total = sum(values.values())

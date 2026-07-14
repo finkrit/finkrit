@@ -1,3 +1,4 @@
+# finkrit/packages/finq/portfolio/portfoliosnapshot.py
 from dataclasses import dataclass, field
 
 from packages.finq.asset import Asset, AssetSnapshot
