@@ -4,7 +4,7 @@ py_library(
     name = "datatype",
     srcs = glob(["*.py"]),
     deps = [
-        "//packages/finq:finq",
+        "//packages/finkritq:finq",
         "@pip//numpy",
     ],
     visibility = ["//visibility:public"],

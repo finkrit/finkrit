@@ -4,8 +4,8 @@ py_library(
     name = "asset",
     srcs = glob(["*.py"]),
     deps = [
-        "//packages/finq:finq",
-        "//packages/finq/datatype",
+        "//packages/finkritq:finq",
+        "//packages/finkritq/datatype",
     ],
     visibility = ["//visibility:public"],
 )

@@ -4,9 +4,9 @@ py_library(
     name = "interfaces",
     srcs = glob(["*.py"]),
     deps = [
-        "//packages/finq/data:data_init",
-        "//packages/finq/asset",
-        "//packages/finq/datatype",
+        "//packages/finkritq/data:data_init",
+        "//packages/finkritq/asset",
+        "//packages/finkritq/datatype",
     ],
     visibility = ["//visibility:public"],
 )

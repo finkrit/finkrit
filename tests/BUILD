@@ -5,9 +5,9 @@ py_library(
     name = "fixtures",
     srcs = ["fixtures.py"],
     deps = [
-        "//packages/finq/asset",
-        "//packages/finq/datatype",
-        "//packages/finq/portfolio",
+        "//packages/finkritq/asset",
+        "//packages/finkritq/datatype",
+        "//packages/finkritq/portfolio",
         "@pip//numpy",
     ],
     visibility = ["//visibility:public"],

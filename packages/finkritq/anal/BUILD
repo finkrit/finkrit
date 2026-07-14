@@ -4,9 +4,9 @@ py_library(
     name = "anal",
     srcs = glob(["*.py"]),
     deps = [
-        "//packages/finq:finq",
-        "//packages/finq/datatype",
-        "//packages/finq/asset",
+        "//packages/finkritq:finq",
+        "//packages/finkritq/datatype",
+        "//packages/finkritq/asset",
         "@pip//numpy",
     ],
     visibility = ["//visibility:public"],

@@ -5,8 +5,8 @@ py_test(
     srcs = ["test_returns.py"],
     deps = [
         "//tests:fixtures",
-        "//packages/finq/anal:anal",
-        "//packages/finq/datatype",
+        "//packages/finkritq/anal:anal",
+        "//packages/finkritq/datatype",
         "@pip//numpy",
         "@pip//pytest",
     ],
