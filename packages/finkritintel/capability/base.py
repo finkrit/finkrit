@@ -1,3 +1,5 @@
+# finkritintel/capability/base.py
+
 from dataclasses import dataclass, field
 
 from finkritintel.tool.binding import ToolBinding
