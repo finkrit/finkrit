@@ -15,7 +15,7 @@ from finkritintel.tool.contract import ToolContract
 # ---------------------------------------------------------------------------
 
 def _make_contract(name: str = "test_tool") -> ToolContract:
-    return ToolContract(name=name, description="A test tool.")
+    return ToolContract(name=name, description="A test tool.", category="some tool category")
 
 
 class _FakeInput:
