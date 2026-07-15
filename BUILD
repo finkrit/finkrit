@@ -3,6 +3,7 @@ load("@rules_python//python:defs.bzl", "py_binary", "py_test")
 py_binary(
     name = "main",
     srcs = ["main.py"],
+    imports = ["packages"],
     deps = [
         "//packages/finkritq/asset",
         "//packages/finkritq/anal:anal",
