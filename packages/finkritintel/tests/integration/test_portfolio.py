@@ -121,7 +121,7 @@ class TestPortfolioBindingExecution:
     def test_maximum_drawdown_returns_float(self):
         result = PORTFOLIO_MAXIMUM_DRAWDOWN_BINDING.execute(self.portfolio_data)
         assert isinstance(result, float)
-        assert result >= 0
+        assert result <= 0
 
     def test_value_at_risk_returns_float(self):
         result = PORTFOLIO_VALUE_AT_RISK_BINDING.execute(self.portfolio_data)
