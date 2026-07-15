@@ -1,4 +1,6 @@
-from packages.finkritintel.tool.contract import ToolContract
+# packages/finkrit
+
+from finkritintel.tool.contract import ToolContract
 
 
 PORTFOLIO_VOLATILITY = ToolContract(

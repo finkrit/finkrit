@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from packages.finkritintel.tool.contract import ToolContract
+from finkritintel.tool.contract import ToolContract
 
 
 @dataclass(frozen=True, slots=True)
