@@ -1,9 +1,9 @@
 # finkrit/packages/finkritq/data/interfaces/history.py
 from abc import ABC, abstractmethod
 from datetime import date
-from packages.finkritq.datatype import PriceHistory
+from finkritq.datatype import PriceHistory
 
-from packages.finkritq.asset import Asset
+from finkritq.asset import Asset
 
 
 class HistoryProvider(ABC):

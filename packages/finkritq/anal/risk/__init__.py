@@ -1,16 +1,16 @@
 # finkrit/packages/finkritq/anal/risk/__init__.py
-from packages.finkritq.anal.risk.beta import beta, beta_asset, beta_from_prices, beta_from_returns
-from packages.finkritq.anal.risk.correlation import correlation, correlation_assets, correlation_from_prices, correlation_from_returns, correlation_matrix, correlation_matrix_from_returns
-from packages.finkritq.anal.risk.componentrisk import component_contribution_to_risk
-from packages.finkritq.anal.risk.conditionalvalueatrisk import (
+from finkritq.anal.risk.beta import beta, beta_asset, beta_from_prices, beta_from_returns
+from finkritq.anal.risk.correlation import correlation, correlation_assets, correlation_from_prices, correlation_from_returns, correlation_matrix, correlation_matrix_from_returns
+from finkritq.anal.risk.componentrisk import component_contribution_to_risk
+from finkritq.anal.risk.conditionalvalueatrisk import (
     conditional_value_at_risk,
     conditional_value_at_risk_asset,
     conditional_value_at_risk_from_prices,
     conditional_value_at_risk_from_returns,
     portfolio_conditional_value_at_risk)
-from packages.finkritq.anal.risk.covariance import covariance, covariance_assets, covariance_from_prices, covariance_from_returns, covariance_matrix, covariance_matrix_from_returns
-from packages.finkritq.anal.risk.downside_deviation import downside_deviation, downside_deviation_from_prices, downside_deviation_asset, downside_deviation_from_returns, portfolio_downside_deviation
-from packages.finkritq.anal.risk.drawdown import (
+from finkritq.anal.risk.covariance import covariance, covariance_assets, covariance_from_prices, covariance_from_returns, covariance_matrix, covariance_matrix_from_returns
+from finkritq.anal.risk.downside_deviation import downside_deviation, downside_deviation_from_prices, downside_deviation_asset, downside_deviation_from_returns, portfolio_downside_deviation
+from finkritq.anal.risk.drawdown import (
     drawdown, 
     drawdown_asset, 
     drawdown_from_prices, 
@@ -24,11 +24,11 @@ from packages.finkritq.anal.risk.drawdown import (
     maximum_drawdown_from_wealth,
     portfolio_drawdown, 
     portfolio_maximum_drawdown)
-from packages.finkritq.anal.risk.marginalrisk import marginal_contribution_to_risk
-from packages.finkritq.anal.risk.semivariance import semivariance, semivariance_asset, semivariance_from_prices, semivariance_from_returns, portfolio_semivariance
-from packages.finkritq.anal.risk.variance import variance, variance_asset, variance_from_prices, variance_from_returns, portfolio_variance
-from packages.finkritq.anal.risk.valueatrisk import portfolio_value_at_risk, value_at_risk, value_at_risk_asset, value_at_risk_from_prices, value_at_risk_from_returns
-from packages.finkritq.anal.risk.volatility import volatility, volatility_asset, volatility_from_prices, volatility_from_returns, portfolio_volatility
+from finkritq.anal.risk.marginalrisk import marginal_contribution_to_risk
+from finkritq.anal.risk.semivariance import semivariance, semivariance_asset, semivariance_from_prices, semivariance_from_returns, portfolio_semivariance
+from finkritq.anal.risk.variance import variance, variance_asset, variance_from_prices, variance_from_returns, portfolio_variance
+from finkritq.anal.risk.valueatrisk import portfolio_value_at_risk, value_at_risk, value_at_risk_asset, value_at_risk_from_prices, value_at_risk_from_returns
+from finkritq.anal.risk.volatility import volatility, volatility_asset, volatility_from_prices, volatility_from_returns, portfolio_volatility
 
 __all__ = [
     # beta

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from packages.finkritq.datatype import CustodianType
+from finkritq.datatype import CustodianType
 
 @dataclass(slots=True)
 class Custodian:

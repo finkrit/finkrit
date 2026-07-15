@@ -1,8 +1,8 @@
 # finkrit/packages/finkritq/portfolio/portfoliosnapshot.py
 from dataclasses import dataclass, field
 
-from packages.finkritq.asset import Asset, AssetSnapshot
-from packages.finkritq.portfolio import Portfolio
+from finkritq.asset import Asset, AssetSnapshot
+from finkritq.portfolio import Portfolio
 
 
 @dataclass(frozen=True, slots=True)

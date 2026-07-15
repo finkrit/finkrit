@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from packages.finkritq.datatype import ReturnCalculationMethod
+from finkritq.datatype import ReturnCalculationMethod
 
 
 def calculate_returns(

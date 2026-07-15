@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from datetime import date
 
-from packages.finkritq.asset import Asset
-from packages.finkritq.data.interfaces import HistoryProvider, SnapshotProvider
-from packages.finkritq.datatype import PriceHistory
-from packages.finkritq.portfolio import Portfolio, PortfolioData
+from finkritq.asset import Asset
+from finkritq.data.interfaces import HistoryProvider, SnapshotProvider
+from finkritq.datatype import PriceHistory
+from finkritq.portfolio import Portfolio, PortfolioData
 
 class DataRegistry:
 

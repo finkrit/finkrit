@@ -7,12 +7,12 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-from packages.finkritq.anal.returns import calculate_returns, ReturnCalculationMethod
-from packages.finkritq.anal.risk.variance import portfolio_variance
-from packages.finkritq.asset import Asset
-from packages.finkritq.data import DataRegistry
-from packages.finkritq.datatype import PriceHistory
-from packages.finkritq.portfolio import PortfolioData
+from finkritq.anal.returns import calculate_returns, ReturnCalculationMethod
+from finkritq.anal.risk.variance import portfolio_variance
+from finkritq.asset import Asset
+from finkritq.data import DataRegistry
+from finkritq.datatype import PriceHistory
+from finkritq.portfolio import PortfolioData
 
 
 def volatility_from_returns(

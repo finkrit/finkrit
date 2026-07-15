@@ -1,8 +1,8 @@
 # finkrit/packages/finkritq/data/interfaces/snapshot.py
 from abc import ABC, abstractmethod
 
-from packages.finkritq.asset import Asset
-from packages.finkritq.asset import AssetSnapshot
+from finkritq.asset import Asset
+from finkritq.asset import AssetSnapshot
 
 
 class SnapshotProvider(ABC):

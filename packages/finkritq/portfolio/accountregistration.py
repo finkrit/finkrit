@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from packages.finkritq.datatype import AccountRegistrationType
+from finkritq.datatype import AccountRegistrationType
 
 
 @dataclass(slots=True, frozen=True)

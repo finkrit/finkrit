@@ -3,7 +3,7 @@ from datetime import datetime
 
 from dataclasses import dataclass
 
-from packages.finkritq.asset import Asset
+from finkritq.asset import Asset
 
 
 @dataclass(frozen=True, slots=True)

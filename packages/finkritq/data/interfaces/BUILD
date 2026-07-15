@@ -2,6 +2,7 @@ load("@rules_python//python:defs.bzl", "py_library")
 
 py_library(
     name = "interfaces",
+    imports = [".."],
     srcs = glob(["*.py"]),
     deps = [
         "//packages/finkritq/data:data_init",

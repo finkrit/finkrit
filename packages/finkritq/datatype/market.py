@@ -4,10 +4,10 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from packages.finkritq.datatype.currency import Currency
+from finkritq.datatype.currency import Currency
 
 if TYPE_CHECKING:
-    from packages.finkritq.asset import Stock
+    from finkritq.asset import Stock
 
 class Exchange(Enum):
     NYSE = "NYSE"
@@ -53,7 +53,7 @@ class MarketIndex(Enum):
         self.description = description
 
     def as_asset(self) -> Stock:
-        from packages.finkritq.asset import Stock
+        from finkritq.asset import Stock
         return Stock(
             ticker=self.ticker,
             currency=Currency.USD,

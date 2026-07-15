@@ -6,13 +6,13 @@ from datetime import date
 from decimal import Decimal
 from typing import Iterator
 
-from packages.finkritq.asset.asset import Asset
-from packages.finkritq.datatype import (
+from finkritq.asset.asset import Asset
+from finkritq.datatype import (
     AccountRegistrationType,
     Currency,
 )
-from packages.finkritq.portfolio.custodian import Custodian
-from packages.finkritq.portfolio.position import Position
+from finkritq.portfolio.custodian import Custodian
+from finkritq.portfolio.position import Position
 
 
 @dataclass(slots=True)

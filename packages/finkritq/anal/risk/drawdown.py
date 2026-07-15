@@ -7,10 +7,10 @@ from datetime import date, timedelta
 import numpy as np
 from numpy.typing import NDArray
 
-from packages.finkritq.asset import Asset
-from packages.finkritq.data import DataRegistry
-from packages.finkritq.datatype import PriceHistory
-from packages.finkritq.portfolio import PortfolioData
+from finkritq.asset import Asset
+from finkritq.data import DataRegistry
+from finkritq.datatype import PriceHistory
+from finkritq.portfolio import PortfolioData
 
 
 def drawdown_from_wealth(wealth: NDArray[np.float64]) -> NDArray[np.float64]:

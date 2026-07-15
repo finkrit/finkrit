@@ -8,16 +8,16 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.stats import norm
 
-from packages.finkritq.anal.returns import calculate_returns
-from packages.finkritq.asset import Asset
-from packages.finkritq.data import DataRegistry
-from packages.finkritq.datatype import (
+from finkritq.anal.returns import calculate_returns
+from finkritq.asset import Asset
+from finkritq.data import DataRegistry
+from finkritq.datatype import (
     PriceHistory,
     ReturnCalculationMethod,
     VaREstimationMethod,
 )
-from packages.finkritq.portfolio import PortfolioData
-from packages.finkritq.anal.risk.valueatrisk import value_at_risk_from_returns
+from finkritq.portfolio import PortfolioData
+from finkritq.anal.risk.valueatrisk import value_at_risk_from_returns
 
 
 def conditional_value_at_risk_from_returns(

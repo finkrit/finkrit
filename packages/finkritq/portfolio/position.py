@@ -6,11 +6,11 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from packages.finkritq.asset import Asset
-from packages.finkritq.portfolio.lot import Lot
+from finkritq.asset import Asset
+from finkritq.portfolio.lot import Lot
 
 if TYPE_CHECKING:
-    from packages.finkritq.portfolio.account import Account
+    from finkritq.portfolio.account import Account
 
 
 @dataclass(slots=True)

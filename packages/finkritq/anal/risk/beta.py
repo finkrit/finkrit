@@ -8,15 +8,15 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy.typing import NDArray
 
-from packages.finkritq.anal.returns import calculate_returns
-from packages.finkritq.asset import Asset
-from packages.finkritq.datatype import (
+from finkritq.anal.returns import calculate_returns
+from finkritq.asset import Asset
+from finkritq.datatype import (
     PriceHistory,
     ReturnCalculationMethod,
 )
 
 if TYPE_CHECKING:
-    from packages.finkritq.data.registry import DataRegistry
+    from finkritq.data.registry import DataRegistry
 
 
 def beta_from_returns(

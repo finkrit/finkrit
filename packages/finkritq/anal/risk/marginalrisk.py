@@ -5,9 +5,9 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from packages.finkritq.anal.risk.covariance import covariance_matrix
-from packages.finkritq.anal.risk.volatility import portfolio_volatility
-from packages.finkritq.portfolio import PortfolioData
+from finkritq.anal.risk.covariance import covariance_matrix
+from finkritq.anal.risk.volatility import portfolio_volatility
+from finkritq.portfolio import PortfolioData
 
 
 def marginal_contribution_to_risk(portfolio_data: PortfolioData) -> NDArray[np.float64]:

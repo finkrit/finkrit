@@ -1,7 +1,7 @@
 # finkrit/packages/finkritq/asset/asset.py
 from dataclasses import dataclass
 
-from packages.finkritq.datatype import AssetType, Currency, Exchange
+from finkritq.datatype import AssetType, Currency, Exchange
 
 
 @dataclass(frozen=True, slots=True)

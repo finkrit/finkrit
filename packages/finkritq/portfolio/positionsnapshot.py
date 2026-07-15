@@ -1,7 +1,7 @@
 # finkrit/packages/finkritq/portfolio/positionsnapshot.py
 from dataclasses import dataclass
 
-from packages.finkritq.portfolio import Position
+from finkritq.portfolio import Position
 
 
 @dataclass(frozen=True, slots=True)

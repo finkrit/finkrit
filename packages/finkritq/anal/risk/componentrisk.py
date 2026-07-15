@@ -5,8 +5,8 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from packages.finkritq.anal.risk.marginalrisk import (marginal_contribution_to_risk)
-from packages.finkritq.portfolio import PortfolioData
+from finkritq.anal.risk.marginalrisk import (marginal_contribution_to_risk)
+from finkritq.portfolio import PortfolioData
 
 
 def component_contribution_to_risk(

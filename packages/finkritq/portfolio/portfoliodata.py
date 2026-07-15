@@ -9,13 +9,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy.typing import NDArray
 
-from packages.finkritq.anal.returns import calculate_returns
-from packages.finkritq.asset import Asset
-from packages.finkritq.datatype import PriceHistory, ReturnCalculationMethod
-from packages.finkritq.portfolio import Portfolio
+from finkritq.anal.returns import calculate_returns
+from finkritq.asset import Asset
+from finkritq.datatype import PriceHistory, ReturnCalculationMethod
+from finkritq.portfolio import Portfolio
 
 if TYPE_CHECKING:
-    from packages.finkritq.data.registry import DataRegistry
+    from finkritq.data.registry import DataRegistry
 
 
 @dataclass(frozen=True, slots=True)

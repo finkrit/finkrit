@@ -10,9 +10,9 @@ from datetime import date
 import numpy as np
 from numpy.typing import NDArray
 
-from packages.finkritq.anal.returns import ReturnCalculationMethod
+from finkritq.anal.returns import ReturnCalculationMethod
 
-from packages.finkritq.anal.risk.semivariance import (
+from finkritq.anal.risk.semivariance import (
     portfolio_semivariance,
     semivariance,
     semivariance_asset,
@@ -20,10 +20,10 @@ from packages.finkritq.anal.risk.semivariance import (
     semivariance_from_returns,
 )
 
-from packages.finkritq.asset import Asset
-from packages.finkritq.data import DataRegistry
-from packages.finkritq.datatype import PriceHistory
-from packages.finkritq.portfolio import PortfolioData
+from finkritq.asset import Asset
+from finkritq.data import DataRegistry
+from finkritq.datatype import PriceHistory
+from finkritq.portfolio import PortfolioData
 
 
 def downside_deviation_from_returns(

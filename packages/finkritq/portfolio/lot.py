@@ -7,9 +7,9 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from packages.finkritq.asset import Asset
-    from packages.finkritq.portfolio.account import Account
-    from packages.finkritq.portfolio.position import Position
+    from finkritq.asset import Asset
+    from finkritq.portfolio.account import Account
+    from finkritq.portfolio.position import Position
 
 
 @dataclass(slots=True)

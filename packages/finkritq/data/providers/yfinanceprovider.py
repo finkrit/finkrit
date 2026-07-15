@@ -1,8 +1,8 @@
 # finkrit/packages/finkritq/data/providers/yfinanceprovider.py
 
-from packages.finkritq.asset import Asset, AssetSnapshot
-from packages.finkritq.data.interfaces import HistoryProvider, SnapshotProvider
-from packages.finkritq.datatype import PriceHistory
+from finkritq.asset import Asset, AssetSnapshot
+from finkritq.data.interfaces import HistoryProvider, SnapshotProvider
+from finkritq.datatype import PriceHistory
 
 
 from datetime import date, timedelta
