@@ -3,7 +3,7 @@
 from finkritintel.capability.base import Capability
 
 
-PORTFOLIO_RISK_CAPABILITY = Capability(
+RISK_CAPABILITY = Capability(
     name="risk_analysis",
-    description="Analyze portfolio risk.",
+    description="Analyze risk.",
 )
