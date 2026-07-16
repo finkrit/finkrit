@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 
-from finkritintel.integration.finq.portfolio_live import (
+from finkritintel.integration.finkritq.portfolio_live import (
     PORTFOLIO_BETA_LIVE_BINDING,
     PORTFOLIO_COMPONENT_CONTRIBUTION_TO_RISK_LIVE_BINDING,
     PORTFOLIO_CONDITIONAL_VALUE_AT_RISK_LIVE_BINDING,
@@ -22,7 +22,7 @@ from finkritintel.integration.finq.portfolio_live import (
     PORTFOLIO_VARIANCE_LIVE_BINDING,
     PORTFOLIO_VOLATILITY_LIVE_BINDING,
 )
-from finkritintel.integration.finq.portfolio import (
+from finkritintel.integration.finkritq.portfolio import (
     PORTFOLIO_MAXIMUM_DRAWDOWN_BINDING,
     PORTFOLIO_VARIANCE_BINDING,
     PORTFOLIO_VOLATILITY_BINDING,

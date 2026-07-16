@@ -31,7 +31,7 @@ from finkritintel.tool.portfolio import (
     PORTFOLIO_VARIANCE,
     PORTFOLIO_VOLATILITY,
 )
-from finkritintel.integration.finq.portfolio_schema import (
+from finkritintel.integration.finkritq.portfolio_schema import (
     BetaInput,
     ComponentRiskInput,
     ConditionalValueAtRiskInput,

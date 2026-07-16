@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from finkritintel.integration.finq.portfolio import (
+from finkritintel.integration.finkritq.portfolio import (
     PORTFOLIO_BETA_BINDING,
     PORTFOLIO_COMPONENT_CONTRIBUTION_TO_RISK_BINDING,
     PORTFOLIO_CONDITIONAL_VALUE_AT_RISK_BINDING,

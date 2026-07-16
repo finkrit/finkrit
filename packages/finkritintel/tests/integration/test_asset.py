@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from finkritintel.integration.finq.asset import (
+from finkritintel.integration.finkritq.asset import (
     ASSET_BETA_BINDING,
     ASSET_CONDITIONAL_VALUE_AT_RISK_BINDING,
     ASSET_DOWNSIDE_DEVIATION_BINDING,

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import numpy as np
 
-from finkritintel.integration.finq.asset_live import (
+from finkritintel.integration.finkritq.asset_live import (
     ASSET_BETA_LIVE_BINDING,
     ASSET_CONDITIONAL_VALUE_AT_RISK_LIVE_BINDING,
     ASSET_DOWNSIDE_DEVIATION_LIVE_BINDING,
@@ -20,7 +20,7 @@ from finkritintel.integration.finq.asset_live import (
     ASSET_VARIANCE_LIVE_BINDING,
     ASSET_VOLATILITY_LIVE_BINDING,
 )
-from finkritintel.integration.finq.asset import ASSET_VOLATILITY_BINDING
+from finkritintel.integration.finkritq.asset import ASSET_VOLATILITY_BINDING
 
 from .fixtures import BENCHMARK_HISTORY, make_portfolio_data
 
