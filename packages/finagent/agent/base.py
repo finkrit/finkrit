@@ -37,4 +37,19 @@ class CapabilityAgent:
         return self._agent
 
     def ask(self, question: str, deps: AgentDeps) -> str:
+        """
+        Synchronous conversational turn -- for scripts, notebooks, the REPL.
+        Spins up its own event loop under the hood (pydantic-ai run_sync).
+        """
         return self._agent.run_sync(question, deps=deps).output
+
+    async def ask_async(self, question: str, deps: AgentDeps) -> str:
+        """
+        Async conversational turn -- for servers (FastAPI) and concurrent
+        callers already inside an event loop. Same result as ask(); this is
+        the path the web layer uses. (Only the LLM loop is genuinely async
+        here; the risk tools it calls remain sync and are threadpooled by
+        pydantic-ai.)
+        """
+        result = await self._agent.run(question, deps=deps)
+        return result.output

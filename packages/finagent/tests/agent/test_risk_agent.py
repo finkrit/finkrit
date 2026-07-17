@@ -1,6 +1,7 @@
 # finagent/tests/agent/test_risk_agent.py
 from __future__ import annotations
 
+import asyncio
 import warnings
 from datetime import date
 
@@ -77,4 +78,19 @@ class TestRiskAgentAsk:
         agent = RiskAgent(model=FunctionModel(script))
         answer = agent.ask("What's my portfolio volatility?", _deps())
         assert isinstance(answer, str)
+        assert "volatility" in answer.lower()
+
+    def test_ask_async_drives_the_same_tool_path(self):
+        def script(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            already = any(
+                isinstance(p, ToolReturnPart) for m in messages for p in getattr(m, "parts", [])
+            )
+            if already:
+                return ModelResponse(parts=[TextPart("Your annualized volatility is computed.")])
+            return ModelResponse(
+                parts=[ToolCallPart(tool_name="portfolio_volatility", args={"portfolio_id": "port-1"})]
+            )
+
+        agent = RiskAgent(model=FunctionModel(script))
+        answer = asyncio.run(agent.ask_async("What's my portfolio volatility?", _deps()))
         assert "volatility" in answer.lower()

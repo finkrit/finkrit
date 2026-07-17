@@ -7,6 +7,7 @@ can't silently break behavior that RiskAgent's tests don't happen to hit.
 """
 from __future__ import annotations
 
+import asyncio
 import warnings
 
 from pydantic_ai import Agent
@@ -44,6 +45,15 @@ class TestCapabilityAgent:
         agent = CapabilityAgent(RISK_CAPABILITY, model=FunctionModel(_static_reply), instructions="Be terse.")
         deps = AgentDeps(store=InMemoryStore(), registry=make_registry())
         assert agent.ask("anything", deps) == "ok"
+
+    def test_ask_async_returns_same_output_as_sync(self):
+        # Async path (used by the server) must agree with the sync path.
+        # Driven via asyncio.run so no pytest-asyncio dependency is needed.
+        from pydantic_ai.models.function import FunctionModel
+
+        agent = CapabilityAgent(RISK_CAPABILITY, model=FunctionModel(_static_reply), instructions="Be terse.")
+        deps = AgentDeps(store=InMemoryStore(), registry=make_registry())
+        assert asyncio.run(agent.ask_async("anything", deps)) == "ok"
 
     def test_instructions_are_passed_through_to_the_agent(self):
         agent = CapabilityAgent(RISK_CAPABILITY, model="test", instructions="Custom prompt text.")

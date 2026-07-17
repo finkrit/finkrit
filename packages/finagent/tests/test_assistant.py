@@ -1,6 +1,7 @@
 # finagent/tests/test_assistant.py
 from __future__ import annotations
 
+import asyncio
 import warnings
 
 import pytest
@@ -68,6 +69,18 @@ class TestAssistant:
         assistant.register_portfolio(make_portfolio())
 
         result = assistant.ask("What's my portfolio's volatility?")
+
+        assert isinstance(result, str)
+        assert "volatility" in result.lower()
+
+    def test_ask_async_answers_the_same_question(self):
+        # The path the FastAPI server will call. asyncio.run avoids needing
+        # a pytest-asyncio plugin.
+        model = FunctionModel(_script_portfolio_volatility_call)
+        assistant = Assistant(model=model, store=InMemoryStore(), registry=make_registry())
+        assistant.register_portfolio(make_portfolio())
+
+        result = asyncio.run(assistant.ask_async("What's my portfolio's volatility?"))
 
         assert isinstance(result, str)
         assert "volatility" in result.lower()

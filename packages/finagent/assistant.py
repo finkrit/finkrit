@@ -56,8 +56,13 @@ class Assistant:
         self._store.register_asset(asset)
 
     def ask(self, question: str) -> str:
-        # Single specialist today; becomes delegation across specialists later.
+        # Sync convenience for scripts/notebooks. Single specialist today;
+        # becomes delegation across specialists later.
         return self.risk.ask(question, self.deps)
+
+    async def ask_async(self, question: str) -> str:
+        # Async path for the web server. Same routing as ask().
+        return await self.risk.ask_async(question, self.deps)
 
     def report(
         self,

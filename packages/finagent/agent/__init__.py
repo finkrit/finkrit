@@ -10,7 +10,10 @@ many capabilities and most turns use few; a one-capability specialist always
 needs its own tools).
 
   - ``CapabilityAgent`` (base) — wraps a capability into a pydantic-ai
-    ``Agent`` and exposes the generic conversational ``.ask()``. Takes its own
+    ``Agent`` and exposes the generic conversational turn in two flavours:
+    ``.ask()`` (sync, for scripts/notebooks) and ``.ask_async()`` (for the web
+    server / concurrent callers). Only the LLM loop is async; the risk tools it
+    calls stay sync and are threadpooled by pydantic-ai. Takes its own
     ``model`` and ``instructions``, so each specialist can run a different
     (e.g. cheaper) backend than a future orchestrator.
 
