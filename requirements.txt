@@ -13,6 +13,8 @@ numpy==2.5.1
 packaging==26.2
 pandas==3.0.3
 peewee==4.1.2
+pydantic==2.13.4
+pydantic-ai==2.11.0
 platformdirs==4.10.0
 pluggy==1.6.0
 protobuf==7.35.1
