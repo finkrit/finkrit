@@ -1,12 +1,14 @@
 # finagent/tests/report/test_composer.py
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 
 from finagent.report.composer import compose_portfolio_risk_report
 from finagent.report.metric import ALL, CORE, RiskMetric
 from finagent.report.report import DrawdownSummary, PortfolioRiskReport
-from finagent.tests.fixtures import make_portfolio, make_registry
+from finagent.tests.fixtures import make_portfolio, make_registry, make_stock
 
 
 class TestComposeCore:
@@ -71,6 +73,49 @@ class TestComposeSelective:
         assert r.beta is None
         # beta not requested -> no benchmark fetch -> not recorded
         assert r.params.benchmark_ticker is None
+
+
+class TestComposeParameterPassthrough:
+    """
+    benchmark=/start=/end=/interval= are all real, documented parameters --
+    previously none were exercised by any test (only the defaults were).
+    """
+
+    def test_explicit_benchmark_overrides_default_sp500(self):
+        custom = make_stock("QQQ")
+        r = compose_portfolio_risk_report(
+            make_portfolio(), make_registry(), {RiskMetric.BETA}, benchmark=custom
+        )
+        assert r.params.benchmark_ticker == "QQQ"
+        assert r.beta is not None
+
+    def test_start_end_interval_are_threaded_to_every_history_fetch(self):
+        calls: list[tuple[str, object, object, str]] = []
+        inner = make_registry()
+
+        class RecordingRegistry:
+            def history(self, target, start=None, end=None, interval="1d"):
+                calls.append((target.ticker, start, end, interval))
+                return inner.history(target, start=start, end=end, interval=interval)
+
+        start, end = date(2023, 1, 1), date(2023, 6, 1)
+        compose_portfolio_risk_report(
+            make_portfolio(), RecordingRegistry(), {RiskMetric.VOLATILITY, RiskMetric.BETA},
+            start=start, end=end, interval="1wk",
+        )
+
+        assert calls, "expected at least one history() call"
+        for ticker, s, e, i in calls:
+            assert (s, e, i) == (start, end, "1wk"), ticker
+
+    def test_start_end_interval_recorded_in_params(self):
+        start, end = date(2023, 1, 1), date(2023, 6, 1)
+        r = compose_portfolio_risk_report(
+            make_portfolio(), make_registry(), "core", start=start, end=end, interval="1wk"
+        )
+        assert r.params.lookback_start == start
+        assert r.params.lookback_end == end
+        assert r.params.interval == "1wk"
 
 
 class TestComposeResilience:

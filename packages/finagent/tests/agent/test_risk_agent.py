@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import warnings
+from datetime import date
+
+import pytest
 
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
@@ -10,8 +13,8 @@ from finagent.agent.risk import RiskAgent
 from finagent.deps import AgentDeps
 from finagent.report.metric import RiskMetric
 from finagent.report.report import PortfolioRiskReport
-from finagent.store import InMemoryStore
-from finagent.tests.fixtures import make_portfolio, make_registry
+from finagent.store import InMemoryStore, PortfolioNotFoundError
+from finagent.tests.fixtures import make_portfolio, make_registry, make_stock
 
 warnings.filterwarnings("ignore", message="Could not generate return schema")
 
@@ -36,6 +39,25 @@ class TestRiskAgentReport:
         report = agent.report("port-1", _deps(), {RiskMetric.MAX_DRAWDOWN})
         assert report.max_drawdown is not None
         assert report.volatility is None
+
+    def test_report_raises_for_unknown_portfolio(self):
+        agent = RiskAgent(model="test")
+        with pytest.raises(PortfolioNotFoundError):
+            agent.report("does-not-exist", _deps())
+
+    def test_report_threads_benchmark_start_end_interval_to_composer(self):
+        # RiskAgent.report() is a thin pass-through to compose_portfolio_risk_report;
+        # prove the four extra params actually reach it rather than being dropped.
+        agent = RiskAgent(model="test")
+        start, end = date(2023, 1, 1), date(2023, 6, 1)
+        report = agent.report(
+            "port-1", _deps(), {RiskMetric.BETA},
+            benchmark=make_stock("QQQ"), start=start, end=end, interval="1wk",
+        )
+        assert report.params.benchmark_ticker == "QQQ"
+        assert report.params.lookback_start == start
+        assert report.params.lookback_end == end
+        assert report.params.interval == "1wk"
 
 
 class TestRiskAgentAsk:

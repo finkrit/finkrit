@@ -7,8 +7,11 @@ import pytest
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
+from finkritq.data import DataRegistry
+from finkritq.data.providers import MemoizingHistoryProvider, YFinanceProvider
+
 from finagent.agent.risk import RiskAgent
-from finagent.assistant import Assistant
+from finagent.assistant import Assistant, _default_registry
 from finagent.deps import AgentDeps
 from finagent.report.report import PortfolioRiskReport
 from finagent.store import InMemoryStore
@@ -68,3 +71,39 @@ class TestAssistant:
 
         assert isinstance(result, str)
         assert "volatility" in result.lower()
+
+    def test_defaults_to_in_memory_store_when_none_given(self):
+        # No `store=` passed -- the actual "just pip install and go" path.
+        assistant = Assistant(model="test", registry=make_registry())
+        assert isinstance(assistant._store, InMemoryStore)
+
+    def test_defaults_to_default_registry_when_none_given(self):
+        # No `registry=` passed either -- exercises _default_registry() for
+        # real, not the fake registry every other test substitutes in.
+        assistant = Assistant(model="test", store=InMemoryStore())
+        assert isinstance(assistant._registry, DataRegistry)
+
+
+class TestDefaultRegistry:
+    """
+    _default_registry() wires YFinanceProvider + MemoizingHistoryProvider.
+    Construction never hits the network (only .history()/.snapshot() calls
+    would), so this is safe to test directly without a live fetch.
+    """
+
+    def test_returns_a_data_registry(self):
+        assert isinstance(_default_registry(), DataRegistry)
+
+    def test_history_provider_is_memoized(self):
+        registry = _default_registry()
+        assert isinstance(registry._history_provider, MemoizingHistoryProvider)
+
+    def test_memoized_provider_wraps_yfinance(self):
+        registry = _default_registry()
+        assert isinstance(registry._history_provider._wrapped, YFinanceProvider)
+
+    def test_snapshot_provider_is_registered_and_unwrapped(self):
+        # Snapshots aren't memoized (a snapshot is a live quote, not history) --
+        # confirm it's wired to a real provider and NOT accidentally left unset.
+        registry = _default_registry()
+        assert isinstance(registry._snapshot_provider, YFinanceProvider)
