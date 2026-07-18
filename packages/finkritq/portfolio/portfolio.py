@@ -36,7 +36,11 @@ class Portfolio:
         existing = self.get_account(account.id)
 
         if existing is not None:
-            return existing
+            # Idempotent for the same object; a *different* account claiming an
+            # existing id is a conflict we surface rather than silently drop.
+            if existing is account:
+                return existing
+            raise ValueError(f"An account with id '{account.id}' already exists.")
 
         self.accounts.append(account)
         return account
