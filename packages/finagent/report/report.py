@@ -16,11 +16,12 @@ from datetime import date
 from finkritq.datatype import ReturnCalculationMethod, VaREstimationMethod
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, kw_only=True)
 class DrawdownSummary:
-    max_drawdown: float       # most negative point over the window (e.g. -0.23)
-    current_drawdown: float   # drawdown as of the last observation
+    max_drawdown: float            # most negative point over the window (e.g. -0.23)
+    current_drawdown: float        # drawdown as of the last observation
     periods: int
+    trough_date: date | None = None  # date of the max-drawdown point (for the dashboard panel)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

@@ -13,9 +13,11 @@ import warnings
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart
 
+import pytest
+
 from finkritintel.capability.risk import RISK_CAPABILITY
 
-from finagent.agent.base import CapabilityAgent
+from finagent.agent.base import DEFAULT_USAGE_LIMITS, CapabilityAgent
 from finagent.deps import AgentDeps
 from finagent.store import InMemoryStore
 from finagent.tests.fixtures import make_registry
@@ -61,3 +63,32 @@ class TestCapabilityAgent:
         # the stored value -- `_instructions` (a list) holds what was passed
         # to the constructor. Verified via direct introspection, not guessed.
         assert "Custom prompt text." in agent.agent._instructions
+
+    # --- F-1: model is optional; the pydantic-ai Agent builds lazily ---
+
+    def test_constructs_without_a_model(self):
+        # Must not raise -- a deterministic-only subclass never touches .agent.
+        agent = CapabilityAgent(RISK_CAPABILITY, instructions="Be terse.")
+        assert isinstance(agent, CapabilityAgent)
+
+    def test_accessing_agent_without_a_model_raises_clearly(self):
+        agent = CapabilityAgent(RISK_CAPABILITY, instructions="Be terse.")
+        with pytest.raises(RuntimeError, match="no model configured"):
+            _ = agent.agent
+
+    # --- F-5: bounded UsageLimits by default, overridable ---
+
+    def test_default_usage_limits_applied(self):
+        agent = CapabilityAgent(RISK_CAPABILITY, model="test", instructions="Be terse.")
+        assert agent._usage_limits is DEFAULT_USAGE_LIMITS
+
+    def test_usage_limits_can_be_disabled(self):
+        agent = CapabilityAgent(RISK_CAPABILITY, model="test", instructions="Be terse.", usage_limits=None)
+        assert agent._usage_limits is None
+
+    def test_custom_usage_limits_honored(self):
+        from pydantic_ai.usage import UsageLimits
+
+        custom = UsageLimits(request_limit=3)
+        agent = CapabilityAgent(RISK_CAPABILITY, model="test", instructions="Be terse.", usage_limits=custom)
+        assert agent._usage_limits is custom

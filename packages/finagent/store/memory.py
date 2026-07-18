@@ -40,6 +40,9 @@ class InMemoryStore:
                 f"No portfolio registered with id '{portfolio_id}'."
             ) from None
 
+    def list_portfolios(self) -> list[Portfolio]:
+        return list(self._portfolios.values())
+
     def register_asset(self, asset: Asset) -> None:
         self._assets[asset.ticker] = asset
 
@@ -50,3 +53,6 @@ class InMemoryStore:
             raise AssetNotFoundError(
                 f"No asset registered with ticker '{ticker}'."
             ) from None
+
+    def list_assets(self) -> list[Asset]:
+        return list(self._assets.values())

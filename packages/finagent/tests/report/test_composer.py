@@ -52,6 +52,12 @@ class TestComposeAll:
         assert isinstance(r.drawdown, DrawdownSummary)
         assert r.drawdown.max_drawdown <= 0.0
 
+    def test_drawdown_trough_date_is_within_the_series(self):
+        # F-4: the dashboard drawdown panel needs a date, not just a value.
+        r = self._report()
+        assert r.drawdown.trough_date is not None
+        assert r.drawdown.trough_date <= r.params.as_of
+
     def test_contributions_keyed_by_ticker(self):
         r = self._report()
         assert set(r.marginal_contributions) == {"AAA", "BBB"}

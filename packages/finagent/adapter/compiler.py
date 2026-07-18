@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import functools
 import typing
 from typing import Any, Callable
 
@@ -19,6 +20,7 @@ from finagent.deps import AgentDeps
 _MISSING = dataclasses.MISSING
 
 
+@functools.lru_cache(maxsize=None)
 def compile_tool(binding: ToolBinding) -> Callable[..., Any]:
     """
     Builds a real, introspectable function for one ToolBinding: an
@@ -31,6 +33,12 @@ def compile_tool(binding: ToolBinding) -> Callable[..., Any]:
     concrete parameter list. Same technique dataclasses uses internally
     to generate __init__; the source is built entirely from our own
     ToolBinding data, never from external input.
+
+    Memoized (F-7): ToolBinding is frozen/hashable and the compiled output
+    depends only on it, so every Assistant()/CapabilityAgent() construction
+    re-running the exec codegen for the same ~20 bindings was pure waste --
+    the server multiplies that by every request. Cached for the process
+    lifetime.
     """
     fields = dataclasses.fields(binding.input_schema)
     hints = typing.get_type_hints(binding.input_schema)

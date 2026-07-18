@@ -35,10 +35,13 @@ class Assistant:
 
     def __init__(
         self,
-        model: models.Model | models.KnownModelName | str,
+        model: models.Model | models.KnownModelName | str | None = None,
         store: Store | None = None,
         registry: DataRegistry | None = None,
     ) -> None:
+        # model is optional -- a dashboard-only user can construct an Assistant
+        # and call .report()/.risk.report() with no LLM and no API key. .ask()
+        # raises a clear error if no model was configured (F-1).
         self._store = store or InMemoryStore()
         self._registry = registry or _default_registry()
         self._store.register_asset(MarketIndex.SP500.as_asset())
@@ -51,6 +54,9 @@ class Assistant:
 
     def register_portfolio(self, portfolio: Portfolio) -> None:
         self._store.register_portfolio(portfolio)
+
+    def list_portfolios(self) -> list[Portfolio]:
+        return self._store.list_portfolios()
 
     def register_asset(self, asset: Asset) -> None:
         self._store.register_asset(asset)

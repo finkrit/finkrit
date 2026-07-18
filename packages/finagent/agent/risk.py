@@ -34,9 +34,11 @@ class RiskAgent(CapabilityAgent):
 
     def __init__(
         self,
-        model: models.Model | models.KnownModelName | str,
+        model: models.Model | models.KnownModelName | str | None = None,
         instructions: str = RISK_INSTRUCTIONS,
     ) -> None:
+        # model is optional: .report() is deterministic and needs no LLM; only
+        # .ask() requires a model (enforced lazily by CapabilityAgent).
         super().__init__(RISK_CAPABILITY, model=model, instructions=instructions)
 
     def report(

@@ -27,6 +27,12 @@ class TestCompileTool:
             assert callable(fn)
             assert fn.__name__ == binding.contract.name
 
+    def test_memoized_same_binding_returns_the_same_function_object(self):
+        # F-7: exec-codegen is real work; a hashable ToolBinding should only
+        # pay it once for the process lifetime, not once per agent construction.
+        binding = _binding("portfolio_volatility")
+        assert compile_tool(binding) is compile_tool(binding)
+
     def test_signature_has_no_annotation_stringification_bug(self):
         # Regression: compile() silently inherits `from __future__ import
         # annotations` from the compiler module unless dont_inherit=True,

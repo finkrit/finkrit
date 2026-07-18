@@ -56,16 +56,8 @@ def make_stock(ticker: str) -> Stock:
 
 
 def _make_position(stock: Stock, account: Account, quantity: str, position_id: str, lot_id: str) -> Position:
-    pos = Position.__new__(Position)
-    pos.id = position_id
-    pos.account = account
-    pos.asset = stock
-    pos.notes = None
-    pos.last_price = None
-    pos.lots = (
-        Lot(id=lot_id, position=pos, quantity=Decimal(quantity), cost_per_share=Decimal("100"), acquired=date(2024, 1, 1)),
-    )
-    return pos
+    lot = Lot(id=lot_id, quantity=Decimal(quantity), cost_per_share=Decimal("100"), acquired=date(2024, 1, 1))
+    return Position(id=position_id, asset=stock, lots=(lot,))
 
 
 def make_portfolio(portfolio_id: str = "port-1") -> Portfolio:

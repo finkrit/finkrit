@@ -44,10 +44,21 @@ DEFAULT_BENCHMARK: Asset = MarketIndex.SP500.as_asset()
 
 def _drawdown_summary(pd: PortfolioData) -> DrawdownSummary:
     arr = np.asarray(PORTFOLIO_DRAWDOWN_BINDING.execute(pd), dtype=float)
+    if arr.size == 0:
+        return DrawdownSummary(max_drawdown=0.0, current_drawdown=0.0, periods=0)
+
+    trough_idx = int(arr.argmin())
+    dates = pd.dates  # datetime64 array aligned to the drawdown series
+    trough_date = None
+    if trough_idx < len(dates):
+        # np.datetime64 -> python date
+        trough_date = np.datetime64(dates[trough_idx], "D").astype("datetime64[D]").astype(date)
+
     return DrawdownSummary(
-        max_drawdown=float(arr.min()) if arr.size else 0.0,
-        current_drawdown=float(arr[-1]) if arr.size else 0.0,
+        max_drawdown=float(arr.min()),
+        current_drawdown=float(arr[-1]),
         periods=int(arr.size),
+        trough_date=trough_date,
     )
 
 

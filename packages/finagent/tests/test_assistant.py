@@ -37,9 +37,19 @@ def assistant() -> Assistant:
 
 class TestAssistant:
 
-    def test_requires_explicit_model(self):
-        with pytest.raises(TypeError):
-            Assistant()  # type: ignore[call-arg]
+    def test_report_works_without_a_model(self):
+        # F-1: the deterministic dashboard path needs no LLM and no API key.
+        assistant = Assistant(store=InMemoryStore(), registry=make_registry())
+        assistant.register_portfolio(make_portfolio())
+        report = assistant.report("port-1")
+        assert isinstance(report, PortfolioRiskReport)
+        assert report.volatility is not None
+
+    def test_ask_without_a_model_raises_clearly(self):
+        assistant = Assistant(store=InMemoryStore(), registry=make_registry())
+        assistant.register_portfolio(make_portfolio())
+        with pytest.raises(RuntimeError, match="no model configured"):
+            assistant.ask("what's my volatility?")
 
     def test_auto_registers_sp500_benchmark(self, assistant: Assistant):
         assert assistant._store.get_asset("^GSPC").ticker == "^GSPC"
