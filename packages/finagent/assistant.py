@@ -14,6 +14,7 @@ from finkritq.portfolio import Portfolio
 
 from finagent.agent.risk import RiskAgent
 from finagent.deps import AgentDeps
+from finagent.ingest import ParsedPortfolio, parse_portfolio_csv, parse_portfolio_csv_async
 from finagent.report.metric import RiskMetric
 from finagent.report.report import PortfolioRiskReport
 from finagent.store import InMemoryStore, Store
@@ -46,6 +47,7 @@ class Assistant:
         self._registry = registry or _default_registry()
         self._store.register_asset(MarketIndex.SP500.as_asset())
 
+        self._model = model
         self.risk = RiskAgent(model=model)
 
     @property
@@ -76,6 +78,23 @@ class Assistant:
         metrics: frozenset[RiskMetric] | set[RiskMetric] | str = "core",
     ) -> PortfolioRiskReport:
         return self.risk.report(portfolio_id, self.deps, metrics)
+
+    def _require_model(self) -> models.Model | models.KnownModelName | str:
+        if self._model is None:
+            raise RuntimeError(
+                "This Assistant has no model configured; parsing a portfolio "
+                "upload requires one (it's an LLM extraction, not deterministic)."
+            )
+        return self._model
+
+    def parse_portfolio_csv(self, csv_text: str) -> ParsedPortfolio:
+        # Sync convenience for scripts/notebooks. Does NOT register anything --
+        # the caller reviews/corrects the result, then register_portfolio()s it.
+        return parse_portfolio_csv(csv_text, self._require_model())
+
+    async def parse_portfolio_csv_async(self, csv_text: str) -> ParsedPortfolio:
+        # Async path for the web server's upload endpoint.
+        return await parse_portfolio_csv_async(csv_text, self._require_model())
 
 
 def _default_registry() -> DataRegistry:

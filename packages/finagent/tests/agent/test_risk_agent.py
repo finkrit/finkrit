@@ -10,11 +10,11 @@ import pytest
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
-from finagent.agent.risk import RiskAgent
+from finagent.agent.risk import RISK_INSTRUCTIONS, RiskAgent
 from finagent.deps import AgentDeps
 from finagent.report.metric import RiskMetric
 from finagent.report.report import PortfolioRiskReport
-from finagent.store import InMemoryStore, PortfolioNotFoundError
+from finagent.store import DEFAULT_PORTFOLIO_ID, InMemoryStore, PortfolioNotFoundError
 from finagent.tests.fixtures import make_portfolio, make_registry, make_stock
 
 warnings.filterwarnings("ignore", message="Could not generate return schema")
@@ -94,3 +94,37 @@ class TestRiskAgentAsk:
         agent = RiskAgent(model=FunctionModel(script))
         answer = asyncio.run(agent.ask_async("What's my portfolio volatility?", _deps()))
         assert "volatility" in answer.lower()
+
+    def test_ask_resolves_without_the_user_naming_a_portfolio(self):
+        # Single-portfolio product: the user never says an id ("what's my
+        # volatility?"), so the model must fall back to DEFAULT_PORTFOLIO_ID --
+        # which is only possible because RISK_INSTRUCTIONS tells it that id.
+        # The portfolio here is registered under that same default id, proving
+        # the whole chain (instructions -> model's tool call -> store lookup)
+        # is consistent, not just that the constant exists somewhere.
+        store = InMemoryStore()
+        store.register_portfolio(make_portfolio(DEFAULT_PORTFOLIO_ID))
+        deps = AgentDeps(store=store, registry=make_registry())
+
+        def script(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            already = any(
+                isinstance(p, ToolReturnPart) for m in messages for p in getattr(m, "parts", [])
+            )
+            if already:
+                return ModelResponse(parts=[TextPart("Your annualized volatility is computed.")])
+            return ModelResponse(
+                parts=[ToolCallPart(
+                    tool_name="portfolio_volatility",
+                    args={"portfolio_id": DEFAULT_PORTFOLIO_ID},
+                )]
+            )
+
+        agent = RiskAgent(model=FunctionModel(script))
+        answer = agent.ask("What's my portfolio's volatility?", deps)  # no id mentioned
+        assert "volatility" in answer.lower()
+
+
+class TestRiskInstructions:
+
+    def test_mentions_the_default_portfolio_id(self):
+        assert DEFAULT_PORTFOLIO_ID in RISK_INSTRUCTIONS

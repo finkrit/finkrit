@@ -17,6 +17,26 @@ class TestRegisterPortfolio:
         assert r.status_code == 200
         assert r.json() == {"portfolio_id": "port-1"}
 
+    def test_omitted_id_defaults_to_primary(self, client: TestClient, portfolio_payload: dict):
+        # Single-portfolio product: the frontend shouldn't have to invent an id.
+        payload = {k: v for k, v in portfolio_payload.items() if k != "id"}
+        r = client.post("/api/portfolio", json=payload)
+        assert r.status_code == 200
+        assert r.json() == {"portfolio_id": "primary"}
+
+    def test_second_upload_overwrites_the_first(self, client: TestClient, portfolio_payload: dict):
+        # No delete endpoint by design -- re-registering the same (default) id
+        # replaces the previous portfolio.
+        first = {k: v for k, v in portfolio_payload.items() if k != "id"}
+        client.post("/api/portfolio", json=first)
+
+        second = {**first, "name": "Replacement Portfolio"}
+        r = client.post("/api/portfolio", json=second)
+        assert r.status_code == 200
+
+        report = client.get("/api/portfolio/primary/report").json()
+        assert report["portfolio_id"] == "primary"
+
     def test_rejects_empty_holdings(self, client: TestClient):
         r = client.post("/api/portfolio", json={"id": "p", "name": "n", "holdings": []})
         assert r.status_code == 422  # pydantic min_length=1

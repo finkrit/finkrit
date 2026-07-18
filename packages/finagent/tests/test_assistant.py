@@ -14,8 +14,9 @@ from finkritq.data.providers import MemoizingHistoryProvider, YFinanceProvider
 from finagent.agent.risk import RiskAgent
 from finagent.assistant import Assistant, _default_registry
 from finagent.deps import AgentDeps
+from finagent.ingest import ParsedPortfolio
 from finagent.report.report import PortfolioRiskReport
-from finagent.store import InMemoryStore
+from finagent.store import InMemoryStore, PortfolioNotFoundError
 from finagent.tests.fixtures import make_portfolio, make_registry
 
 warnings.filterwarnings("ignore", message="Could not generate return schema")
@@ -105,6 +106,57 @@ class TestAssistant:
         # real, not the fake registry every other test substitutes in.
         assistant = Assistant(model="test", store=InMemoryStore())
         assert isinstance(assistant._registry, DataRegistry)
+
+    def test_parse_portfolio_csv_without_a_model_raises_clearly(self):
+        assistant = Assistant(store=InMemoryStore(), registry=make_registry())
+        with pytest.raises(RuntimeError, match="no model configured"):
+            assistant.parse_portfolio_csv("ticker,qty\nAAPL,10")
+
+    def test_parse_portfolio_csv_returns_parsed_portfolio(self):
+        def script(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            return ModelResponse(
+                parts=[
+                    ToolCallPart(
+                        tool_name="final_result",
+                        args={
+                            "name": "My Portfolio",
+                            "holdings": [
+                                {
+                                    "ticker": "AAPL",
+                                    "quantity": 10,
+                                    "cost_per_share": 150.0,
+                                    "acquired": "2023-01-15",
+                                }
+                            ],
+                            "warnings": [],
+                        },
+                    )
+                ]
+            )
+
+        assistant = Assistant(model=FunctionModel(script), store=InMemoryStore(), registry=make_registry())
+        result = assistant.parse_portfolio_csv("ticker,qty,cost,date\nAAPL,10,150,2023-01-15")
+
+        assert isinstance(result, ParsedPortfolio)
+        assert result.holdings[0].ticker == "AAPL"
+        # parse-only: nothing gets registered as a side effect
+        with pytest.raises(PortfolioNotFoundError):
+            assistant._store.get_portfolio("My Portfolio")
+
+    def test_parse_portfolio_csv_async_matches_sync(self):
+        def script(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+            return ModelResponse(
+                parts=[
+                    ToolCallPart(
+                        tool_name="final_result",
+                        args={"name": "P", "holdings": [], "warnings": ["no rows found"]},
+                    )
+                ]
+            )
+
+        assistant = Assistant(model=FunctionModel(script), store=InMemoryStore(), registry=make_registry())
+        result = asyncio.run(assistant.parse_portfolio_csv_async("empty,csv"))
+        assert result.warnings == ["no rows found"]
 
 
 class TestDefaultRegistry:

@@ -15,6 +15,8 @@ from datetime import date
 
 from pydantic import BaseModel, Field
 
+from finagent.store import DEFAULT_PORTFOLIO_ID
+
 
 class HoldingSpec(BaseModel):
     """One line item in a portfolio. Custodian/account details are omitted --
@@ -35,7 +37,11 @@ class HoldingSpec(BaseModel):
 
 
 class PortfolioSpec(BaseModel):
-    id: str
+    # Optional: the product is scoped to a single portfolio right now, so the
+    # frontend doesn't need to invent/track an id -- omitting it defaults to
+    # DEFAULT_PORTFOLIO_ID, the same id the risk agent's chat instructions
+    # assume. Still overridable for tests or a future multi-portfolio UI.
+    id: str = DEFAULT_PORTFOLIO_ID
     name: str
     holdings: list[HoldingSpec] = Field(min_length=1)
 

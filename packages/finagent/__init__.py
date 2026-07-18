@@ -26,10 +26,17 @@ Sub-packages: ``agent`` (the specialists), ``report`` (structured output +
 deterministic composer), ``adapter`` (the LLM/binding translation machinery),
 ``store`` (id -> domain-object resolution). See ``deps`` for the shared
 ``AgentDeps`` handed to every tool via pydantic-ai's ``RunContext``.
+
+``ingest`` is a third way to use it: ``assistant.parse_portfolio_csv(text)``
+hands raw CSV text to a one-shot structured-output LLM call and gets back a
+``ParsedPortfolio`` -- no tabular-parsing library, the model maps whatever
+columns the file has onto our schema. Deliberately not auto-registered: the
+caller reviews/corrects the result before calling ``register_portfolio``.
 """
 
 from finagent.agent import CapabilityAgent, RiskAgent
 from finagent.assistant import Assistant
+from finagent.ingest import ParsedHolding, ParsedPortfolio
 from finagent.report import (
     ALL,
     CORE,
@@ -47,5 +54,7 @@ __all__ = [
     "ALL",
     "PortfolioRiskReport",
     "AssetRiskReport",
+    "ParsedPortfolio",
+    "ParsedHolding",
 ]
 

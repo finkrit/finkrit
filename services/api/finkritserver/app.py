@@ -19,11 +19,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from finagent.assistant import Assistant
+from finagent.ingest import ParsedPortfolio
 from finagent.report import PortfolioRiskReport
 from finagent.store import AssetNotFoundError, PortfolioNotFoundError
 
@@ -35,6 +36,11 @@ from finkritserver.schemas import (
     PortfolioSpec,
     PortfolioSummary,
 )
+
+# A CSV this large is almost certainly not "my brokerage holdings" -- fed
+# whole into the model prompt, so cap it rather than send something
+# pathological (or expensive) through.
+MAX_UPLOAD_BYTES = 512_000  # 500 KB
 
 # Default dev origins: Vite's default port, both localhost/127.0.0.1 spellings
 # (browsers don't treat them as the same origin). This is a local, single-user
@@ -71,6 +77,33 @@ def create_app(
     def register_portfolio(spec: PortfolioSpec) -> PortfolioRegistered:
         assistant.register_portfolio(build_portfolio(spec))
         return PortfolioRegistered(portfolio_id=spec.id)
+
+    @app.post("/api/portfolio/upload", response_model=ParsedPortfolio)
+    async def upload_portfolio(file: UploadFile = File(...)) -> ParsedPortfolio:
+        # Parse-only: an LLM extraction, NOT a registration. The frontend shows
+        # the result for the user to review/correct, then submits the
+        # (possibly corrected) holdings to POST /api/portfolio to commit --
+        # re-registering the same id overwrites, so "upload a new file"
+        # already replaces the single portfolio with no separate delete step.
+        if file.filename and not file.filename.lower().endswith(".csv"):
+            raise HTTPException(
+                status_code=400,
+                detail="Only .csv uploads are supported right now.",
+            )
+
+        raw = await file.read()
+        if len(raw) > MAX_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File too large ({len(raw)} bytes, max {MAX_UPLOAD_BYTES}).",
+            )
+
+        try:
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise HTTPException(status_code=400, detail="File is not valid UTF-8 text.") from exc
+
+        return await assistant.parse_portfolio_csv_async(text)
 
     @app.get("/api/portfolios", response_model=list[PortfolioSummary])
     def list_portfolios() -> list[PortfolioSummary]:

@@ -14,6 +14,7 @@ from finagent.deps import AgentDeps
 from finagent.report.composer import compose_portfolio_risk_report
 from finagent.report.metric import RiskMetric
 from finagent.report.report import PortfolioRiskReport
+from finagent.store import DEFAULT_PORTFOLIO_ID
 
 RISK_INSTRUCTIONS = (
     "You are a portfolio risk analyst. Use the available tools to compute risk "
@@ -21,7 +22,9 @@ RISK_INSTRUCTIONS = (
     "Always state the number, the lookback window it was computed over, and the "
     "benchmark where relevant. Volatility and related measures are annualized; "
     "Value at Risk is a 95% one-period figure unless stated otherwise. If a metric "
-    "cannot be computed (e.g. no benchmark, missing data), say so rather than guessing."
+    "cannot be computed (e.g. no benchmark, missing data), say so rather than guessing. "
+    f"The user has a single portfolio, registered with id '{DEFAULT_PORTFOLIO_ID}' -- "
+    "use that id for any portfolio-level tool unless the user names a different one."
 )
 
 

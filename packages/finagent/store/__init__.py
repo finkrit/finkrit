@@ -20,14 +20,20 @@ into an ``Asset``. That is the ``Store``.
     without extra calls. Misses raise ``PortfolioNotFoundError`` /
     ``AssetNotFoundError`` (``KeyError`` subclasses), which the adapter layer
     turns into a recoverable ``ModelRetry``.
+
+  - ``DEFAULT_PORTFOLIO_ID`` — the id used when the product is scoped to a
+    single portfolio (no id the user/frontend has to invent or track). Both
+    finkritserver's registration default and the risk agent's chat
+    instructions use this same constant.
 """
 
 from .memory import AssetNotFoundError, InMemoryStore, PortfolioNotFoundError
-from .protocol import Store
+from .protocol import DEFAULT_PORTFOLIO_ID, Store
 
 __all__ = [
     "Store",
     "InMemoryStore",
     "PortfolioNotFoundError",
     "AssetNotFoundError",
+    "DEFAULT_PORTFOLIO_ID",
 ]
