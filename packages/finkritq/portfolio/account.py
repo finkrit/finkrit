@@ -15,10 +15,13 @@ from finkritq.portfolio.custodian import Custodian
 from finkritq.portfolio.position import Position
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class Account:
     """
     Represents an investment account held at a custodian.
+
+    ``eq=False`` -> identity equality (an Account is a mutable entity, not a
+    value; see Position for the rationale).
     """
 
     id: str
@@ -56,12 +59,19 @@ class Account:
         """
         Adds a position to the account.
 
-        If the account already contains a position for the asset,
-        the existing position is returned.
+        If the account already holds the asset, the incoming position's lots
+        are MERGED into the existing position (a second purchase of the same
+        asset is another tax lot, not a duplicate to discard). Returns the
+        resulting position. Previously this silently dropped the new lots.
         """
         existing = self.get_position(position.asset)
 
         if existing is not None:
+            # Idempotent re-add of the same object -> no-op. A *different*
+            # position for an already-held asset contributes its lots (a second
+            # purchase is another tax lot, not a duplicate to discard).
+            if existing is not position:
+                existing.lots = existing.lots + position.lots
             return existing
 
         self.positions.append(position)

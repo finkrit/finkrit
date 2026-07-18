@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 
 import pytest
 
@@ -54,6 +55,30 @@ class TestAccount:
 
         assert returned is position
         assert account.position_count == 1
+
+    def test_re_adding_same_object_does_not_double_its_lots(self, account, position):
+        # Idempotency: the exact same position added twice is a no-op, not a
+        # lot-doubling merge.
+        account.add_position(position)
+        lot_count_before = len(position.lots)
+        account.add_position(position)
+        assert len(position.lots) == lot_count_before
+
+    def test_adding_different_position_for_held_asset_merges_lots(self, account, stock_a):
+        # D-B: a second purchase of an already-held asset contributes its lots
+        # (a new tax lot), rather than being silently discarded.
+        from finkritq.tests.fixtures import make_position
+
+        first = make_position(stock_a, quantity=Decimal("10"), position_id="p1", lot_id="l1")
+        second = make_position(stock_a, quantity=Decimal("5"), position_id="p2", lot_id="l2")
+
+        account.add_position(first)
+        returned = account.add_position(second)
+
+        assert returned is first                 # merged into the existing position
+        assert account.position_count == 1
+        assert len(first.lots) == 2              # both tax lots retained
+        assert first.quantity == Decimal("15")   # 10 + 5, not silently dropped
 
     def test_remove_position(self, account, position):
         account.add_position(position)
