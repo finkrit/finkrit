@@ -34,7 +34,7 @@ from finkritq.datatype import (
     MarketIndex,
     VaREstimationMethod,
 )
-from finkritq.portfolio import Account, Lot, Portfolio, Position
+from finkritq.portfolio import Account, Lot, Portfolio, PortfolioData, Position
 from finkritq.portfolio.custodian import Custodian
 
 
@@ -47,15 +47,8 @@ def _make_position(
     cost: Decimal,
     acquired: date,
 ) -> Position:
-    pos = Position.__new__(Position)
-    pos.id = position_id
-    pos.account = account
-    pos.asset = stock
-    pos.notes = None
-    pos.last_price = None
-    lot = Lot(id=lot_id, position=pos, quantity=quantity, cost_per_share=cost, acquired=acquired)
-    pos.lots = (lot,)
-    return pos
+    lot = Lot(id=lot_id, quantity=quantity, cost_per_share=cost, acquired=acquired)
+    return Position(id=position_id, asset=stock, lots=(lot,))
 
 
 def main():
@@ -160,7 +153,7 @@ def main():
     # Analytics
     # -----------------------------------------------------------------------
 
-    portfolio_data = registry.history(portfolio)
+    portfolio_data = PortfolioData.from_registry(portfolio, registry)
 
     benchmark = registry.history(MarketIndex.SP500.as_asset())
 
@@ -259,28 +252,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-from finkritq.anal.risk import (
-    beta_from_returns, 
-    component_contribution_to_risk,
-    marginal_contribution_to_risk,
-    portfolio_conditional_value_at_risk, 
-    portfolio_downside_deviation, 
-    portfolio_semivariance, 
-    portfolio_value_at_risk,
-    portfolio_variance,
-    portfolio_volatility,
-    variance, 
-    volatility)
-from finkritq.anal.risk.correlation import correlation_matrix
-from finkritq.data.providers import YFinanceProvider
-from finkritq.data.registry import DataRegistry
-from finkritq.datatype import Currency, Exchange, MarketIndex, VaREstimationMethod
-from finkritq.portfolio import Portfolio, Position, PortfolioSnapshot
-from finkritq.anal.risk.covariance import covariance_matrix
-from finkritq.anal.risk.drawdown import (
-    portfolio_drawdown,
-    portfolio_maximum_drawdown,
-)
-
 
