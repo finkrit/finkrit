@@ -64,7 +64,6 @@ def position(account, stock_a):
 def lot(position):
     return Lot(
         id="lot-1",
-        position=position,
         quantity=Decimal("10"),
         cost_per_share=Decimal("100"),
         acquired=LONG_TERM_DATE,

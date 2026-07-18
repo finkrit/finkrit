@@ -4,23 +4,25 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 from finkritq.asset import Asset
 from finkritq.portfolio.lot import Lot
 
-if TYPE_CHECKING:
-    from finkritq.portfolio.account import Account
 
-
-@dataclass(slots=True)
+@dataclass(slots=True, eq=False)
 class Position:
     """
-    Represents a position in a single asset within an account.
+    A position in a single asset: the asset plus its tax lots. Part of the
+    one-directional tree (owned by an Account; does not point back up to it).
+
+    ``eq=False`` -> identity equality. A Position is a mutable entity
+    (``last_price`` is updated in place), not a value; two distinct positions
+    are never "equal" just because their contents match, and value-equality on
+    a mutable entity is a footgun (it also used to recurse through the old
+    Position<->Lot<->Account cycle).
     """
 
     id: str
-    account: Account
     asset: Asset
     lots: tuple[Lot, ...]
 
@@ -30,9 +32,6 @@ class Position:
     def __post_init__(self) -> None:
         if not self.lots:
             raise ValueError("Position requires at least one lot.")
-
-        if any(lot.asset != self.asset for lot in self.lots):
-            raise ValueError("All lots must belong to the same asset.")
 
     @property
     def quantity(self) -> Decimal:
