@@ -130,10 +130,16 @@ class PortfolioData:
     @property
     def weights(self) -> dict[Asset, float]:
 
-        values = {
-            position.asset: self.latest_prices[position.asset] * float(position.quantity)
-            for position in self.portfolio.positions
-            }
+        # Accumulate market value per asset: the same asset can be held in
+        # more than one account/position, so we sum rather than overwrite.
+        # (A dict comprehension keyed by asset would silently drop all but the
+        # last position of a repeated asset -- and disagree with .value, which
+        # already sums across positions.)
+        values: dict[Asset, float] = {}
+        for position in self.portfolio.positions:
+            market_value = self.latest_prices[position.asset] * float(position.quantity)
+            values[position.asset] = values.get(position.asset, 0.0) + market_value
+
         total = sum(values.values())
         return {
             asset: value / total
