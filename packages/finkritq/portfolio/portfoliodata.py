@@ -48,7 +48,7 @@ class PortfolioData:
             return (
                 position.asset,
                 registry.history(
-                    target=position.asset,
+                    position.asset,
                     start=start,
                     end=end,
                     interval=interval,
@@ -94,7 +94,16 @@ class PortfolioData:
 
     @property
     def value(self) -> NDArray[np.float64]:
+        """
+        Portfolio market value over the lookback window.
 
+        Convention: *current* holdings are applied across the whole history --
+        i.e. today's quantities times each day's close. Lot `acquired` dates are
+        intentionally ignored; this is the standard "current-composition" basis
+        for risk analytics (what is today's portfolio's risk, given how these
+        assets have historically behaved?), NOT a position-aware backtest of
+        what you actually held on each past date.
+        """
         values = np.zeros(len(self), dtype=np.float64)
         for position in self.portfolio.positions:
             values += (self[position.asset].close * float(position.quantity))

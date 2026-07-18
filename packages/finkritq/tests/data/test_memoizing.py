@@ -64,3 +64,14 @@ class TestMemoizingHistoryProvider:
         memo.clear()
         memo.history(_stock())
         assert inner.calls == 2
+
+    def test_open_ended_end_is_keyed_by_today(self):
+        # F-2: end=None ("up to today") and end=today() are the same request,
+        # so they share a cache entry rather than the None key living forever.
+        from datetime import date
+
+        inner = _CountingProvider()
+        memo = MemoizingHistoryProvider(inner)
+        memo.history(_stock(), end=None)
+        memo.history(_stock(), end=date.today())
+        assert inner.calls == 1
