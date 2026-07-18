@@ -74,7 +74,7 @@ class AssetConditionalValueAtRiskInput:
 
 @dataclass(frozen=True, slots=True)
 class AssetBetaInput:
-    history: PriceHistory
+    asset_history: PriceHistory  # matches beta(asset_history, benchmark_history, method)
     benchmark_history: PriceHistory
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
 
