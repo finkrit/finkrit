@@ -25,3 +25,28 @@ class TestCapability:
         with pytest.raises((AttributeError, TypeError)):
             cap.name = "changed"  # type: ignore[misc]
 
+    # --- I-5: invariants enforced by __post_init__ ---
+
+    def test_rejects_empty_name(self):
+        with pytest.raises(ValueError):
+            Capability(name="", description="d")
+
+    def test_rejects_empty_description(self):
+        with pytest.raises(ValueError):
+            Capability(name="test", description="")
+
+    def test_rejects_duplicate_contract_names(self):
+        from finkritintel.tool.binding import ToolBinding
+        from finkritintel.tool.contract import ToolContract
+
+        def _binding(name: str) -> ToolBinding:
+            return ToolBinding(
+                contract=ToolContract(name=name, description="d", category="risk"),
+                input_schema=object,
+                output_schema=object,
+                implementation=lambda: None,
+            )
+
+        with pytest.raises(ValueError, match="Duplicate"):
+            Capability(name="c", description="d", tools=(_binding("dup"), _binding("dup")))
+

@@ -20,16 +20,7 @@ class TestToolContract:
         assert contract.name == "my_tool"
         assert contract.description == "Does something useful."
         assert contract.category == "analysis"
-        assert contract.summary is None
         assert contract.tags == ()
-
-    def test_optional_summary(self):
-        contract = ToolContract(
-            name="my_tool",
-            description="Full description.",
-            category="analysis",
-            summary="One liner.")
-        assert contract.summary == "One liner."
 
     def test_tags(self):
         contract = ToolContract(
