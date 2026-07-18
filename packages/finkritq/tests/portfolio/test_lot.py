@@ -15,17 +15,13 @@ class TestLot:
     def lot(self, position):
         return Lot(
             id="lot-1",
-            position=position,
             quantity=Decimal("10"),
             cost_per_share=Decimal("100"),
             acquired=date.today() - timedelta(days=400),
         )
 
-    def test_asset(self, lot, position):
-        assert lot.asset is position.asset
-
-    def test_account(self, lot, position):
-        assert lot.account is position.account
+    # Lot no longer references its parent (tree, not cycle) -- the old
+    # test_asset/test_account back-reference tests are gone by design.
 
     def test_cost_basis(self, lot):
         assert lot.cost_basis == Decimal("1000")
@@ -57,7 +53,6 @@ class TestLot:
     def test_is_long_term_false(self, position):
         lot = Lot(
             id="lot-2",
-            position=position,
             quantity=Decimal("10"),
             cost_per_share=Decimal("100"),
             acquired=date.today() - timedelta(days=100),
@@ -80,7 +75,6 @@ class TestLot:
         with pytest.raises(ValueError):
             Lot(
                 id="lot",
-                position=position,
                 quantity=quantity,
                 cost_per_share=Decimal("100"),
                 acquired=date.today(),
@@ -94,7 +88,6 @@ class TestLot:
         with pytest.raises(ValueError):
             Lot(
                 id="lot",
-                position=position,
                 quantity=Decimal("10"),
                 cost_per_share=cost_per_share,
                 acquired=date.today(),
@@ -104,7 +97,6 @@ class TestLot:
         with pytest.raises(ValueError):
             Lot(
                 id="lot",
-                position=position,
                 quantity=Decimal("10"),
                 cost_per_share=Decimal("100"),
                 acquired=date.today() + timedelta(days=1),
@@ -113,7 +105,6 @@ class TestLot:
     def test_notes_stored(self, position):
         lot = Lot(
             id="lot",
-            position=position,
             quantity=Decimal("10"),
             cost_per_share=Decimal("100"),
             acquired=date.today(),

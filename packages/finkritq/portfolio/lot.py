@@ -4,22 +4,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from finkritq.asset import Asset
-    from finkritq.portfolio.account import Account
-    from finkritq.portfolio.position import Position
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class Lot:
     """
-    Represents a single tax lot within a position.
+    A single tax lot: a quantity of an asset acquired at a point in time and
+    price. A pure value object -- it does NOT reference its parent Position
+    (the tree is one-directional Portfolio -> Account -> Position -> Lot). The
+    asset/account it belongs to are known by the owning Position, so a Lot
+    carries only what a lot intrinsically is. Frozen: a tax lot is an
+    immutable historical record.
     """
 
     id: str
-    position: Position
 
     quantity: Decimal
     cost_per_share: Decimal
@@ -36,14 +34,6 @@ class Lot:
 
         if self.acquired > date.today():
             raise ValueError("acquired cannot be in the future.")
-
-    @property
-    def asset(self) -> Asset:
-        return self.position.asset
-
-    @property
-    def account(self) -> Account:
-        return self.position.account
 
     @property
     def cost_basis(self) -> Decimal:
