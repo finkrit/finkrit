@@ -1,17 +1,16 @@
 import tailwindcss from '@tailwindcss/vite';
-import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
 
+// Kit config (adapter, aliases) now lives in svelte.config.js -- this file is
+// just Vite plugins + the dev proxy.
 export default defineConfig({
-	plugins: [
-		tailwindcss(),
-		sveltekit({
-			compilerOptions: {
-				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.
-				runes: ({ filename }) => filename.split(/[/\\]/).includes('node_modules') ? undefined : true
-			},
-			adapter: adapter()
-		})
-	]
+	plugins: [tailwindcss(), sveltekit()],
+	server: {
+		// Dev only: forward /api/* to FastAPI so fetches use plain relative
+		// paths ('/api/...') in dev and in the production build alike.
+		proxy: {
+			'/api': 'http://127.0.0.1:8000'
+		}
+	}
 });

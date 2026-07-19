@@ -3,8 +3,10 @@
 Tests for CORS and the built-SPA fallback serving added in app.py.
 
 Uses a separate `spa_client` fixture pointed at a temp directory standing in
-for a built Svelte app -- the default `client` fixture (no static_dir on
-disk) exercises the "UI not built yet" path instead.
+for a built Svelte app. The default `client` fixture now points at a real
+build (apps/finkritweb's output lands in services/api/finkritserver/static/),
+so the "UI not built yet" test constructs its own app with an explicitly
+nonexistent static_dir rather than relying on that build's absence.
 """
 from __future__ import annotations
 
@@ -91,11 +93,13 @@ class TestSpaServing:
         assert r.status_code in (200, 404)
         assert "root:" not in r.text  # /etc/passwd contents never leaked
 
-    def test_missing_ui_returns_clear_404_not_crash(self, client: TestClient):
-        # Default client's static_dir doesn't exist on disk -- API still works
-        # (proven by other tests), and a UI route fails clearly, not with a
-        # framework traceback.
-        r = client.get("/dashboard")
+    def test_missing_ui_returns_clear_404_not_crash(self, assistant, tmp_path: Path):
+        # An explicitly nonexistent static_dir (not the default, which now
+        # points at a real build -- apps/finkritweb -> services/api's static/)
+        # -- API still works (proven by other tests), and a UI route fails
+        # clearly, not with a framework traceback.
+        app = create_app(assistant, static_dir=tmp_path / "does-not-exist")
+        r = TestClient(app).get("/dashboard")
         assert r.status_code == 404
         assert "not built" in r.json()["detail"].lower()
 
