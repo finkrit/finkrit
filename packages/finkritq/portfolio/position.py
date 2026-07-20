@@ -67,9 +67,8 @@ class Position:
     def latest_acquired(self) -> date:
         return max(lot.acquired for lot in self.lots)
 
-    @property
-    def is_long_term(self) -> bool:
-        return all(lot.is_long_term for lot in self.lots)
+    def is_long_term(self, as_of: date) -> bool:
+        return all(lot.is_long_term(as_of) for lot in self.lots)
 
     def __len__(self) -> int:
         return self.lot_count

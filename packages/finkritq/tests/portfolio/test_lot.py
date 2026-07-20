@@ -20,7 +20,7 @@ class TestLot:
             acquired=date.today() - timedelta(days=400),
         )
 
-    # Lot no longer references its parent (tree, not cycle) -- the old
+    # Lot no longer references its parent (tree, not cycle). The old
     # test_asset/test_account back-reference tests are gone by design.
 
     def test_cost_basis(self, lot):
@@ -42,22 +42,25 @@ class TestLot:
         assert lot.unrealized_return(Decimal("80")) == Decimal("-0.2")
 
     def test_holding_period(self, lot):
-        assert lot.holding_period.days >= 400
+        # A fixed as_of makes this deterministic: 400 days after acquisition.
+        as_of = lot.acquired + timedelta(days=400)
+        assert lot.holding_period(as_of).days == 400
 
     def test_holding_days(self, lot):
-        assert lot.holding_days >= 400
+        as_of = lot.acquired + timedelta(days=400)
+        assert lot.holding_days(as_of) == 400
 
     def test_is_long_term_true(self, lot):
-        assert lot.is_long_term is True
+        assert lot.is_long_term(lot.acquired + timedelta(days=365)) is True
 
     def test_is_long_term_false(self, position):
         lot = Lot(
             id="lot-2",
             quantity=Decimal("10"),
             cost_per_share=Decimal("100"),
-            acquired=date.today() - timedelta(days=100),
+            acquired=date(2020, 1, 1),
         )
-        assert lot.is_long_term is False
+        assert lot.is_long_term(date(2020, 4, 10)) is False  # 100 days -> short-term
 
     def test_str(self, lot):
         assert str(lot) == "Lot(10 @ 100)"
@@ -91,15 +94,6 @@ class TestLot:
                 quantity=Decimal("10"),
                 cost_per_share=cost_per_share,
                 acquired=date.today(),
-            )
-
-    def test_future_acquired_date(self, position):
-        with pytest.raises(ValueError):
-            Lot(
-                id="lot",
-                quantity=Decimal("10"),
-                cost_per_share=Decimal("100"),
-                acquired=date.today() + timedelta(days=1),
             )
 
     def test_notes_stored(self, position):

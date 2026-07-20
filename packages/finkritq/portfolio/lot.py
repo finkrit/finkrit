@@ -10,11 +10,18 @@ from decimal import Decimal
 class Lot:
     """
     A single tax lot: a quantity of an asset acquired at a point in time and
-    price. A pure value object -- it does NOT reference its parent Position
+    price. A pure value object. It does NOT reference its parent Position
     (the tree is one-directional Portfolio -> Account -> Position -> Lot). The
     asset/account it belongs to are known by the owning Position, so a Lot
     carries only what a lot intrinsically is. Frozen: a tax lot is an
     immutable historical record.
+
+    Time-relative queries (holding period, long/short-term) take an explicit
+    `as_of` date rather than reading the wall clock, so a lot gives the same
+    answer for a given reference date and nothing here depends on "now". The
+    "acquired is not in the future" check likewise belongs at the ingestion
+    boundary (where the as-of date is known), not in the value object, since
+    "future" has no meaning without a reference date.
     """
 
     id: str
@@ -32,24 +39,18 @@ class Lot:
         if self.cost_per_share <= 0:
             raise ValueError("cost_per_share must be positive.")
 
-        if self.acquired > date.today():
-            raise ValueError("acquired cannot be in the future.")
-
     @property
     def cost_basis(self) -> Decimal:
         return self.quantity * self.cost_per_share
 
-    @property
-    def holding_period(self) -> timedelta:
-        return date.today() - self.acquired
+    def holding_period(self, as_of: date) -> timedelta:
+        return as_of - self.acquired
 
-    @property
-    def holding_days(self) -> int:
-        return self.holding_period.days
+    def holding_days(self, as_of: date) -> int:
+        return self.holding_period(as_of).days
 
-    @property
-    def is_long_term(self) -> bool:
-        return self.holding_days >= 365
+    def is_long_term(self, as_of: date) -> bool:
+        return self.holding_days(as_of) >= 365
 
     def __str__(self) -> str:
         return f"Lot({self.quantity} @ {self.cost_per_share})"

@@ -1,6 +1,7 @@
 # finkrit/tests/packages/finkritq/portfolio/test_portfolio.py
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 from finkritq.portfolio import Portfolio
@@ -129,13 +130,15 @@ class TestPortfolio:
         portfolio = Portfolio(id="1", name="Portfolio")
         portfolio.add_account(account)
 
-        assert all(lot.is_long_term for lot in portfolio.long_term_lots)
+        as_of = date(2025, 1, 1)  # well after the fixture lots' 2020 acquisition
+        assert all(lot.is_long_term(as_of) for lot in portfolio.long_term_lots(as_of))
 
     def test_short_term_lots(self, account):
         portfolio = Portfolio(id="1", name="Portfolio")
         portfolio.add_account(account)
 
-        assert all(not lot.is_long_term for lot in portfolio.short_term_lots)
+        as_of = date(2025, 1, 1)
+        assert all(not lot.is_long_term(as_of) for lot in portfolio.short_term_lots(as_of))
 
     def test_earliest_acquired(self, account, position):
         account.add_position(position)

@@ -112,13 +112,11 @@ class Portfolio:
     def is_empty(self) -> bool:
         return not self.accounts
 
-    @property
-    def long_term_lots(self) -> tuple[Lot, ...]:
-        return tuple(lot for lot in self.lots if lot.is_long_term)
+    def long_term_lots(self, as_of: date) -> tuple[Lot, ...]:
+        return tuple(lot for lot in self.lots if lot.is_long_term(as_of))
 
-    @property
-    def short_term_lots(self) -> tuple[Lot, ...]:
-        return tuple(lot for lot in self.lots if not lot.is_long_term)
+    def short_term_lots(self, as_of: date) -> tuple[Lot, ...]:
+        return tuple(lot for lot in self.lots if not lot.is_long_term(as_of))
 
     @property
     def earliest_acquired(self) -> date:
