@@ -9,6 +9,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import numpy as np
+import pytest
 
 from finkritq.portfolio import Portfolio, PortfolioData
 from finkritq.tests.fixtures import make_account, make_position, make_price_history, make_stock
@@ -64,3 +65,30 @@ class TestMultiAccountAggregation:
     def test_weight_vector_length_matches_unique_assets(self):
         data = _portfolio_data()
         assert len(data.weight_vector) == data.n_assets == 2
+
+
+class TestAlignedClose:
+    """PortfolioData.aligned_close samples a benchmark at the portfolio's dates."""
+
+    def test_returns_benchmark_closes_on_matching_dates(self):
+        # _portfolio_data has 10 observation dates (from _FLAT). A benchmark on
+        # the same dates should come back unchanged, in the portfolio's order.
+        data = _portfolio_data()
+        bench_closes = np.arange(200.0, 210.0)  # 10 distinct closes
+        aligned = data.aligned_close(make_price_history(bench_closes))
+        assert np.array_equal(aligned, bench_closes)
+
+    def test_samples_only_portfolio_dates_from_longer_benchmark(self):
+        # A benchmark whose calendar is a superset is trimmed to the portfolio's
+        # dates (here the first 10), so its extra tail is ignored.
+        data = _portfolio_data()
+        bench_closes = np.arange(200.0, 215.0)  # 15 dates, superset of the 10
+        aligned = data.aligned_close(make_price_history(bench_closes))
+        assert np.array_equal(aligned, bench_closes[:10])
+
+    def test_missing_portfolio_date_raises(self):
+        # A benchmark on a disjoint calendar cannot cover the portfolio's dates.
+        data = _portfolio_data()
+        disjoint = make_price_history(np.arange(200.0, 210.0), start="2030-01-02")
+        with pytest.raises(ValueError):
+            data.aligned_close(disjoint)

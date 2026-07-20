@@ -255,6 +255,26 @@ class PortfolioData:
         """
         return self.realized_returns(method=method)
 
+    def aligned_close(self, benchmark: PriceHistory) -> NDArray[np.float64]:
+        """
+        Benchmark closing prices sampled at THIS portfolio's observation dates.
+
+        Benchmark-relative metrics (beta, tracking error, information ratio,
+        alpha) need the benchmark measured on the same periods as the portfolio.
+        Rather than assume the two were fetched over identical calendars, we index
+        the benchmark by date so its returns line up period-for-period with the
+        portfolio's own. Extra benchmark dates are ignored; a benchmark missing
+        any portfolio date is an alignment error and raises.
+        """
+        close_by_date = dict(zip(benchmark.dates.tolist(), benchmark.close))
+        try:
+            aligned = [close_by_date[day] for day in self.dates.tolist()]
+        except KeyError as missing:
+            raise ValueError(
+                f"Benchmark has no observation for portfolio date {missing.args[0]}."
+            ) from None
+        return np.asarray(aligned, dtype=np.float64)
+
 
     def items(self) -> tuple[tuple[Asset, PriceHistory], ...]:
         return tuple(self._histories.items())
