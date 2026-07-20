@@ -29,6 +29,20 @@ from finkritq.anal.performance.sharpe_ratio import (
     sharpe_ratio_from_prices,
     sharpe_ratio_from_returns,
 )
+from finkritq.anal.performance.sortino_ratio import (
+    portfolio_sortino_ratio,
+    sortino_ratio,
+    sortino_ratio_asset,
+    sortino_ratio_from_prices,
+    sortino_ratio_from_returns,
+)
+from finkritq.anal.performance.calmar_ratio import (
+    calmar_ratio,
+    calmar_ratio_asset,
+    calmar_ratio_from_prices,
+    calmar_ratio_from_returns,
+    portfolio_calmar_ratio,
+)
 
 __all__ = [
     # total (cumulative) return
@@ -49,4 +63,16 @@ __all__ = [
     "sharpe_ratio",
     "sharpe_ratio_asset",
     "portfolio_sharpe_ratio",
+    # sortino ratio
+    "sortino_ratio_from_returns",
+    "sortino_ratio_from_prices",
+    "sortino_ratio",
+    "sortino_ratio_asset",
+    "portfolio_sortino_ratio",
+    # calmar ratio
+    "calmar_ratio_from_returns",
+    "calmar_ratio_from_prices",
+    "calmar_ratio",
+    "calmar_ratio_asset",
+    "portfolio_calmar_ratio",
 ]

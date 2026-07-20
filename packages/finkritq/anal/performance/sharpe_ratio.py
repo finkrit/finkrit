@@ -1,4 +1,4 @@
-# finkrit/packages/finkritq/anal/performance/sharpe_ratio.py
+# finkritq/anal/performance/sharpe_ratio.py
 """
 Sharpe ratio: excess return per unit of total risk, the canonical risk-adjusted
 performance measure.
@@ -177,3 +177,4 @@ def portfolio_sharpe_ratio(
     )
 
     return _sharpe(annualized, vol, risk_free_rate)
+
