@@ -25,7 +25,14 @@ def beta_from_returns(
 ) -> float:
     """
     Compute beta from two aligned return series.
+
+    Beta is undefined (nan) without dispersion to regress against: fewer than two
+    observations, or a benchmark with zero variance. The length guard also keeps
+    np.cov(ddof=1) from dividing by n-1 = 0 and emitting a RuntimeWarning.
     """
+    if len(benchmark_returns) < 2:
+        return float("nan")
+
     covariance = np.cov(asset_returns, benchmark_returns, ddof=1)
     market_variance = covariance[1, 1]
 
