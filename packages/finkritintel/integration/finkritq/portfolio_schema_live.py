@@ -5,8 +5,13 @@ from datetime import date
 
 from finkritq.anal.returns import ReturnCalculationMethod
 from finkritq.data import DataRegistry
-from finkritq.datatype import VaREstimationMethod
+from finkritq.datatype import VaREstimationMethod, WeightingBasis
 from finkritq.portfolio import Portfolio
+
+# `basis` mirrors the finkritq portfolio_* implementations (and the pre-fetched
+# schemas in portfolio_schema.py), so the live tools expose the same
+# constant-mix vs buy-and-hold choice. Each default matches its metric's default
+# basis; see finkritq WeightingBasis.
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,6 +21,7 @@ class PortfolioVolatilityLiveInput:
     start: date | None = None
     end: date | None = None
     interval: str = "1d"
+    basis: WeightingBasis = WeightingBasis.CONSTANT_MIX
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     annualized: bool = True
     periods_per_year: int = 252
@@ -28,6 +34,7 @@ class PortfolioVarianceLiveInput:
     start: date | None = None
     end: date | None = None
     interval: str = "1d"
+    basis: WeightingBasis = WeightingBasis.CONSTANT_MIX
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     annualized: bool = True
     periods_per_year: int = 252
@@ -40,6 +47,7 @@ class PortfolioSemivarianeLiveInput:
     start: date | None = None
     end: date | None = None
     interval: str = "1d"
+    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     target: float = 0.0
     annualized: bool = True
@@ -53,6 +61,7 @@ class PortfolioDownsideDeviationLiveInput:
     start: date | None = None
     end: date | None = None
     interval: str = "1d"
+    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     target: float = 0.0
     annualized: bool = True
@@ -66,6 +75,7 @@ class PortfolioDrawdownLiveInput:
     start: date | None = None
     end: date | None = None
     interval: str = "1d"
+    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,6 +85,7 @@ class PortfolioMaximumDrawdownLiveInput:
     start: date | None = None
     end: date | None = None
     interval: str = "1d"
+    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +95,7 @@ class PortfolioValueAtRiskLiveInput:
     start: date | None = None
     end: date | None = None
     interval: str = "1d"
+    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
     return_method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     method: VaREstimationMethod = VaREstimationMethod.HISTORICAL
     confidence: float = 0.95
@@ -98,6 +110,7 @@ class PortfolioConditionalValueAtRiskLiveInput:
     start: date | None = None
     end: date | None = None
     interval: str = "1d"
+    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
     return_method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     method: VaREstimationMethod = VaREstimationMethod.HISTORICAL
     confidence: float = 0.95
