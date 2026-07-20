@@ -22,6 +22,13 @@ from finkritq.anal.performance.annualized_return import (
     annualized_return_from_returns,
     portfolio_annualized_return,
 )
+from finkritq.anal.performance.sharpe_ratio import (
+    portfolio_sharpe_ratio,
+    sharpe_ratio,
+    sharpe_ratio_asset,
+    sharpe_ratio_from_prices,
+    sharpe_ratio_from_returns,
+)
 
 __all__ = [
     # total (cumulative) return
@@ -36,4 +43,10 @@ __all__ = [
     "annualized_return",
     "annualized_return_asset",
     "portfolio_annualized_return",
+    # sharpe ratio
+    "sharpe_ratio_from_returns",
+    "sharpe_ratio_from_prices",
+    "sharpe_ratio",
+    "sharpe_ratio_asset",
+    "portfolio_sharpe_ratio",
 ]
