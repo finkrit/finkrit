@@ -14,6 +14,10 @@ def marginal_contribution_to_risk(portfolio_data: PortfolioData) -> NDArray[np.f
     """
     Compute the marginal contribution to portfolio risk (MCTR).
 
+    Basis: CONSTANT_MIX only. MCTR lives in covariance space (Σ, w) and has no
+    buy-and-hold analogue, unlike the dual metrics it takes no `basis`
+    argument. See WeightingBasis.
+
     Returns
     -------
     ndarray

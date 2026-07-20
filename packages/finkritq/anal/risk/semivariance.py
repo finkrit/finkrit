@@ -10,7 +10,7 @@ from numpy.typing import NDArray
 from finkritq.anal.returns import (ReturnCalculationMethod, calculate_returns)
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
-from finkritq.datatype import PriceHistory
+from finkritq.datatype import PriceHistory, WeightingBasis
 from finkritq.portfolio import PortfolioData
 
 
@@ -110,6 +110,7 @@ def semivariance_asset(
 
 def portfolio_semivariance(
     portfolio_data: PortfolioData,
+    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     target: float = 0.0,
     annualized: bool = True,
@@ -117,9 +118,18 @@ def portfolio_semivariance(
 ) -> float:
     """
     Compute the semivariance of a portfolio.
+
+    `basis` selects the realized (BUY_AND_HOLD, default) or ex-ante
+    (CONSTANT_MIX) return basis. See WeightingBasis for details.
     """
 
-    returns = portfolio_data.portfolio_returns(method=method)
+    # Select the return series for the requested basis (default BUY_AND_HOLD,
+    # the realized value path), then measure downside dispersion below `target`.
+    returns = (
+        portfolio_data.constant_mix_returns(method)
+        if basis == WeightingBasis.CONSTANT_MIX
+        else portfolio_data.realized_returns(method)
+    )
 
     return semivariance_from_returns(
         returns,

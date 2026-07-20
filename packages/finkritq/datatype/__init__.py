@@ -5,7 +5,7 @@ from .currency import Currency
 from .custodian import CustodianType
 from .market import Exchange, MarketIndex
 from .returns import ReturnCalculationMethod
-from .risk import VaREstimationMethod
+from .risk import VaREstimationMethod, WeightingBasis
 from .pricehistory import PriceHistory
 
 __all__ = [
@@ -17,5 +17,6 @@ __all__ = [
     "MarketIndex",
     "ReturnCalculationMethod",
     "PriceHistory",
-    "VaREstimationMethod"
+    "VaREstimationMethod",
+    "WeightingBasis",
 ]

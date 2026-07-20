@@ -22,7 +22,7 @@ from finkritq.anal.risk.semivariance import (
 
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
-from finkritq.datatype import PriceHistory
+from finkritq.datatype import PriceHistory, WeightingBasis
 from finkritq.portfolio import PortfolioData
 
 
@@ -30,7 +30,7 @@ def downside_deviation_from_returns(
     returns: NDArray[np.float64],
     target: float = 0.0,
     annualized: bool = True,
-    periods_per_year: int = 252,
+    periods_per_year: int = 252, # number of trading days
 ) -> float:
     """
     Compute the downside deviation of a return series.
@@ -122,6 +122,7 @@ def downside_deviation_asset(
 
 def portfolio_downside_deviation(
     portfolio_data: PortfolioData,
+    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     target: float = 0.0,
     annualized: bool = True,
@@ -129,11 +130,15 @@ def portfolio_downside_deviation(
 ) -> float:
     """
     Compute downside deviation of a portfolio.
+
+    `basis` selects the realized (BUY_AND_HOLD, default) or ex-ante
+    (CONSTANT_MIX) return basis; see WeightingBasis.
     """
 
     return float(np.sqrt(
         portfolio_semivariance(
             portfolio_data,
+            basis=basis,
             method=method,
             target=target,
             annualized=annualized,

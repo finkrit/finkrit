@@ -15,6 +15,7 @@ from finkritq.datatype import (
     PriceHistory,
     ReturnCalculationMethod,
     VaREstimationMethod,
+    WeightingBasis,
 )
 from finkritq.portfolio import PortfolioData
 from finkritq.anal.risk.valueatrisk import value_at_risk_from_returns
@@ -152,6 +153,7 @@ def conditional_value_at_risk_asset(
 
 def portfolio_conditional_value_at_risk(
     portfolio_data: PortfolioData,
+    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
     return_method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     method: VaREstimationMethod = VaREstimationMethod.HISTORICAL,
     confidence: float = 0.95,
@@ -159,9 +161,18 @@ def portfolio_conditional_value_at_risk(
     random_state: int | None = None) -> float:
     """
     Compute the Conditional Value at Risk (CVaR) of a portfolio.
+
+    `basis` selects the realized (BUY_AND_HOLD, default) or ex-ante
+    (CONSTANT_MIX) return basis; see WeightingBasis.
     """
 
-    returns = portfolio_data.portfolio_returns(method=return_method)
+    # Select the return series for the requested basis (default BUY_AND_HOLD,
+    # the realized value path), then run the ordinary from-returns estimator.
+    returns = (
+        portfolio_data.constant_mix_returns(return_method)
+        if basis == WeightingBasis.CONSTANT_MIX
+        else portfolio_data.realized_returns(return_method)
+    )
 
     return conditional_value_at_risk_from_returns(
         returns,

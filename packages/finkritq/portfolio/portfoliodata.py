@@ -191,9 +191,70 @@ class PortfolioData:
             for history in self.histories
         ])
     
-    def portfolio_returns(self, method: ReturnCalculationMethod = ReturnCalculationMethod.LOG) -> NDArray[np.float64]:
+    # ------------------------------------------------------------------------
+    # Portfolio return series with the two WeightingBasis choices.
+    #
+    # A multi-asset portfolio has no single return series; you first choose what
+    # stays constant as prices move (see datatype.WeightingBasis for the full
+    # explanation). These two methods are the concrete constructions of that
+    # choice, and every portfolio_* risk metric ultimately consumes one of them.
+    # ------------------------------------------------------------------------
+
+    def realized_returns(
+        self,
+        method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
+    ) -> NDArray[np.float64]:
+        """
+        Buy-and-hold portfolio return series (WeightingBasis.BUY_AND_HOLD).
+
+        Holds today's SHARE COUNTS fixed and lets weights drift: the return of
+        the actual dollar value path, V(t) = Σ q_i·P_i(t). `self.value` already
+        applies today's quantities across the whole history, so its period
+        returns ARE the buy-and-hold portfolio returns -- no weighting step here.
+
+        This is the realized / path-dependent basis: the honest source for
+        drawdown and the correct numerator basis for Sharpe / Sortino.
+        """
+
+        # self.value is the value path (one number per day); its returns are the
+        # portfolio returns directly. Nothing per-asset to combine.
         return calculate_returns(self.value, method=method)
-    
+
+    def constant_mix_returns(
+        self,
+        method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
+    ) -> NDArray[np.float64]:
+        """
+        Constant-mix portfolio return series (WeightingBasis.CONSTANT_MIX).
+
+        Holds today's WEIGHTS `w` fixed for every period, i.e. models a
+        portfolio rebalanced back to `w` each period and takes the weighted
+        sum of the individual asset returns:
+
+            r_p(t) = Σ_i w_i · r_i(t)
+
+        This is the ex-ante / forward-looking basis. A useful invariant: by
+        linearity of variance, Var(Σ_i w_i r_i) = wᵀΣw EXACTLY (Σ = asset
+        covariance matrix), for any return convention. So the variance of this
+        series equals the quadratic form used by `portfolio_variance` /
+        `portfolio_volatility` under CONSTANT_MIX the series form and the
+        matrix form are two views of the same number, and stay consistent.
+        """
+
+        # weight_vector is (n_assets,); return_matrix(method) is
+        # (n_assets, n_periods). The matmul contracts the asset axis, giving the
+        # (n_periods,) weighted-sum return series r_p(t) = Σ_i w_i · r_i(t).
+        return self.weight_vector @ self.return_matrix(method)
+
+    def portfolio_returns(self, method: ReturnCalculationMethod = ReturnCalculationMethod.LOG) -> NDArray[np.float64]:
+        """
+        Deprecated alias for `realized_returns`, kept so pre-existing callers
+        (which predate the basis split) keep working. New code should call
+        `realized_returns` / `constant_mix_returns` explicitly so the basis is
+        visible at the call site.
+        """
+        return self.realized_returns(method=method)
+
 
     def items(self) -> tuple[tuple[Asset, PriceHistory], ...]:
         return tuple(self._histories.items())

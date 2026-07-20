@@ -11,7 +11,7 @@ from finkritq.anal.risk.covariance import covariance_matrix
 from finkritq.anal.returns import ReturnCalculationMethod, calculate_returns
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
-from finkritq.datatype import PriceHistory
+from finkritq.datatype import PriceHistory, WeightingBasis
 from finkritq.portfolio import PortfolioData
 
 
@@ -97,6 +97,7 @@ def variance_asset(
 
 def portfolio_variance(
     portfolio_data: PortfolioData,
+    basis: WeightingBasis = WeightingBasis.CONSTANT_MIX,
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     annualized: bool = True,
     periods_per_year: int = 252,
@@ -108,6 +109,10 @@ def portfolio_variance(
     ----------
     portfolio_data
         Portfolio market data.
+    basis
+        CONSTANT_MIX (default) uses the ex-ante quadratic form wᵀΣw; BUY_AND_HOLD
+        uses the variance of the realized value-path return series. See
+        WeightingBasis.
 
     Returns
     -------
@@ -115,6 +120,20 @@ def portfolio_variance(
         Portfolio variance.
     """
 
+    # BUY_AND_HOLD: variance of the realized value-path return series. Weights
+    # drift with prices, so there is no closed-form quadratic shortcut, take
+    # the sample variance of the series directly.
+    if basis == WeightingBasis.BUY_AND_HOLD:
+        return variance_from_returns(
+            portfolio_data.realized_returns(method),
+            annualized=annualized,
+            periods_per_year=periods_per_year,
+        )
+
+    # CONSTANT_MIX (default): weights are fixed at `w`, so the portfolio variance
+    # is the exact quadratic form σ_p² = wᵀΣw. This equals the sample variance of
+    # `constant_mix_returns` (linearity of variance) but computing it from Σ is
+    # the canonical ex-ante form and is what MCTR/CCTR decompose.
     covariance = covariance_matrix(
         portfolio_data,
         method=method,
@@ -124,6 +143,6 @@ def portfolio_variance(
 
     weights = portfolio_data.weight_vector
 
-    # σp2​=w⊤Σw
+    # σ_p² = wᵀΣw
     return float(weights.T @ covariance @ weights)
 

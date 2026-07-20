@@ -15,6 +15,10 @@ def component_contribution_to_risk(
     """
     Compute the component contribution to portfolio risk (CCTR).
 
+    Basis: CONSTANT_MIX only (weights * MCTR). Like MCTR it has no buy-and-hold
+    analogue and takes no `basis` argument. The components sum to the CONSTANT_MIX
+    portfolio volatility.
+
     Returns
     -------
     ndarray

@@ -9,7 +9,7 @@ from numpy.typing import NDArray
 
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
-from finkritq.datatype import PriceHistory
+from finkritq.datatype import PriceHistory, ReturnCalculationMethod, WeightingBasis
 from finkritq.portfolio import PortfolioData
 
 
@@ -162,19 +162,41 @@ def maximum_drawdown_asset(
 
 def portfolio_drawdown(
     portfolio_data: PortfolioData,
+    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
 ) -> NDArray[np.float64]:
     """
     Compute the drawdown series of a portfolio.
+
+    BUY_AND_HOLD (default) is the realized drawdown of the actual value path
+    path-dependent measure. CONSTANT_MIX returns the drawdown of a
+    *synthetic* daily-rebalanced wealth index reconstructed from the constant-mix
+    return series (simple returns, so 1+r compounds correctly). See
+    WeightingBasis.
     """
 
+    if basis == WeightingBasis.CONSTANT_MIX:
+        # There is no real value path for a rebalanced portfolio, so synthesize a
+        # wealth index by compounding the constant-mix returns. drawdown_from_
+        # returns does cumprod(1 + r), which is only correct for SIMPLE returns
+        # (log returns would need exp(cumsum)); hence SIMPLE explicitly here.
+        returns = portfolio_data.constant_mix_returns(ReturnCalculationMethod.SIMPLE)
+        return drawdown_from_returns(returns)
+
+    # BUY_AND_HOLD (default): draw down the actual value path. `self.value` is a
+    # real wealth index, so the drawdown is the realized one an investor saw.
     return drawdown_from_prices(portfolio_data.value)
 
 
 def portfolio_maximum_drawdown(
-    portfolio_data: PortfolioData) -> float:
+    portfolio_data: PortfolioData,
+    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
+) -> float:
     """
     Compute the maximum drawdown of a portfolio.
+
+    `basis` selects realized (BUY_AND_HOLD, default) or synthetic rebalanced
+    (CONSTANT_MIX); see `portfolio_drawdown`.
     """
 
-    return maximum_drawdown_from_drawdown(portfolio_drawdown(portfolio_data))
+    return maximum_drawdown_from_drawdown(portfolio_drawdown(portfolio_data, basis=basis))
 

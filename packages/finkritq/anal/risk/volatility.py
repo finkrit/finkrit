@@ -11,7 +11,7 @@ from finkritq.anal.returns import calculate_returns, ReturnCalculationMethod
 from finkritq.anal.risk.variance import portfolio_variance
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
-from finkritq.datatype import PriceHistory
+from finkritq.datatype import PriceHistory, WeightingBasis
 from finkritq.portfolio import PortfolioData
 
 
@@ -80,17 +80,22 @@ def volatility_asset(
 
 def portfolio_volatility(
     portfolio_data: PortfolioData,
+    basis: WeightingBasis = WeightingBasis.CONSTANT_MIX,
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     annualized: bool = True,
     periods_per_year: int = 252,
 ) -> float:
     """
     Compute the volatility of a portfolio.
+
+    `basis` selects the ex-ante (CONSTANT_MIX, default) or realized
+    (BUY_AND_HOLD) return basis; see WeightingBasis.
     """
 
     return float(np.sqrt(
         portfolio_variance(
             portfolio_data,
+            basis=basis,
             method=method,
             annualized=annualized,
             periods_per_year=periods_per_year,
