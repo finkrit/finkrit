@@ -1,5 +1,5 @@
 # finkrit/packages/finkritq/anal/risk/__init__.py
-from finkritq.anal.risk.beta import beta, beta_asset, beta_from_prices, beta_from_returns
+from finkritq.anal.risk.beta import beta, beta_asset, beta_from_prices, beta_from_returns, portfolio_beta
 from finkritq.anal.risk.correlation import correlation, correlation_assets, correlation_from_prices, correlation_from_returns, correlation_matrix, correlation_matrix_from_returns
 from finkritq.anal.risk.componentrisk import component_contribution_to_risk
 from finkritq.anal.risk.conditionalvalueatrisk import (
@@ -29,10 +29,17 @@ from finkritq.anal.risk.semivariance import semivariance, semivariance_asset, se
 from finkritq.anal.risk.variance import variance, variance_asset, variance_from_prices, variance_from_returns, portfolio_variance
 from finkritq.anal.risk.valueatrisk import portfolio_value_at_risk, value_at_risk, value_at_risk_asset, value_at_risk_from_prices, value_at_risk_from_returns
 from finkritq.anal.risk.volatility import volatility, volatility_asset, volatility_from_prices, volatility_from_returns, portfolio_volatility
+from finkritq.anal.risk.tracking_error import (
+    tracking_error,
+    tracking_error_asset,
+    tracking_error_from_prices,
+    tracking_error_from_returns,
+    portfolio_tracking_error,
+)
 
 __all__ = [
     # beta
-    "beta", "beta_asset", "beta_from_prices", "beta_from_returns",
+    "beta", "beta_asset", "beta_from_prices", "beta_from_returns", "portfolio_beta",
     # correlation
     "correlation", "correlation_assets", "correlation_from_prices", "correlation_from_returns",
     "correlation_matrix", "correlation_matrix_from_returns",
@@ -66,4 +73,7 @@ __all__ = [
     # volatility
     "volatility", "volatility_asset", "volatility_from_prices",
     "volatility_from_returns", "portfolio_volatility",
+    # tracking error
+    "tracking_error", "tracking_error_asset", "tracking_error_from_prices",
+    "tracking_error_from_returns", "portfolio_tracking_error",
 ]
