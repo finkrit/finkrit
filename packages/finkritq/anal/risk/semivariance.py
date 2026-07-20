@@ -7,7 +7,7 @@ from datetime import date, timedelta
 import numpy as np
 from numpy.typing import NDArray
 
-from finkritq.anal.returns import (ReturnCalculationMethod, calculate_returns)
+from finkritq.transform.returns import (ReturnCalculationMethod, periodic_returns)
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
 from finkritq.datatype import PriceHistory, WeightingBasis
@@ -44,7 +44,7 @@ def semivariance_from_prices(
     Compute semivariance from a price series.
     """
 
-    returns = calculate_returns(prices, method=method)
+    returns = periodic_returns(prices, method=method)
 
     return semivariance_from_returns(
         returns,

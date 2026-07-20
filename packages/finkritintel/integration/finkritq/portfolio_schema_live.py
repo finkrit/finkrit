@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
-from finkritq.anal.returns import ReturnCalculationMethod
+from finkritq.transform.returns import ReturnCalculationMethod
 from finkritq.data import DataRegistry
 from finkritq.datatype import VaREstimationMethod, WeightingBasis
 from finkritq.portfolio import Portfolio

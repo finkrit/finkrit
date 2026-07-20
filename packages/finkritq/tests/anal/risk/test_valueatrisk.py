@@ -62,8 +62,8 @@ class TestVaRFromPrices:
         assert value_at_risk_from_prices(_PRICES_LARGE, return_method=return_method) > 0.0
 
     def test_matches_returns(self):
-        from finkritq.anal.returns import calculate_returns
-        assert value_at_risk_from_prices(_PRICES_LARGE, method=VaREstimationMethod.HISTORICAL) == pytest.approx(value_at_risk_from_returns(calculate_returns(_PRICES_LARGE), method=VaREstimationMethod.HISTORICAL), rel=1e-9)
+        from finkritq.transform.returns import periodic_returns
+        assert value_at_risk_from_prices(_PRICES_LARGE, method=VaREstimationMethod.HISTORICAL) == pytest.approx(value_at_risk_from_returns(periodic_returns(_PRICES_LARGE), method=VaREstimationMethod.HISTORICAL), rel=1e-9)
 
     def test_higher_confidence_gives_higher_var(self):
         assert value_at_risk_from_prices(_PRICES_LARGE, confidence=0.99) >= value_at_risk_from_prices(_PRICES_LARGE, confidence=0.95)

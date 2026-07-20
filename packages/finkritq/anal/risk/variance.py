@@ -8,7 +8,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from finkritq.anal.risk.covariance import covariance_matrix
-from finkritq.anal.returns import ReturnCalculationMethod, calculate_returns
+from finkritq.transform.returns import ReturnCalculationMethod, periodic_returns
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
 from finkritq.datatype import PriceHistory, WeightingBasis
@@ -41,7 +41,7 @@ def variance_from_prices(
     Compute variance from a price series.
     """
 
-    returns = calculate_returns(prices, method=method)
+    returns = periodic_returns(prices, method=method)
 
     return variance_from_returns(
         returns,

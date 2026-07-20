@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy.typing import NDArray
 
-from finkritq.anal.returns import calculate_returns
+from finkritq.transform.returns import periodic_returns
 from finkritq.asset import Asset
 from finkritq.datatype import (
     PriceHistory,
@@ -43,9 +43,9 @@ def beta_from_prices(
     Compute beta from two aligned price series.
     """
 
-    asset_returns = calculate_returns(asset_prices, method=method)
+    asset_returns = periodic_returns(asset_prices, method=method)
 
-    benchmark_returns = calculate_returns(benchmark_prices, method=method)
+    benchmark_returns = periodic_returns(benchmark_prices, method=method)
     return beta_from_returns(asset_returns, benchmark_returns)
 
 

@@ -18,7 +18,7 @@ from finkritq.datatype import (
     WeightingBasis,
 )
 from finkritq.portfolio import PortfolioData
-from finkritq.anal.returns import calculate_returns
+from finkritq.transform.returns import periodic_returns
 
 
 def value_at_risk_from_returns(
@@ -69,7 +69,7 @@ def value_at_risk_from_prices(
     Compute the Value at Risk (value_at_risk) from a price series.
     """
 
-    returns = calculate_returns(prices, method=return_method)
+    returns = periodic_returns(prices, method=return_method)
 
     return value_at_risk_from_returns(
         returns,

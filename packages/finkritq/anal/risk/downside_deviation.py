@@ -10,7 +10,7 @@ from datetime import date
 import numpy as np
 from numpy.typing import NDArray
 
-from finkritq.anal.returns import ReturnCalculationMethod
+from finkritq.transform.returns import ReturnCalculationMethod
 
 from finkritq.anal.risk.semivariance import (
     portfolio_semivariance,

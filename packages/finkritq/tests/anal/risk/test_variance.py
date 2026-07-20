@@ -11,7 +11,7 @@ from finkritq.anal.risk.variance import (
     variance,
     variance_asset,
     portfolio_variance)
-from finkritq.anal.returns import calculate_returns
+from finkritq.transform.returns import periodic_returns
 from finkritq.tests.fixtures import make_price_history, make_stock
 from finkritq.tests.fixtures import RETURNS_A, PRICES, FLAT_PRICES
 
@@ -76,7 +76,7 @@ class TestVarianceFromPrices:
         assert variance_from_prices(PRICES) >= 0.0
 
     def test_consistent_with_returns_version(self):
-        returns = calculate_returns(PRICES)
+        returns = periodic_returns(PRICES)
         v_prices  = variance_from_prices(PRICES,   annualized=False)
         v_returns = variance_from_returns(returns, annualized=False)
         assert v_prices == pytest.approx(v_returns, rel=1e-9)
@@ -85,7 +85,7 @@ class TestVarianceFromPrices:
         assert variance_from_prices(FLAT_PRICES, annualized=False) == pytest.approx(0.0)
 
     def test_matches_numpy_prices(self):
-        returns = calculate_returns(PRICES)
+        returns = periodic_returns(PRICES)
         expected = np.var(returns, ddof=1)
         actual = variance_from_prices(PRICES, annualized=False)
         assert actual == pytest.approx(expected)

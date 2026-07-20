@@ -7,9 +7,9 @@ from datetime import date, timedelta
 import numpy as np
 from numpy.typing import NDArray
 
-from finkritq.anal.returns import (
+from finkritq.transform.returns import (
     ReturnCalculationMethod,
-    calculate_returns,
+    periodic_returns,
 )
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
@@ -45,8 +45,8 @@ def covariance_from_prices(
     Compute covariance from two aligned price series.
     """
 
-    asset_returns = calculate_returns(asset_prices, method=method)
-    other_asset_returns = calculate_returns(other_asset_prices, method=method)
+    asset_returns = periodic_returns(asset_prices, method=method)
+    other_asset_returns = periodic_returns(other_asset_prices, method=method)
 
     return covariance_from_returns(
         asset_returns,

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from numpy.typing import NDArray
 
-from finkritq.anal.returns import calculate_returns
+from finkritq.transform.returns import periodic_returns
 from finkritq.asset import Asset
 from finkritq.datatype import PriceHistory, ReturnCalculationMethod
 from finkritq.portfolio import Portfolio
@@ -187,7 +187,7 @@ class PortfolioData:
     ) -> NDArray[np.float64]:
 
         return np.vstack([
-            calculate_returns(history.close, method)
+            periodic_returns(history.close, method)
             for history in self.histories
         ])
     
@@ -218,7 +218,7 @@ class PortfolioData:
 
         # self.value is the value path (one number per day); its returns are the
         # portfolio returns directly. Nothing per-asset to combine.
-        return calculate_returns(self.value, method=method)
+        return periodic_returns(self.value, method=method)
 
     def constant_mix_returns(
         self,
@@ -265,7 +265,7 @@ class PortfolioData:
         method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     ) -> NDArray[np.float64]:
 
-        return calculate_returns(self[asset].close, method=method)
+        return periodic_returns(self[asset].close, method=method)
     
     def asset_history(self, asset: Asset) -> PriceHistory:
         return self[asset]

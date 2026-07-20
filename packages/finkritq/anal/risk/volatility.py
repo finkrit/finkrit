@@ -7,7 +7,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 
-from finkritq.anal.returns import calculate_returns, ReturnCalculationMethod
+from finkritq.transform.returns import periodic_returns, ReturnCalculationMethod
 from finkritq.anal.risk.variance import portfolio_variance
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
@@ -41,7 +41,7 @@ def volatility_from_prices(
     Compute volatility from a price series.
     """
 
-    returns = calculate_returns(prices, method=method)
+    returns = periodic_returns(prices, method=method)
     return volatility_from_returns(returns, annualized=annualized, periods_per_year=periods_per_year)
 
 

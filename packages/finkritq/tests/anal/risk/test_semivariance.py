@@ -13,7 +13,7 @@ from finkritq.anal.risk.semivariance import (
     portfolio_semivariance,
 )
 from finkritq.anal.risk.variance import variance_from_returns
-from finkritq.anal.returns import calculate_returns
+from finkritq.transform.returns import periodic_returns
 from finkritq.tests.fixtures import make_price_history, make_stock
 from finkritq.tests.fixtures import RETURNS_A, PRICES, FLAT_PRICES
 
@@ -76,7 +76,7 @@ class TestSemivarianceFromPrices:
         assert semivariance_from_prices(FLAT_PRICES, annualized=False) == pytest.approx(0.0)
 
     def test_matches_returns_version(self):
-        returns = calculate_returns(PRICES)
+        returns = periodic_returns(PRICES)
 
         expected = semivariance_from_returns(returns, annualized=False)
         actual = semivariance_from_prices(PRICES, annualized=False)

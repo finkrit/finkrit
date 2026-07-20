@@ -122,10 +122,10 @@ class TestCVaRFromPrices:
         assert conditional_value_at_risk_from_prices(prices, return_method=return_method) > 0.0
 
     def test_matches_returns(self):
-        from finkritq.anal.returns import calculate_returns
+        from finkritq.transform.returns import periodic_returns
 
         prices = np.cumprod(1 + _RETURNS_LARGE) * 100
-        returns = calculate_returns(prices)
+        returns = periodic_returns(prices)
 
         assert conditional_value_at_risk_from_prices(
             prices,

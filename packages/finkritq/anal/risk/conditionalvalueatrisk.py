@@ -8,7 +8,7 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.stats import norm
 
-from finkritq.anal.returns import calculate_returns
+from finkritq.transform.returns import periodic_returns
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
 from finkritq.datatype import (
@@ -84,7 +84,7 @@ def conditional_value_at_risk_from_prices(
     Compute the Conditional Value at Risk (CVaR) from a price series.
     """
 
-    returns = calculate_returns(prices, method=return_method)
+    returns = periodic_returns(prices, method=return_method)
 
     return conditional_value_at_risk_from_returns(
         returns,

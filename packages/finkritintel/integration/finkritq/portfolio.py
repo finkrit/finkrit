@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 from numpy.typing import NDArray
 
-from finkritq.anal.returns import calculate_returns
+from finkritq.transform.returns import periodic_returns
 from finkritq.anal.risk.beta import beta_from_returns
 from finkritq.anal.risk.componentrisk import component_contribution_to_risk
 from finkritq.anal.risk.conditionalvalueatrisk import portfolio_conditional_value_at_risk
@@ -52,7 +52,7 @@ def _portfolio_beta(
     method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
 ) -> float:
     portfolio_returns = portfolio_data.portfolio_returns(method=method)
-    benchmark_returns = calculate_returns(benchmark_history.close, method=method)
+    benchmark_returns = periodic_returns(benchmark_history.close, method=method)
     return beta_from_returns(portfolio_returns, benchmark_returns)
 
 

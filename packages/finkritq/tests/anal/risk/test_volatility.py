@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 
-from finkritq.anal.returns import calculate_returns
+from finkritq.transform.returns import periodic_returns
 from finkritq.anal.risk.variance import variance_from_returns, portfolio_variance
 from finkritq.anal.risk.volatility import (
     volatility_from_returns,
@@ -66,7 +66,7 @@ class TestVolatilityFromPrices:
         assert volatility_from_prices(PRICES) >= 0.0
 
     def test_consistent_with_returns_version(self):
-        returns = calculate_returns(PRICES)
+        returns = periodic_returns(PRICES)
         vp = volatility_from_prices(PRICES,   annualized=False)
         vr = volatility_from_returns(returns, annualized=False)
         assert vp == pytest.approx(vr, rel=1e-9)
@@ -75,13 +75,13 @@ class TestVolatilityFromPrices:
         assert volatility_from_prices(FLAT_PRICES, annualized=False) == pytest.approx(0.0)
 
     def test_matches_numpy_std_prices(self):
-        returns = calculate_returns(PRICES)
+        returns = periodic_returns(PRICES)
         expected = np.std(returns, ddof=1)
         actual = volatility_from_prices(PRICES, annualized=False)
         assert actual == pytest.approx(expected)
 
     def test_matches_returns_version(self):
-        returns = calculate_returns(PRICES)
+        returns = periodic_returns(PRICES)
         expected = volatility_from_returns(returns, annualized=False)
         actual = volatility_from_prices(PRICES, annualized=False)
 

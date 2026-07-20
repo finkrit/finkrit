@@ -4,7 +4,11 @@ from .assettype import AssetType
 from .currency import Currency
 from .custodian import CustodianType
 from .market import Exchange, MarketIndex
-from .returns import ReturnCalculationMethod
+# ReturnCalculationMethod lives with the returns transform it parameterizes (in
+# transform/), below this layer. Re-exported here so `from finkritq.datatype
+# import ReturnCalculationMethod` keeps working. The dependency points one way
+# (datatype -> transform), so there is no cycle.
+from finkritq.transform.returns import ReturnCalculationMethod
 from .risk import VaREstimationMethod, WeightingBasis
 from .pricehistory import PriceHistory
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from finkritq.anal.returns import ReturnCalculationMethod
+from finkritq.transform.returns import ReturnCalculationMethod
 from finkritq.datatype import PriceHistory, VaREstimationMethod
 
 

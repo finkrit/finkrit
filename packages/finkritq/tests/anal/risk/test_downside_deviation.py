@@ -54,8 +54,8 @@ class TestDownsideDeviationFromPrices:
         assert downside_deviation_from_prices(np.array([100.0, 101.0, 102.0, 103.0, 104.0]), annualized=False) == pytest.approx(0.0)
 
     def test_matches_returns(self):
-        from finkritq.anal.returns import calculate_returns
-        assert downside_deviation_from_prices(PRICES, annualized=False) == pytest.approx(downside_deviation_from_returns(calculate_returns(PRICES), annualized=False), rel=1e-9)
+        from finkritq.transform.returns import periodic_returns
+        assert downside_deviation_from_prices(PRICES, annualized=False) == pytest.approx(downside_deviation_from_returns(periodic_returns(PRICES), annualized=False), rel=1e-9)
 
     @pytest.mark.parametrize("method", list(ReturnCalculationMethod))
     def test_all_return_methods(self, method):
@@ -173,9 +173,9 @@ class TestDownsideDeviationFromPrices:
         assert downside_deviation_from_prices(prices, annualized=False) == pytest.approx(0.0)
 
     def test_matches_returns(self):
-        from finkritq.anal.returns import calculate_returns
+        from finkritq.transform.returns import periodic_returns
 
-        returns = calculate_returns(PRICES)
+        returns = periodic_returns(PRICES)
         dd_prices = downside_deviation_from_prices(PRICES, annualized=False)
         dd_returns = downside_deviation_from_returns(returns, annualized=False)
         assert dd_prices == pytest.approx(dd_returns, rel=1e-9)

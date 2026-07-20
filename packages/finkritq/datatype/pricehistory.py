@@ -4,6 +4,8 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
+from finkritq.transform.returns import ReturnCalculationMethod, periodic_returns
+
 @dataclass(frozen=True, slots=True)
 class PriceHistory:
     """
@@ -85,6 +87,20 @@ class PriceHistory:
         if self.empty:
             return "PriceHistory(empty)"
         return f"PriceHistory({self.start} -> {self.end}, {self.n_periods} observations)"
+
+    def returns(
+        self,
+        method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
+    ) -> NDArray[np.float64]:
+        """
+        Period-over-period returns of this series' close prices.
+
+        Convenience over `periodic_returns(self.close, method)`. Returns are a
+        derived view of a price series, so the series knows how to produce them.
+        Output has one fewer element than the history (the first period has no
+        prior close to compare against).
+        """
+        return periodic_returns(self.close, method)
     
     def align(self, other: "PriceHistory") -> tuple["PriceHistory", "PriceHistory"]:
         """

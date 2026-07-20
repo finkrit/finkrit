@@ -14,7 +14,7 @@ from finkritq.anal.risk.covariance import (
     covariance_assets,
 )
 from finkritq.anal.risk.covariance import covariance
-from finkritq.anal.returns import calculate_returns
+from finkritq.transform.returns import periodic_returns
 from finkritq.tests.fixtures import make_price_history, make_stock, make_price_history
 from finkritq.tests.fixtures import RETURNS_A, RETURNS_B, PRICES
 
@@ -76,11 +76,11 @@ class TestCovarianceFromPrices:
         assert covariance_from_prices(PRICES, PRICES, annualized=False) >= 0.0
 
     def test_matches_returns_version(self):
-        returns = calculate_returns(PRICES)
+        returns = periodic_returns(PRICES)
         assert covariance_from_prices(PRICES, PRICES, annualized=False) == pytest.approx(covariance_from_returns(returns, returns, annualized=False))
 
     def test_matches_numpy_cov(self):
-        returns = calculate_returns(PRICES)
+        returns = periodic_returns(PRICES)
         expected = np.cov(returns, returns, ddof=1)[0, 1]
         assert covariance_from_prices(PRICES, PRICES, annualized=False) == pytest.approx(expected)
 
