@@ -43,6 +43,27 @@ from finkritq.anal.performance.calmar_ratio import (
     calmar_ratio_from_returns,
     portfolio_calmar_ratio,
 )
+from finkritq.anal.performance.treynor_ratio import (
+    portfolio_treynor_ratio,
+    treynor_ratio,
+    treynor_ratio_asset,
+    treynor_ratio_from_prices,
+    treynor_ratio_from_returns,
+)
+from finkritq.anal.performance.information_ratio import (
+    information_ratio,
+    information_ratio_asset,
+    information_ratio_from_prices,
+    information_ratio_from_returns,
+    portfolio_information_ratio,
+)
+from finkritq.anal.performance.jensens_alpha import (
+    jensens_alpha,
+    jensens_alpha_asset,
+    jensens_alpha_from_prices,
+    jensens_alpha_from_returns,
+    portfolio_jensens_alpha,
+)
 
 __all__ = [
     # total (cumulative) return
@@ -75,4 +96,22 @@ __all__ = [
     "calmar_ratio",
     "calmar_ratio_asset",
     "portfolio_calmar_ratio",
+    # treynor ratio
+    "treynor_ratio_from_returns",
+    "treynor_ratio_from_prices",
+    "treynor_ratio",
+    "treynor_ratio_asset",
+    "portfolio_treynor_ratio",
+    # information ratio
+    "information_ratio_from_returns",
+    "information_ratio_from_prices",
+    "information_ratio",
+    "information_ratio_asset",
+    "portfolio_information_ratio",
+    # jensen's alpha
+    "jensens_alpha_from_returns",
+    "jensens_alpha_from_prices",
+    "jensens_alpha",
+    "jensens_alpha_asset",
+    "portfolio_jensens_alpha",
 ]
