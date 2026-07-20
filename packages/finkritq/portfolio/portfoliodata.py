@@ -98,8 +98,8 @@ class PortfolioData:
         Portfolio market value over the lookback window.
 
         Convention: *current* holdings are applied across the whole history --
-        i.e. today's quantities times each day's close. Lot `acquired` dates are
-        intentionally ignored; this is the standard "current-composition" basis
+        i.e. today's quantities times each day's close. TaxLot `acquired` dates
+        are intentionally ignored; this is the standard "current-composition" basis
         for risk analytics (what is today's portfolio's risk, given how these
         assets have historically behaved?), NOT a position-aware backtest of
         what you actually held on each past date.
@@ -139,8 +139,8 @@ class PortfolioData:
     @property
     def weights(self) -> dict[Asset, float]:
 
-        # Accumulate market value per asset: the same asset can be held in
-        # more than one account/position, so we sum rather than overwrite.
+        # Accumulate market value per asset: the same asset can appear in
+        # more than one position, so we sum rather than overwrite.
         # (A dict comprehension keyed by asset would silently drop all but the
         # last position of a repeated asset -- and disagree with .value, which
         # already sums across positions.)

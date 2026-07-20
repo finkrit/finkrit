@@ -1,117 +1,102 @@
-# finkrit/tests/packages/finkritq/portfolio/test_portfolio.py
+# finkrit/packages/finkritq/tests/portfolio/test_portfolio.py
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
 
 from finkritq.portfolio import Portfolio
 
 
 class TestPortfolio:
 
-    def test_add_account(self, account):
+    def test_add_position(self, position):
         portfolio = Portfolio(id="1", name="Portfolio")
 
-        returned = portfolio.add_account(account)
+        returned = portfolio.add_position(position)
 
-        assert returned is account
-        assert portfolio.account_count == 1
+        assert returned is position
+        assert portfolio.position_count == 1
 
-    def test_add_duplicate_account_returns_existing(self, account):
+    def test_add_duplicate_position_returns_existing(self, position):
         portfolio = Portfolio(id="1", name="Portfolio")
 
-        portfolio.add_account(account)
-        returned = portfolio.add_account(account)
+        portfolio.add_position(position)
+        returned = portfolio.add_position(position)
 
-        assert returned is account
-        assert portfolio.account_count == 1
+        assert returned is position
+        assert portfolio.position_count == 1
 
-    def test_remove_account(self, account):
+    def test_remove_position(self, position):
         portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
+        portfolio.add_position(position)
 
-        removed = portfolio.remove_account(account.id)
+        removed = portfolio.remove_position(position.id)
 
-        assert removed is account
-        assert portfolio.account_count == 0
+        assert removed is position
+        assert portfolio.position_count == 0
 
-    def test_remove_missing_account_returns_none(self):
-        portfolio = Portfolio(id="1", name="Portfolio")
-
-        assert portfolio.remove_account("missing") is None
-
-    def test_get_account(self, account):
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
-
-        assert portfolio.get_account(account.id) is account
-
-    def test_get_missing_account_returns_none(self):
+    def test_remove_missing_position_returns_none(self):
         portfolio = Portfolio(id="1", name="Portfolio")
 
-        assert portfolio.get_account("missing") is None
+        assert portfolio.remove_position("missing") is None
 
-    def test_has_account_true(self, account):
+    def test_get_position(self, position):
         portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
+        portfolio.add_position(position)
 
-        assert portfolio.has_account(account.id)
+        assert portfolio.get_position(position.id) is position
 
-    def test_has_account_false(self):
-        portfolio = Portfolio(id="1", name="Portfolio")
-
-        assert not portfolio.has_account("missing")
-
-    def test_positions(self, account):
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
-
-        assert portfolio.positions == tuple(account)
-
-    def test_assets(self, account):
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
-
-        assert portfolio.assets == tuple(position.asset for position in account)
-
-    def test_lots(self, account):
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
-
-        expected = tuple(lot for position in account for lot in position.lots)
-
-        assert portfolio.lots == expected
-
-    def test_cost_basis(self, account):
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
-
-        assert portfolio.cost_basis == account.cost_basis
-
-    def test_account_count(self, account):
+    def test_get_missing_position_returns_none(self):
         portfolio = Portfolio(id="1", name="Portfolio")
 
-        assert portfolio.account_count == 0
+        assert portfolio.get_position("missing") is None
 
-        portfolio.add_account(account)
-
-        assert portfolio.account_count == 1
-
-    def test_position_count(self, account):
+    def test_has_position_true(self, position):
         portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
+        portfolio.add_position(position)
 
-        assert portfolio.position_count == len(portfolio.positions)
+        assert portfolio.has_position(position.id)
 
-    def test_asset_count(self, account):
+    def test_has_position_false(self):
         portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
+
+        assert not portfolio.has_position("missing")
+
+    def test_positions(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
+
+        assert portfolio.positions == [position]
+
+    def test_assets(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
+
+        assert portfolio.assets == (position.asset,)
+
+    def test_lots(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
+
+        assert portfolio.lots == tuple(position.lots)
+
+    def test_cost_basis(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
+
+        assert portfolio.cost_basis == position.cost_basis
+
+    def test_position_count(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio")
+
+        assert portfolio.position_count == 0
+
+        portfolio.add_position(position)
+
+        assert portfolio.position_count == 1
+
+    def test_asset_count(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
 
         assert portfolio.asset_count == len(portfolio.assets)
 
-    def test_lot_count(self, account):
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
+    def test_lot_count(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
 
         assert portfolio.lot_count == len(portfolio.lots)
 
@@ -120,69 +105,57 @@ class TestPortfolio:
 
         assert portfolio.is_empty
 
-    def test_is_empty_false(self, account):
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
+    def test_is_empty_false(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
 
         assert not portfolio.is_empty
 
-    def test_long_term_lots(self, account):
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
+    def test_long_term_lots(self, position):
+        # The fixture position's lot is acquired at LONG_TERM_DATE (2020).
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
 
-        as_of = date(2025, 1, 1)  # well after the fixture lots' 2020 acquisition
+        as_of = date(2025, 1, 1)
         assert all(lot.is_long_term(as_of) for lot in portfolio.long_term_lots(as_of))
 
-    def test_short_term_lots(self, account):
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
+    def test_short_term_lots(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
 
         as_of = date(2025, 1, 1)
         assert all(not lot.is_long_term(as_of) for lot in portfolio.short_term_lots(as_of))
 
-    def test_earliest_acquired(self, account, position):
-        account.add_position(position)
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
+    def test_earliest_acquired(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
 
-        assert portfolio.earliest_acquired == min(
-            lot.acquired for lot in portfolio.lots
-        )
+        assert portfolio.earliest_acquired == min(lot.acquired for lot in portfolio.lots)
 
-    def test_latest_acquired(self, account, position):
-        account.add_position(position)
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
+    def test_latest_acquired(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
 
-        assert portfolio.latest_acquired == max(
-            lot.acquired for lot in portfolio.lots
-        )
+        assert portfolio.latest_acquired == max(lot.acquired for lot in portfolio.lots)
 
-    def test_iter(self, account):
-        portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
+    def test_iter(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
 
-        assert list(portfolio) == [account]
+        assert list(portfolio) == [position]
 
-    def test_len(self, account):
+    def test_len(self, position):
         portfolio = Portfolio(id="1", name="Portfolio")
 
         assert len(portfolio) == 0
 
-        portfolio.add_account(account)
+        portfolio.add_position(position)
 
         assert len(portfolio) == 1
 
-    def test_contains(self, account):
+    def test_contains(self, position):
+        portfolio = Portfolio(id="1", name="Portfolio", positions=[position])
+
+        assert position in portfolio
+
+    def test_not_contains(self, position):
         portfolio = Portfolio(id="1", name="Portfolio")
-        portfolio.add_account(account)
 
-        assert account in portfolio
-
-    def test_not_contains(self, account):
-        portfolio = Portfolio(id="1", name="Portfolio")
-
-        assert account not in portfolio
+        assert position not in portfolio
 
     def test_str(self):
         portfolio = Portfolio(id="1", name="Retirement")
@@ -192,20 +165,13 @@ class TestPortfolio:
     def test_repr(self):
         portfolio = Portfolio(id="1", name="Retirement")
 
-        assert repr(portfolio) == (
-            "Portfolio(name='Retirement', accounts=0, positions=0)"
-        )
+        assert repr(portfolio) == "Portfolio(name='Retirement', positions=0)"
 
     def test_optional_fields_are_stored(self):
-        user = object()
-
         portfolio = Portfolio(
             id="1",
             name="Portfolio",
-            user=user,
             notes="Long-term portfolio",
         )
 
-        assert portfolio.user is user
         assert portfolio.notes == "Long-term portfolio"
-

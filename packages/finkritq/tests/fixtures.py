@@ -11,14 +11,11 @@ import numpy as np
 
 from finkritq.asset import Stock
 from finkritq.datatype import (
-    AccountRegistrationType,
     Currency,
-    CustodianType,
     Exchange,
     PriceHistory,
 )
-from finkritq.portfolio import Account, Lot, Portfolio, Position
-from finkritq.portfolio.custodian import Custodian
+from finkritq.portfolio import Portfolio, Position, TaxLot
 
 
 # ---------------------------------------------------------------------------
@@ -104,45 +101,23 @@ def make_stock(ticker: str = "TST") -> Stock:
     )
 
 
-def make_custodian() -> Custodian:
-    return Custodian(type=CustodianType.SCHWAB)
-
-
-def make_account(
-    account_id: str = "acct-1",
-    account_number: str = "1234",
-    name: str = "Test Account",
-) -> Account:
-    return Account(
-        id=account_id,
-        account_number=account_number,
-        name=name,
-        custodian=make_custodian(),
-        account_registration_type=AccountRegistrationType.INDIVIDUAL,
-    )
-
-
 def make_position(
     stock: Stock,
-    account: Account | None = None,  # accepted for call-site compatibility; unused
     quantity: Decimal = Decimal("10"),
     cost: Decimal = Decimal("100"),
     position_id: str = "pos-1",
     lot_id: str = "lot-1",
     acquired: date = LONG_TERM_DATE,
 ) -> Position:
-    """Build a Position + single Lot. Now a normal constructor call -- the
-    domain graph is a tree, so no __new__ dance is needed."""
-    lot = Lot(id=lot_id, quantity=quantity, cost_per_share=cost, acquired=acquired)
+    """Build a Position holding a single TaxLot."""
+    lot = TaxLot(id=lot_id, quantity=quantity, cost_per_share=cost, acquired=acquired)
     return Position(id=position_id, asset=stock, lots=(lot,))
 
 
 def make_two_stock_portfolio() -> tuple[Portfolio, Stock, Stock]:
     a = make_stock("AAA")
     b = make_stock("BBB")
-    account = make_account()
-    pos_a = make_position(a, account=account, quantity=Decimal("10"), cost=Decimal("100"), position_id="pos-a", lot_id="lot-a")
-    pos_b = make_position(b, account=account, quantity=Decimal("5"),  cost=Decimal("200"), position_id="pos-b", lot_id="lot-b")
-    account.positions = [pos_a, pos_b]
-    portfolio = Portfolio(id="port-1", name="Test Portfolio", accounts=[account])
+    pos_a = make_position(a, quantity=Decimal("10"), cost=Decimal("100"), position_id="pos-a", lot_id="lot-a")
+    pos_b = make_position(b, quantity=Decimal("5"),  cost=Decimal("200"), position_id="pos-b", lot_id="lot-b")
+    portfolio = Portfolio(id="port-1", name="Test Portfolio", positions=[pos_a, pos_b])
     return portfolio, a, b

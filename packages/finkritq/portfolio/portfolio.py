@@ -4,80 +4,76 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
-from typing import Any, Iterator
+from typing import Iterator
 
 from finkritq.asset import Asset
-from finkritq.portfolio.account import Account
-from finkritq.portfolio.lot import Lot
 from finkritq.portfolio.position import Position
+from finkritq.portfolio.taxlot import TaxLot
 
 
 @dataclass(slots=True)
 class Portfolio:
     """
-    Represents a collection of investment accounts managed together.
+    A set of positions analyzed together -- the quant analysis unit.
+
+    This is deliberately lean: just a bag of positions, with no notion of who
+    owns it, where it custodies, or how it is taxed. The ownership/legal graph
+    (household, registration, account, custodian) lives above finq, in the RIA
+    layer, which flattens an account's or a household's holdings *down to* a
+    Portfolio to run analytics. finq never sees an account -- it sees positions
+    and prices. "Portfolio" here is the polymorphic analysis view: whatever set
+    of holdings you point the measures at.
     """
 
     id: str
     name: str
 
-    accounts: list[Account] = field(default_factory=list)
+    positions: list[Position] = field(default_factory=list)
 
-    # Higher-level objects (RIA platform)
-    user: Any | None = None
-    
     notes: str | None = None
 
     # ------------------------------------------------------------------
-    # Account Management
+    # Position Management
     # ------------------------------------------------------------------
 
-    def add_account(self, account: Account) -> Account:
-        existing = self.get_account(account.id)
+    def add_position(self, position: Position) -> Position:
+        existing = self.get_position(position.id)
 
         if existing is not None:
-            # Idempotent for the same object; a *different* account claiming an
+            # Idempotent for the same object; a *different* position claiming an
             # existing id is a conflict we surface rather than silently drop.
-            if existing is account:
+            if existing is position:
                 return existing
-            raise ValueError(f"An account with id '{account.id}' already exists.")
+            raise ValueError(f"A position with id '{position.id}' already exists.")
 
-        self.accounts.append(account)
-        return account
+        self.positions.append(position)
+        return position
 
-    def remove_account(self, account_id: str) -> Account | None:
-        account = self.get_account(account_id)
+    def remove_position(self, position_id: str) -> Position | None:
+        position = self.get_position(position_id)
 
-        if account is None:
+        if position is None:
             return None
 
-        self.accounts.remove(account)
-        return account
+        self.positions.remove(position)
+        return position
 
-    def get_account(self, account_id: str) -> Account | None:
-        return next((a for a in self.accounts if a.id == account_id), None)
+    def get_position(self, position_id: str) -> Position | None:
+        return next((p for p in self.positions if p.id == position_id), None)
 
-    def has_account(self, account_id: str) -> bool:
-        return self.get_account(account_id) is not None
+    def has_position(self, position_id: str) -> bool:
+        return self.get_position(position_id) is not None
 
     # ------------------------------------------------------------------
     # Derived Collections
     # ------------------------------------------------------------------
 
     @property
-    def positions(self) -> tuple[Position, ...]:
-        return tuple(
-            position
-            for account in self.accounts
-            for position in account
-        )
-
-    @property
     def assets(self) -> tuple[Asset, ...]:
         return tuple(position.asset for position in self.positions)
 
     @property
-    def lots(self) -> tuple[Lot, ...]:
+    def lots(self) -> tuple[TaxLot, ...]:
         return tuple(
             lot
             for position in self.positions
@@ -90,11 +86,7 @@ class Portfolio:
 
     @property
     def cost_basis(self) -> Decimal:
-        return sum((account.cost_basis for account in self.accounts), start=Decimal("0"))
-
-    @property
-    def account_count(self) -> int:
-        return len(self.accounts)
+        return sum((position.cost_basis for position in self.positions), start=Decimal("0"))
 
     @property
     def position_count(self) -> int:
@@ -110,12 +102,12 @@ class Portfolio:
 
     @property
     def is_empty(self) -> bool:
-        return not self.accounts
+        return not self.positions
 
-    def long_term_lots(self, as_of: date) -> tuple[Lot, ...]:
+    def long_term_lots(self, as_of: date) -> tuple[TaxLot, ...]:
         return tuple(lot for lot in self.lots if lot.is_long_term(as_of))
 
-    def short_term_lots(self, as_of: date) -> tuple[Lot, ...]:
+    def short_term_lots(self, as_of: date) -> tuple[TaxLot, ...]:
         return tuple(lot for lot in self.lots if not lot.is_long_term(as_of))
 
     @property
@@ -130,14 +122,14 @@ class Portfolio:
     # Collection Interface
     # ------------------------------------------------------------------
 
-    def __iter__(self) -> Iterator[Account]:
-        return iter(self.accounts)
+    def __iter__(self) -> Iterator[Position]:
+        return iter(self.positions)
 
     def __len__(self) -> int:
-        return len(self.accounts)
+        return len(self.positions)
 
-    def __contains__(self, account: Account) -> bool:
-        return account in self.accounts
+    def __contains__(self, position: Position) -> bool:
+        return position in self.positions
 
     def __str__(self) -> str:
         return self.name
@@ -146,7 +138,5 @@ class Portfolio:
         return (
             f"Portfolio("
             f"name={self.name!r}, "
-            f"accounts={self.account_count}, "
             f"positions={self.position_count})"
         )
-    

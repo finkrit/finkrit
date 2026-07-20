@@ -6,25 +6,25 @@ from datetime import date
 from decimal import Decimal
 
 from finkritq.asset import Asset
-from finkritq.portfolio.lot import Lot
+from finkritq.portfolio.taxlot import TaxLot
 
 
 @dataclass(slots=True, eq=False)
 class Position:
     """
     A position in a single asset: the asset plus its tax lots. Part of the
-    one-directional tree (owned by an Account; does not point back up to it).
+    one-directional tree (owned by a Portfolio; does not point back up to it).
 
     ``eq=False`` -> identity equality. A Position is a mutable entity
     (``last_price`` is updated in place), not a value; two distinct positions
     are never "equal" just because their contents match, and value-equality on
     a mutable entity is a footgun (it also used to recurse through the old
-    Position<->Lot<->Account cycle).
+    Position<->TaxLot cycle).
     """
 
     id: str
     asset: Asset
-    lots: tuple[Lot, ...]
+    lots: tuple[TaxLot, ...]
 
     notes: str | None = None
     last_price: Decimal | None = None

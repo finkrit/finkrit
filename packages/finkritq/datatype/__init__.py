@@ -1,8 +1,6 @@
 # finkrit/packages/finkritq/datatype/__init__.py
-from .accountregistration import AccountRegistrationType
 from .assettype import AssetType
 from .currency import Currency
-from .custodian import CustodianType
 from .market import Exchange, MarketIndex
 # ReturnCalculationMethod lives with the returns transform it parameterizes (in
 # transform/), below this layer. Re-exported here so `from finkritq.datatype
@@ -13,10 +11,8 @@ from .risk import VaREstimationMethod, WeightingBasis
 from .pricehistory import PriceHistory
 
 __all__ = [
-    "AccountRegistrationType",
     "AssetType",
     "Currency",
-    "CustodianType",
     "Exchange",
     "MarketIndex",
     "ReturnCalculationMethod",

@@ -1,4 +1,4 @@
-# finkrit/packages/finkritq/portfolio/lot.py
+# finkrit/packages/finkritq/portfolio/taxlot.py
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -7,14 +7,15 @@ from decimal import Decimal
 
 
 @dataclass(frozen=True, slots=True)
-class Lot:
+class TaxLot:
     """
     A single tax lot: a quantity of an asset acquired at a point in time and
-    price. A pure value object. It does NOT reference its parent Position
-    (the tree is one-directional Portfolio -> Account -> Position -> Lot). The
-    asset/account it belongs to are known by the owning Position, so a Lot
-    carries only what a lot intrinsically is. Frozen: a tax lot is an
-    immutable historical record.
+    price. A pure value object and the atomic unit tax-lot analytics (harvesting,
+    realized/unrealized gains, holding period) operate on. It does NOT reference
+    its parent Position (the tree is one-directional Portfolio -> Position ->
+    TaxLot); the asset it belongs to is known by the owning Position, so a lot
+    carries only what a lot intrinsically is. Frozen: a tax lot is an immutable
+    historical record.
 
     Time-relative queries (holding period, long/short-term) take an explicit
     `as_of` date rather than reading the wall clock, so a lot gives the same
@@ -53,11 +54,11 @@ class Lot:
         return self.holding_days(as_of) >= 365
 
     def __str__(self) -> str:
-        return f"Lot({self.quantity} @ {self.cost_per_share})"
+        return f"TaxLot({self.quantity} @ {self.cost_per_share})"
 
     def __repr__(self) -> str:
         return (
-            f"Lot("
+            f"TaxLot("
             f"quantity={self.quantity}, "
             f"cost_per_share={self.cost_per_share}, "
             f"acquired={self.acquired!r})"
@@ -73,4 +74,3 @@ class Lot:
         if self.cost_per_share == 0:
             return Decimal("0")
         return (last_price - self.cost_per_share) / self.cost_per_share
-

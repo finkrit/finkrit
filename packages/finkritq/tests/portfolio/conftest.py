@@ -1,23 +1,16 @@
-# finkrit/tests/packages/finkritq/portfolio/conftest.py
+# finkrit/packages/finkritq/tests/portfolio/conftest.py
 """
 Shared pytest fixtures for portfolio tests.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
 from decimal import Decimal
 
 import pytest
 
-from finkritq.asset import Stock
-from finkritq.datatype import AccountRegistrationType, Currency, CustodianType, Exchange
-from finkritq.portfolio import Account, Lot, Portfolio, Position
-from finkritq.portfolio.custodian import Custodian
+from finkritq.portfolio import Portfolio, TaxLot
 from finkritq.tests.fixtures import (
     LONG_TERM_DATE,
-    SHORT_TERM_DATE,
-    make_account,
-    make_custodian,
     make_position,
     make_stock,
     make_two_stock_portfolio,
@@ -40,29 +33,13 @@ def asset(stock_a):
 
 
 @pytest.fixture
-def custodian():
-    return make_custodian()
+def position(stock_a):
+    return make_position(stock_a)
 
 
 @pytest.fixture
-def account(custodian):
-    return Account(
-        id="acct-1",
-        account_number="1234",
-        name="Test Account",
-        custodian=custodian,
-        account_registration_type=AccountRegistrationType.INDIVIDUAL,
-    )
-
-
-@pytest.fixture
-def position(account, stock_a):
-    return make_position(stock_a, account=account)
-
-
-@pytest.fixture
-def lot(position):
-    return Lot(
+def taxlot():
+    return TaxLot(
         id="lot-1",
         quantity=Decimal("10"),
         cost_per_share=Decimal("100"),
@@ -72,18 +49,16 @@ def lot(position):
 
 @pytest.fixture
 def two_stock_portfolio(stock_a, stock_b):
-    account = make_account()
-    pos_a = make_position(stock_a, account=account, quantity=Decimal("10"), cost=Decimal("100"), position_id="pos-a", lot_id="lot-a")
-    pos_b = make_position(stock_b, account=account, quantity=Decimal("5"),  cost=Decimal("200"), position_id="pos-b", lot_id="lot-b")
-    account.positions = [pos_a, pos_b]
-    return Portfolio(id="port-1", name="Test Portfolio", accounts=[account])
+    pos_a = make_position(stock_a, quantity=Decimal("10"), cost=Decimal("100"), position_id="pos-a", lot_id="lot-a")
+    pos_b = make_position(stock_b, quantity=Decimal("5"),  cost=Decimal("200"), position_id="pos-b", lot_id="lot-b")
+    return Portfolio(id="port-1", name="Test Portfolio", positions=[pos_a, pos_b])
 
 
 @pytest.fixture
-def position_a(account, stock_a):
-    return make_position(stock_a, account=account, position_id="pos-a", lot_id="lot-a")
+def position_a(stock_a):
+    return make_position(stock_a, position_id="pos-a", lot_id="lot-a")
 
 
 @pytest.fixture
-def position_b(account, stock_b):
-    return make_position(stock_b, account=account, position_id="pos-b", lot_id="lot-b")
+def position_b(stock_b):
+    return make_position(stock_b, position_id="pos-b", lot_id="lot-b")

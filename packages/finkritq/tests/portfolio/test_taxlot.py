@@ -1,4 +1,4 @@
-# finkrit/tests/packages/finkritq/portfolio/test_lot.py
+# finkrit/packages/finkritq/tests/portfolio/test_taxlot.py
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -6,21 +6,21 @@ from decimal import Decimal
 
 import pytest
 
-from finkritq.portfolio import Lot
+from finkritq.portfolio import TaxLot
 
 
-class TestLot:
+class TestTaxLot:
 
     @pytest.fixture
-    def lot(self, position):
-        return Lot(
+    def lot(self):
+        return TaxLot(
             id="lot-1",
             quantity=Decimal("10"),
             cost_per_share=Decimal("100"),
             acquired=date.today() - timedelta(days=400),
         )
 
-    # Lot no longer references its parent (tree, not cycle). The old
+    # TaxLot no longer references its parent (tree, not cycle). The old
     # test_asset/test_account back-reference tests are gone by design.
 
     def test_cost_basis(self, lot):
@@ -53,8 +53,8 @@ class TestLot:
     def test_is_long_term_true(self, lot):
         assert lot.is_long_term(lot.acquired + timedelta(days=365)) is True
 
-    def test_is_long_term_false(self, position):
-        lot = Lot(
+    def test_is_long_term_false(self):
+        lot = TaxLot(
             id="lot-2",
             quantity=Decimal("10"),
             cost_per_share=Decimal("100"),
@@ -63,20 +63,20 @@ class TestLot:
         assert lot.is_long_term(date(2020, 4, 10)) is False  # 100 days -> short-term
 
     def test_str(self, lot):
-        assert str(lot) == "Lot(10 @ 100)"
+        assert str(lot) == "TaxLot(10 @ 100)"
 
     def test_repr(self, lot):
         assert repr(lot) == (
-            f"Lot(quantity=10, cost_per_share=100, acquired={lot.acquired!r})"
+            f"TaxLot(quantity=10, cost_per_share=100, acquired={lot.acquired!r})"
         )
 
     @pytest.mark.parametrize("quantity", [
         Decimal("0"),
         Decimal("-1"),
     ])
-    def test_invalid_quantity(self, position, quantity):
+    def test_invalid_quantity(self, quantity):
         with pytest.raises(ValueError):
-            Lot(
+            TaxLot(
                 id="lot",
                 quantity=quantity,
                 cost_per_share=Decimal("100"),
@@ -87,17 +87,17 @@ class TestLot:
         Decimal("0"),
         Decimal("-1"),
     ])
-    def test_invalid_cost_per_share(self, position, cost_per_share):
+    def test_invalid_cost_per_share(self, cost_per_share):
         with pytest.raises(ValueError):
-            Lot(
+            TaxLot(
                 id="lot",
                 quantity=Decimal("10"),
                 cost_per_share=cost_per_share,
                 acquired=date.today(),
             )
 
-    def test_notes_stored(self, position):
-        lot = Lot(
+    def test_notes_stored(self):
+        lot = TaxLot(
             id="lot",
             quantity=Decimal("10"),
             cost_per_share=Decimal("100"),

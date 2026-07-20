@@ -10,12 +10,12 @@ from decimal import Decimal
 
 import pytest
 
-from finkritq.portfolio import Lot, Position
+from finkritq.portfolio import Position, TaxLot
 from finkritq.tests.fixtures import make_stock
 
 
-def _lot(qty="10", lot_id="lot-1") -> Lot:
-    return Lot(id=lot_id, quantity=Decimal(qty), cost_per_share=Decimal("100"), acquired=date(2020, 1, 1))
+def _lot(qty="10", lot_id="lot-1") -> TaxLot:
+    return TaxLot(id=lot_id, quantity=Decimal(qty), cost_per_share=Decimal("100"), acquired=date(2020, 1, 1))
 
 
 class TestPositionConstruction:
