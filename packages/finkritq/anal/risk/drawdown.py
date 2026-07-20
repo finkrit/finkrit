@@ -36,10 +36,22 @@ def drawdown_from_returns(
     returns: NDArray[np.float64],
 ) -> NDArray[np.float64]:
     """
-    Compute the drawdown series from a return series.
+    Compute the drawdown series from a SIMPLE return series.
+
+    The returns compound into a wealth index that starts at 1.0 BEFORE the first
+    return, so a first-period loss is measured against that starting peak.
+    Omitting the leading 1.0 (compounding straight into the first period's wealth)
+    would hide an opening drawdown entirely -- e.g. returns [-0.1, 0.0] would
+    report 0 instead of -0.1. With the leading 1.0 this also matches
+    drawdown_from_prices exactly: drawdown_from_returns(periodic_returns(prices,
+    SIMPLE)) equals drawdown_from_prices(prices), since drawdown is scale-free.
+
+    Returns are treated as SIMPLE (wealth compounds as 1 + r). For log returns,
+    build a wealth series with exp(cumsum(returns)) and call drawdown_from_prices.
+    The output has one more element than `returns` (the leading starting point).
     """
 
-    wealth = np.cumprod(1.0 + returns)
+    wealth = np.concatenate(([1.0], np.cumprod(1.0 + returns)))
     return drawdown_from_wealth(wealth)
 
 
@@ -111,7 +123,10 @@ def maximum_drawdown_from_returns(
     returns: NDArray[np.float64],
 ) -> float:
     """
-    Compute the maximum drawdown from a return series.
+    Compute the maximum drawdown from a SIMPLE return series.
+
+    Wealth starts at 1.0 before the first return, so an opening loss counts (see
+    drawdown_from_returns).
     """
 
     return maximum_drawdown_from_drawdown(drawdown_from_returns(returns))

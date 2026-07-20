@@ -252,9 +252,10 @@ class TestDrawdownFromPrices:
 class TestDrawdownFromReturns:
 
     def test_single_return(self):
+        # Wealth [1.0, 1.1] -> drawdown [0, 0]; one more point than the returns.
         np.testing.assert_allclose(
             drawdown_from_returns(np.array([0.1])),
-            np.array([0.0]),
+            np.array([0.0, 0.0]),
         )
 
     def test_monotonically_falling_wealth(self):
@@ -263,17 +264,36 @@ class TestDrawdownFromReturns:
         assert np.all(np.diff(dd) < 0.0)
 
     def test_all_positive_returns(self):
+        # Leading 1.0 adds a point, so the all-zero series has len(returns) + 1.
         np.testing.assert_allclose(
             drawdown_from_returns(np.array([0.05, 0.02, 0.03])),
-            np.zeros(3),
+            np.zeros(4),
+        )
+
+    def test_captures_first_period_drawdown(self):
+        # An opening loss must register against the starting wealth of 1.0. The
+        # old cumprod-without-leading-1.0 hid it and reported 0.
+        np.testing.assert_allclose(
+            drawdown_from_returns(np.array([-0.1, 0.0])),
+            np.array([0.0, -0.1, -0.1]),
         )
 
     def test_matches_wealth(self):
         returns = np.array([0.10, -0.20, 0.30, -0.10])
-        wealth = np.cumprod(1.0 + returns)
+        wealth = np.concatenate(([1.0], np.cumprod(1.0 + returns)))
         np.testing.assert_allclose(
             drawdown_from_returns(returns),
             drawdown_from_wealth(wealth),
+        )
+
+    def test_equals_price_drawdown(self):
+        # The whole point of the leading 1.0: returns of a price path reproduce
+        # the price path's own drawdown exactly (scale-free).
+        prices = np.array([100.0, 90.0, 120.0, 80.0])
+        returns = prices[1:] / prices[:-1] - 1.0
+        np.testing.assert_allclose(
+            drawdown_from_returns(returns),
+            drawdown_from_prices(prices),
         )
 
 
@@ -292,9 +312,14 @@ class TestMaximumDrawdown:
 
     def test_from_returns(self):
         returns = np.array([0.1, -0.2])
+        wealth = np.concatenate(([1.0], np.cumprod(1.0 + returns)))
         assert maximum_drawdown_from_returns(returns) == pytest.approx(
-            maximum_drawdown_from_wealth(np.cumprod(1.0 + returns))
+            maximum_drawdown_from_wealth(wealth)
         )
+
+    def test_from_returns_counts_opening_loss(self):
+        # Regression: a first-period drop is the worst drawdown and must count.
+        assert maximum_drawdown_from_returns(np.array([-0.2, 0.05])) == pytest.approx(-0.2)
 
     def test_from_drawdown_manual(self):
         assert maximum_drawdown_from_drawdown(

@@ -111,10 +111,11 @@ class TestConstantMixDrawdownReconstruction:
 
     def test_uses_simple_returns_for_wealth(self, two_stock_portfolio_data):
         # The reconstruction must compound simple returns; a log-return series
-        # fed to 1+r would be subtly wrong. Guard the intended convention.
+        # fed to 1+r would be subtly wrong. Wealth starts at 1.0 so an opening
+        # loss counts. Guard both conventions.
         pd = two_stock_portfolio_data
         simple = pd.constant_mix_returns()
-        wealth = np.cumprod(1.0 + simple)
+        wealth = np.concatenate(([1.0], np.cumprod(1.0 + simple)))
         expected_mdd = float(
             ((wealth - np.maximum.accumulate(wealth)) / np.maximum.accumulate(wealth)).min()
         )

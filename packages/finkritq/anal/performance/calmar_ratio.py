@@ -54,12 +54,11 @@ def calmar_ratio_from_returns(
     """
     Calmar ratio from a periodic return series.
 
-    The drawdown is taken off a reconstructed wealth path rather than
-    maximum_drawdown_from_returns, for two reasons: a leading 1.0 is prepended so
-    a first-period loss is counted, and the path is built per `method` (exp of the
-    cumulative sum for log returns, cumulative product for simple) rather than
-    compounding log returns as if they were simple. With that, this matches
-    calmar_ratio_from_prices exactly (drawdown is scale-invariant).
+    The wealth path is reconstructed here (rather than via
+    maximum_drawdown_from_returns, which is simple-only) so it can honor `method`:
+    exp of the cumulative sum for log returns, cumulative product for simple. A
+    leading 1.0 is prepended so a first-period loss counts. With that, this
+    matches calmar_ratio_from_prices exactly (drawdown is scale-invariant).
     """
 
     annualized = annualized_return_from_returns(
