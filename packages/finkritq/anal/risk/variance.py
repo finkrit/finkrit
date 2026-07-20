@@ -98,7 +98,6 @@ def variance_asset(
 def portfolio_variance(
     portfolio_data: PortfolioData,
     basis: WeightingBasis = WeightingBasis.CONSTANT_MIX,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     annualized: bool = True,
     periods_per_year: int = 252,
 ) -> float:
@@ -112,7 +111,8 @@ def portfolio_variance(
     basis
         CONSTANT_MIX (default) uses the ex-ante quadratic form wᵀΣw; BUY_AND_HOLD
         uses the variance of the realized value-path return series. See
-        WeightingBasis.
+        WeightingBasis. Portfolio returns are always simple, so there is no
+        `method` here (see PortfolioData.constant_mix_returns).
 
     Returns
     -------
@@ -125,7 +125,7 @@ def portfolio_variance(
     # the sample variance of the series directly.
     if basis == WeightingBasis.BUY_AND_HOLD:
         return variance_from_returns(
-            portfolio_data.realized_returns(method),
+            portfolio_data.realized_returns(),
             annualized=annualized,
             periods_per_year=periods_per_year,
         )
@@ -136,7 +136,6 @@ def portfolio_variance(
     # the canonical ex-ante form and is what MCTR/CCTR decompose.
     covariance = covariance_matrix(
         portfolio_data,
-        method=method,
         annualized=annualized,
         periods_per_year=periods_per_year,
     )

@@ -96,7 +96,8 @@ class TestPortfolioInformationRatio:
         pd = two_stock_portfolio_data
         bench = self._bench()
         active = _geo_from_prices(pd.value, 252) - _geo_from_prices(bench.close, 252)
-        te = _tracking_error(np.diff(np.log(pd.value)), np.diff(np.log(bench.close)), 252)
+        # Portfolio + benchmark returns are simple at the portfolio level.
+        te = _tracking_error(pd.value[1:] / pd.value[:-1] - 1.0, bench.close[1:] / bench.close[:-1] - 1.0, 252)
         assert portfolio_information_ratio(pd, bench, basis=WeightingBasis.BUY_AND_HOLD) == pytest.approx(active / te)
 
     def test_both_bases_finite(self, two_stock_portfolio_data):

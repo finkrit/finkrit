@@ -97,7 +97,6 @@ def portfolio_beta(
     portfolio_data: PortfolioData,
     benchmark: PriceHistory,
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
 ) -> float:
     """
     Compute the beta of a portfolio against a benchmark.
@@ -105,14 +104,17 @@ def portfolio_beta(
     The portfolio's return series (selected by `basis`, see WeightingBasis) is
     regressed on the benchmark's returns. The benchmark is aligned to the
     portfolio's observation dates first, so the two series line up period-for-
-    period.
+    period. Both are simple returns (portfolio returns are always simple), so
+    there is no `method`.
     """
     portfolio_returns = (
-        portfolio_data.constant_mix_returns(method)
+        portfolio_data.constant_mix_returns()
         if basis == WeightingBasis.CONSTANT_MIX
-        else portfolio_data.realized_returns(method)
+        else portfolio_data.realized_returns()
     )
-    benchmark_returns = periodic_returns(portfolio_data.aligned_close(benchmark), method)
+    benchmark_returns = periodic_returns(
+        portfolio_data.aligned_close(benchmark), ReturnCalculationMethod.SIMPLE
+    )
 
     return beta_from_returns(portfolio_returns, benchmark_returns)
 

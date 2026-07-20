@@ -151,7 +151,6 @@ def portfolio_sortino_ratio(
     portfolio_data: PortfolioData,
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
     risk_free_rate: float = 0.0,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     target: float = 0.0,
     periods_per_year: int = 252,
 ) -> float:
@@ -160,7 +159,7 @@ def portfolio_sortino_ratio(
 
     `basis` is passed to BOTH the annualized return and the downside deviation,
     so the ratio describes one portfolio (see WeightingBasis). Defaults to
-    BUY_AND_HOLD.
+    BUY_AND_HOLD. Portfolio returns are always simple, so there is no `method`.
     """
 
     annualized = portfolio_annualized_return(
@@ -169,7 +168,6 @@ def portfolio_sortino_ratio(
     downside = portfolio_downside_deviation(
         portfolio_data,
         basis=basis,
-        method=method,
         target=target,
         annualized=True,
         periods_per_year=periods_per_year,

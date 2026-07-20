@@ -143,7 +143,6 @@ def portfolio_information_ratio(
     portfolio_data: PortfolioData,
     benchmark: PriceHistory,
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     periods_per_year: int = 252,
 ) -> float:
     """
@@ -151,7 +150,8 @@ def portfolio_information_ratio(
 
     `basis` selects the portfolio return series (see WeightingBasis). The
     benchmark's annualized return is taken from its prices aligned to the
-    portfolio's dates, so both return terms cover the same window.
+    portfolio's dates, so both return terms cover the same window. Portfolio
+    returns are always simple, so there is no `method`.
     """
 
     annualized = portfolio_annualized_return(portfolio_data, basis=basis, periods_per_year=periods_per_year)
@@ -159,7 +159,7 @@ def portfolio_information_ratio(
         portfolio_data.aligned_close(benchmark), periods_per_year=periods_per_year
     )
     tracking = portfolio_tracking_error(
-        portfolio_data, benchmark, basis=basis, method=method, annualized=True, periods_per_year=periods_per_year
+        portfolio_data, benchmark, basis=basis, annualized=True, periods_per_year=periods_per_year
     )
 
     return _information_ratio(annualized - benchmark_annualized, tracking)

@@ -81,7 +81,6 @@ def volatility_asset(
 def portfolio_volatility(
     portfolio_data: PortfolioData,
     basis: WeightingBasis = WeightingBasis.CONSTANT_MIX,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     annualized: bool = True,
     periods_per_year: int = 252,
 ) -> float:
@@ -89,14 +88,14 @@ def portfolio_volatility(
     Compute the volatility of a portfolio.
 
     `basis` selects the ex-ante (CONSTANT_MIX, default) or realized
-    (BUY_AND_HOLD) return basis; see WeightingBasis.
+    (BUY_AND_HOLD) return basis; see WeightingBasis. Portfolio returns are always
+    simple, so there is no `method`.
     """
 
     return float(np.sqrt(
         portfolio_variance(
             portfolio_data,
             basis=basis,
-            method=method,
             annualized=annualized,
             periods_per_year=periods_per_year,
         )))

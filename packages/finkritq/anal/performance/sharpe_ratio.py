@@ -152,7 +152,6 @@ def portfolio_sharpe_ratio(
     portfolio_data: PortfolioData,
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
     risk_free_rate: float = 0.0,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     periods_per_year: int = 252,
 ) -> float:
     """
@@ -161,8 +160,8 @@ def portfolio_sharpe_ratio(
     `basis` is passed to BOTH the annualized return and the volatility, so the
     ratio describes one portfolio (see WeightingBasis). Defaults to BUY_AND_HOLD:
     the realized return over the realized risk, the "how well did this book
-    actually do per unit of risk" Sharpe. `method` affects only the volatility
-    denominator.
+    actually do per unit of risk" Sharpe. Portfolio returns are always simple, so
+    there is no `method`.
     """
 
     annualized = portfolio_annualized_return(
@@ -171,7 +170,6 @@ def portfolio_sharpe_ratio(
     vol = portfolio_volatility(
         portfolio_data,
         basis=basis,
-        method=method,
         annualized=True,
         periods_per_year=periods_per_year,
     )

@@ -3,15 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 
-from finkritq.transform.returns import ReturnCalculationMethod
 from finkritq.data import DataRegistry
 from finkritq.datatype import VaREstimationMethod, WeightingBasis
 from finkritq.portfolio import Portfolio
 
-# `basis` mirrors the finkritq portfolio_* implementations (and the pre-fetched
-# schemas in portfolio_schema.py), so the live tools expose the same
-# constant-mix vs buy-and-hold choice. Each default matches its metric's default
-# basis; see finkritq WeightingBasis.
+# Fields mirror the live wrapper implementations (and the pre-fetched schemas).
+# Portfolio returns are always simple, so there is no return-convention `method`
+# at the portfolio level; see finkritq WeightingBasis.
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,7 +20,6 @@ class PortfolioVolatilityLiveInput:
     end: date | None = None
     interval: str = "1d"
     basis: WeightingBasis = WeightingBasis.CONSTANT_MIX
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     annualized: bool = True
     periods_per_year: int = 252
 
@@ -35,7 +32,6 @@ class PortfolioVarianceLiveInput:
     end: date | None = None
     interval: str = "1d"
     basis: WeightingBasis = WeightingBasis.CONSTANT_MIX
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     annualized: bool = True
     periods_per_year: int = 252
 
@@ -48,7 +44,6 @@ class PortfolioSemivarianeLiveInput:
     end: date | None = None
     interval: str = "1d"
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     target: float = 0.0
     annualized: bool = True
     periods_per_year: int = 252
@@ -62,7 +57,6 @@ class PortfolioDownsideDeviationLiveInput:
     end: date | None = None
     interval: str = "1d"
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     target: float = 0.0
     annualized: bool = True
     periods_per_year: int = 252
@@ -96,7 +90,6 @@ class PortfolioValueAtRiskLiveInput:
     end: date | None = None
     interval: str = "1d"
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
-    return_method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     method: VaREstimationMethod = VaREstimationMethod.HISTORICAL
     confidence: float = 0.95
     n_simulations: int = 100_000
@@ -111,7 +104,6 @@ class PortfolioConditionalValueAtRiskLiveInput:
     end: date | None = None
     interval: str = "1d"
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
-    return_method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     method: VaREstimationMethod = VaREstimationMethod.HISTORICAL
     confidence: float = 0.95
     n_simulations: int = 100_000
@@ -126,7 +118,6 @@ class PortfolioBetaLiveInput:
     start: date | None = None
     end: date | None = None
     interval: str = "1d"
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,5 +136,3 @@ class PortfolioComponentRiskLiveInput:
     start: date | None = None
     end: date | None = None
     interval: str = "1d"
-
-

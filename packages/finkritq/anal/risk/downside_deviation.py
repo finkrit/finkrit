@@ -123,7 +123,6 @@ def downside_deviation_asset(
 def portfolio_downside_deviation(
     portfolio_data: PortfolioData,
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     target: float = 0.0,
     annualized: bool = True,
     periods_per_year: int = 252,
@@ -132,14 +131,14 @@ def portfolio_downside_deviation(
     Compute downside deviation of a portfolio.
 
     `basis` selects the realized (BUY_AND_HOLD, default) or ex-ante
-    (CONSTANT_MIX) return basis; see WeightingBasis.
+    (CONSTANT_MIX) return basis; see WeightingBasis. Portfolio returns are always
+    simple, so there is no `method`.
     """
 
     return float(np.sqrt(
         portfolio_semivariance(
             portfolio_data,
             basis=basis,
-            method=method,
             target=target,
             annualized=annualized,
             periods_per_year=periods_per_year,

@@ -49,10 +49,12 @@ from finkritintel.integration.finkritq.portfolio_schema import (
 def _portfolio_beta(
     portfolio_data: PortfolioData,
     benchmark_history: PriceHistory,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
 ) -> float:
-    portfolio_returns = portfolio_data.portfolio_returns(method=method)
-    benchmark_returns = periodic_returns(benchmark_history.close, method=method)
+    # Portfolio returns are always simple; match the benchmark convention to it.
+    portfolio_returns = portfolio_data.realized_returns()
+    benchmark_returns = periodic_returns(
+        benchmark_history.close, ReturnCalculationMethod.SIMPLE
+    )
     return beta_from_returns(portfolio_returns, benchmark_returns)
 
 

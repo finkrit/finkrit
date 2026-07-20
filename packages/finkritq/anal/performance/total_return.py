@@ -113,7 +113,7 @@ def portfolio_total_return(
     """
 
     if basis == WeightingBasis.CONSTANT_MIX:
-        simple = portfolio_data.constant_mix_returns(ReturnCalculationMethod.SIMPLE)
+        simple = portfolio_data.constant_mix_returns()
         return total_return_from_returns(simple, method=ReturnCalculationMethod.SIMPLE)
 
     value = portfolio_data.value

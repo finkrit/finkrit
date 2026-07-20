@@ -100,7 +100,8 @@ class TestPortfolioJensensAlpha:
         bench = self._bench()
         ann = _geo_from_prices(pd.value, 252)
         ann_b = _geo_from_prices(bench.close, 252)
-        beta = _beta(np.diff(np.log(pd.value)), np.diff(np.log(bench.close)))
+        # Portfolio + benchmark returns are simple at the portfolio level.
+        beta = _beta(pd.value[1:] / pd.value[:-1] - 1.0, bench.close[1:] / bench.close[:-1] - 1.0)
         expected = ann - beta * ann_b  # rf = 0
         assert portfolio_jensens_alpha(pd, bench, basis=WeightingBasis.BUY_AND_HOLD) == pytest.approx(expected)
 

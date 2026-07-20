@@ -102,16 +102,12 @@ class TestPortfolioVaR:
     def test_positive(self, two_stock_portfolio_data, method):
         assert portfolio_value_at_risk(two_stock_portfolio_data, method=method) > 0.0
 
-    @pytest.mark.parametrize("return_method", list(ReturnCalculationMethod))
-    def test_all_return_methods_positive(self, two_stock_portfolio_data, return_method):
-        assert portfolio_value_at_risk(two_stock_portfolio_data, return_method=return_method) > 0.0
-
     def test_higher_confidence_gives_higher_var(self, two_stock_portfolio_data):
         assert portfolio_value_at_risk(two_stock_portfolio_data, confidence=0.99) >= portfolio_value_at_risk(two_stock_portfolio_data, confidence=0.95)
 
     def test_matches_value_series(self, two_stock_portfolio_data):
         assert portfolio_value_at_risk(two_stock_portfolio_data, method=VaREstimationMethod.HISTORICAL) == pytest.approx(
-            value_at_risk_from_prices(two_stock_portfolio_data.value, method=VaREstimationMethod.HISTORICAL), rel=1e-9
+            value_at_risk_from_prices(two_stock_portfolio_data.value, return_method=ReturnCalculationMethod.SIMPLE, method=VaREstimationMethod.HISTORICAL), rel=1e-9
         )
 
     def test_monte_carlo_reproducible(self, two_stock_portfolio_data):
@@ -143,13 +139,9 @@ class TestPortfolioVaR:
     def test_positive(self, two_stock_portfolio_data, method):
         assert portfolio_value_at_risk(two_stock_portfolio_data, method=method) > 0.0
 
-    @pytest.mark.parametrize("return_method", list(ReturnCalculationMethod))
-    def test_all_return_methods(self, two_stock_portfolio_data, return_method):
-        assert portfolio_value_at_risk(two_stock_portfolio_data, return_method=return_method) > 0.0
-
     def test_confidence_increases_var(self, two_stock_portfolio_data):
         assert portfolio_value_at_risk(two_stock_portfolio_data, confidence=0.99) >= portfolio_value_at_risk(two_stock_portfolio_data, confidence=0.95)
 
     def test_matches_value_series(self, two_stock_portfolio_data):
-        assert portfolio_value_at_risk(two_stock_portfolio_data, method=VaREstimationMethod.HISTORICAL) == pytest.approx(value_at_risk_from_prices(two_stock_portfolio_data.value, method=VaREstimationMethod.HISTORICAL), rel=1e-9)
+        assert portfolio_value_at_risk(two_stock_portfolio_data, method=VaREstimationMethod.HISTORICAL) == pytest.approx(value_at_risk_from_prices(two_stock_portfolio_data.value, return_method=ReturnCalculationMethod.SIMPLE, method=VaREstimationMethod.HISTORICAL), rel=1e-9)
 

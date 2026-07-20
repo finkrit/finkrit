@@ -102,10 +102,6 @@ class TestPortfolioDownsideDeviation:
     def test_matches_value_series(self, two_stock_portfolio_data):
         assert portfolio_downside_deviation(two_stock_portfolio_data, annualized=False) == pytest.approx(downside_deviation_from_prices(two_stock_portfolio_data.value, annualized=False), rel=1e-9)
 
-    @pytest.mark.parametrize("method", list(ReturnCalculationMethod))
-    def test_all_return_methods(self, two_stock_portfolio_data, method):
-        assert portfolio_downside_deviation(two_stock_portfolio_data, method=method) >= 0.0
-
     def test_target_forwarded(self, two_stock_portfolio_data):
         assert portfolio_downside_deviation(two_stock_portfolio_data, target=0.05, annualized=False) >= portfolio_downside_deviation(two_stock_portfolio_data, target=0.0, annualized=False)
 
@@ -271,23 +267,19 @@ class TestPortfolioDownsideDeviation:
         assert dd == pytest.approx(np.sqrt(sv), rel=1e-9)
 
     def test_matches_value_series(self, two_stock_portfolio_data):
+        # Portfolio downside deviation uses simple value-path returns, so the
+        # oracle must pass method=SIMPLE.
         assert portfolio_downside_deviation(
             two_stock_portfolio_data,
             annualized=False,
         ) == pytest.approx(
             downside_deviation_from_prices(
                 two_stock_portfolio_data.value,
+                method=ReturnCalculationMethod.SIMPLE,
                 annualized=False,
             ),
             rel=1e-9,
         )
-
-    @pytest.mark.parametrize("method", list(ReturnCalculationMethod))
-    def test_all_return_methods(self, two_stock_portfolio_data, method):
-        assert portfolio_downside_deviation(
-            two_stock_portfolio_data,
-            method=method,
-        ) >= 0.0
 
     def test_target_forwarded(self, two_stock_portfolio_data):
         low = portfolio_downside_deviation(

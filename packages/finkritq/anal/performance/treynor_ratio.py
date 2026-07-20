@@ -141,7 +141,6 @@ def portfolio_treynor_ratio(
     benchmark: PriceHistory,
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
     risk_free_rate: float = 0.0,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     periods_per_year: int = 252,
 ) -> float:
     """
@@ -149,11 +148,12 @@ def portfolio_treynor_ratio(
 
     `basis` selects the portfolio return series for BOTH the annualized return
     and the beta, so the ratio describes one portfolio (see WeightingBasis).
+    Portfolio returns are always simple, so there is no `method`.
     """
 
     annualized = portfolio_annualized_return(
         portfolio_data, basis=basis, periods_per_year=periods_per_year
     )
-    beta = portfolio_beta(portfolio_data, benchmark, basis=basis, method=method)
+    beta = portfolio_beta(portfolio_data, benchmark, basis=basis)
 
     return _treynor(annualized, beta, risk_free_rate)

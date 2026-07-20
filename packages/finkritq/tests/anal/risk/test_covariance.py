@@ -14,7 +14,7 @@ from finkritq.anal.risk.covariance import (
     covariance_assets,
 )
 from finkritq.anal.risk.covariance import covariance
-from finkritq.transform.returns import periodic_returns
+from finkritq.transform.returns import periodic_returns, ReturnCalculationMethod
 from finkritq.tests.fixtures import make_price_history, make_stock, make_price_history
 from finkritq.tests.fixtures import RETURNS_A, RETURNS_B, PRICES
 
@@ -108,7 +108,9 @@ class TestCovarianceMatrix:
         )
 
     def test_matches_numpy_cov_matrix(self, two_stock_portfolio_data):
-        returns = two_stock_portfolio_data.return_matrix()
+        # Portfolio covariance uses simple returns (portfolio aggregation is
+        # always simple), so the oracle must too.
+        returns = two_stock_portfolio_data.return_matrix(ReturnCalculationMethod.SIMPLE)
         np.testing.assert_allclose(
             covariance_matrix(two_stock_portfolio_data, annualized=False),
             np.cov(returns, rowvar=True, ddof=1),

@@ -4,20 +4,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from finkritq.transform.returns import ReturnCalculationMethod
 from finkritq.datatype import PriceHistory, VaREstimationMethod, WeightingBasis
 from finkritq.portfolio import PortfolioData
 
-# NOTE: `basis` mirrors the finkritq portfolio_* implementations (the contract
-# test enforces schema<->impl parity). Each default matches its function's
-# default basis; see finkritq WeightingBasis.
+# NOTE: fields mirror the finkritq portfolio_* implementations (the contract test
+# enforces schema<->impl parity). Portfolio returns are always simple, so there
+# is no return-convention `method` at the portfolio level; see finkritq
+# WeightingBasis / PortfolioData.constant_mix_returns.
 
 
 @dataclass(frozen=True, slots=True)
 class VolatilityInput:
     portfolio_data: PortfolioData
     basis: WeightingBasis = WeightingBasis.CONSTANT_MIX
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     annualized: bool = True
     periods_per_year: int = 252
 
@@ -26,7 +25,6 @@ class VolatilityInput:
 class VarianceInput:
     portfolio_data: PortfolioData
     basis: WeightingBasis = WeightingBasis.CONSTANT_MIX
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     annualized: bool = True
     periods_per_year: int = 252
 
@@ -35,7 +33,6 @@ class VarianceInput:
 class SemivarianceInput:
     portfolio_data: PortfolioData
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     target: float = 0.0
     annualized: bool = True
     periods_per_year: int = 252
@@ -45,7 +42,6 @@ class SemivarianceInput:
 class DownsideDeviationInput:
     portfolio_data: PortfolioData
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     target: float = 0.0
     annualized: bool = True
     periods_per_year: int = 252
@@ -67,7 +63,6 @@ class MaximumDrawdownInput:
 class ValueAtRiskInput:
     portfolio_data: PortfolioData
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
-    return_method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     method: VaREstimationMethod = VaREstimationMethod.HISTORICAL
     confidence: float = 0.95
     n_simulations: int = 100_000
@@ -78,7 +73,6 @@ class ValueAtRiskInput:
 class ConditionalValueAtRiskInput:
     portfolio_data: PortfolioData
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD
-    return_method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
     method: VaREstimationMethod = VaREstimationMethod.HISTORICAL
     confidence: float = 0.95
     n_simulations: int = 100_000
@@ -89,7 +83,6 @@ class ConditionalValueAtRiskInput:
 class BetaInput:
     portfolio_data: PortfolioData
     benchmark_history: PriceHistory
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG
 
 
 @dataclass(frozen=True, slots=True)

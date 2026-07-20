@@ -154,7 +154,6 @@ def conditional_value_at_risk_asset(
 def portfolio_conditional_value_at_risk(
     portfolio_data: PortfolioData,
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
-    return_method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     method: VaREstimationMethod = VaREstimationMethod.HISTORICAL,
     confidence: float = 0.95,
     n_simulations: int = 100_000,
@@ -163,15 +162,16 @@ def portfolio_conditional_value_at_risk(
     Compute the Conditional Value at Risk (CVaR) of a portfolio.
 
     `basis` selects the realized (BUY_AND_HOLD, default) or ex-ante
-    (CONSTANT_MIX) return basis; see WeightingBasis.
+    (CONSTANT_MIX) return basis; see WeightingBasis. `method` is the estimation
+    method. Portfolio returns are always simple.
     """
 
     # Select the return series for the requested basis (default BUY_AND_HOLD,
     # the realized value path), then run the ordinary from-returns estimator.
     returns = (
-        portfolio_data.constant_mix_returns(return_method)
+        portfolio_data.constant_mix_returns()
         if basis == WeightingBasis.CONSTANT_MIX
-        else portfolio_data.realized_returns(return_method)
+        else portfolio_data.realized_returns()
     )
 
     return conditional_value_at_risk_from_returns(

@@ -77,8 +77,9 @@ class TestPortfolioTrackingError:
     def test_matches_independent_oracle(self, two_stock_portfolio_data):
         pd = two_stock_portfolio_data
         bench = _benchmark_60()  # same 60 dates as the portfolio -> aligns exactly
-        port_returns = np.diff(np.log(pd.value))            # BUY_AND_HOLD realized
-        bench_returns = np.diff(np.log(bench.close))
+        # Portfolio + benchmark returns are simple at the portfolio level.
+        port_returns = pd.value[1:] / pd.value[:-1] - 1.0     # BUY_AND_HOLD realized
+        bench_returns = bench.close[1:] / bench.close[:-1] - 1.0
         expected = np.std(port_returns - bench_returns, ddof=1) * np.sqrt(252)
         assert portfolio_tracking_error(pd, bench, basis=WeightingBasis.BUY_AND_HOLD) == pytest.approx(expected)
 

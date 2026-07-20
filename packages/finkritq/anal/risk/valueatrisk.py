@@ -134,7 +134,6 @@ def value_at_risk_asset(
 def portfolio_value_at_risk(
     portfolio_data: PortfolioData,
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
-    return_method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     method: VaREstimationMethod = VaREstimationMethod.HISTORICAL,
     confidence: float = 0.95,
     n_simulations: int = 100_000,
@@ -143,16 +142,18 @@ def portfolio_value_at_risk(
     Compute the Value at Risk (value_at_risk) of a portfolio.
 
     `basis` selects the realized (BUY_AND_HOLD, default) or ex-ante
-    (CONSTANT_MIX) return basis. see WeightingBasis for details.
+    (CONSTANT_MIX) return basis; see WeightingBasis. `method` is the VaR
+    estimation method. Portfolio returns are always simple, so there is no return
+    convention to choose.
     """
 
     # Pick the portfolio return series for the requested basis, then run the
     # ordinary from-returns estimator on it. Default is BUY_AND_HOLD (realized
     # value path) -- the loss an investor actually faced on these exact lots.
     returns = (
-        portfolio_data.constant_mix_returns(return_method)
+        portfolio_data.constant_mix_returns()
         if basis == WeightingBasis.CONSTANT_MIX
-        else portfolio_data.realized_returns(return_method)
+        else portfolio_data.realized_returns()
     )
 
     return value_at_risk_from_returns(

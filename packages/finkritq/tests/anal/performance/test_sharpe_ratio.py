@@ -102,7 +102,9 @@ class TestPortfolioSharpe:
         value = pd.value
         n = pd.n_periods - 1
         annualized = (value[-1] / value[0]) ** (252 / n) - 1.0
-        vol = np.std(np.diff(np.log(value)), ddof=1) * np.sqrt(252)
+        # Portfolio returns are simple, so the vol oracle uses simple returns too.
+        simple_returns = value[1:] / value[:-1] - 1.0
+        vol = np.std(simple_returns, ddof=1) * np.sqrt(252)
         expected = annualized / vol
         assert portfolio_sharpe_ratio(pd, basis=WeightingBasis.BUY_AND_HOLD) == pytest.approx(expected)
 

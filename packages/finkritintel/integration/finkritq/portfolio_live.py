@@ -52,45 +52,45 @@ def _fetch(portfolio: Portfolio, registry: DataRegistry, start, end, interval) -
 
 
 # Live wrappers fetch PortfolioData, then delegate to the finkritq function.
-# `basis` is forwarded straight through; its default here matches the underlying
-# metric's default basis (CONSTANT_MIX for variance/volatility, BUY_AND_HOLD for
-# the tail/downside/drawdown family). See finkritq WeightingBasis.
+# `basis` is forwarded straight through. Portfolio returns are always simple, so
+# there is no return-convention `method` at this level. See finkritq
+# WeightingBasis.
 
 
 def _portfolio_volatility_live(
     portfolio: Portfolio, registry: DataRegistry,
     start=None, end=None, interval="1d",
     basis=WeightingBasis.CONSTANT_MIX,
-    method=ReturnCalculationMethod.LOG, annualized=True, periods_per_year=252,
+    annualized=True, periods_per_year=252,
 ) -> float:
-    return portfolio_volatility(_fetch(portfolio, registry, start, end, interval), basis=basis, method=method, annualized=annualized, periods_per_year=periods_per_year)
+    return portfolio_volatility(_fetch(portfolio, registry, start, end, interval), basis=basis, annualized=annualized, periods_per_year=periods_per_year)
 
 
 def _portfolio_variance_live(
     portfolio: Portfolio, registry: DataRegistry,
     start=None, end=None, interval="1d",
     basis=WeightingBasis.CONSTANT_MIX,
-    method=ReturnCalculationMethod.LOG, annualized=True, periods_per_year=252,
+    annualized=True, periods_per_year=252,
 ) -> float:
-    return portfolio_variance(_fetch(portfolio, registry, start, end, interval), basis=basis, method=method, annualized=annualized, periods_per_year=periods_per_year)
+    return portfolio_variance(_fetch(portfolio, registry, start, end, interval), basis=basis, annualized=annualized, periods_per_year=periods_per_year)
 
 
 def _portfolio_semivariance_live(
     portfolio: Portfolio, registry: DataRegistry,
     start=None, end=None, interval="1d",
     basis=WeightingBasis.BUY_AND_HOLD,
-    method=ReturnCalculationMethod.LOG, target=0.0, annualized=True, periods_per_year=252,
+    target=0.0, annualized=True, periods_per_year=252,
 ) -> float:
-    return portfolio_semivariance(_fetch(portfolio, registry, start, end, interval), basis=basis, method=method, target=target, annualized=annualized, periods_per_year=periods_per_year)
+    return portfolio_semivariance(_fetch(portfolio, registry, start, end, interval), basis=basis, target=target, annualized=annualized, periods_per_year=periods_per_year)
 
 
 def _portfolio_downside_deviation_live(
     portfolio: Portfolio, registry: DataRegistry,
     start=None, end=None, interval="1d",
     basis=WeightingBasis.BUY_AND_HOLD,
-    method=ReturnCalculationMethod.LOG, target=0.0, annualized=True, periods_per_year=252,
+    target=0.0, annualized=True, periods_per_year=252,
 ) -> float:
-    return portfolio_downside_deviation(_fetch(portfolio, registry, start, end, interval), basis=basis, method=method, target=target, annualized=annualized, periods_per_year=periods_per_year)
+    return portfolio_downside_deviation(_fetch(portfolio, registry, start, end, interval), basis=basis, target=target, annualized=annualized, periods_per_year=periods_per_year)
 
 
 def _portfolio_drawdown_live(
@@ -113,38 +113,38 @@ def _portfolio_value_at_risk_live(
     portfolio: Portfolio, registry: DataRegistry,
     start=None, end=None, interval="1d",
     basis=WeightingBasis.BUY_AND_HOLD,
-    return_method=ReturnCalculationMethod.LOG, method=None, confidence=0.95, n_simulations=100_000, random_state=None,
+    method=None, confidence=0.95, n_simulations=100_000, random_state=None,
 ) -> float:
     from finkritq.datatype import VaREstimationMethod
     method = method or VaREstimationMethod.HISTORICAL
-    return portfolio_value_at_risk(_fetch(portfolio, registry, start, end, interval), basis=basis, return_method=return_method, method=method, confidence=confidence, n_simulations=n_simulations, random_state=random_state)
+    return portfolio_value_at_risk(_fetch(portfolio, registry, start, end, interval), basis=basis, method=method, confidence=confidence, n_simulations=n_simulations, random_state=random_state)
 
 
 def _portfolio_conditional_value_at_risk_live(
     portfolio: Portfolio, registry: DataRegistry,
     start=None, end=None, interval="1d",
     basis=WeightingBasis.BUY_AND_HOLD,
-    return_method=ReturnCalculationMethod.LOG, method=None, confidence=0.95, n_simulations=100_000, random_state=None,
+    method=None, confidence=0.95, n_simulations=100_000, random_state=None,
 ) -> float:
     from finkritq.datatype import VaREstimationMethod
     method = method or VaREstimationMethod.HISTORICAL
-    return portfolio_conditional_value_at_risk(_fetch(portfolio, registry, start, end, interval), basis=basis, return_method=return_method, method=method, confidence=confidence, n_simulations=n_simulations, random_state=random_state)
+    return portfolio_conditional_value_at_risk(_fetch(portfolio, registry, start, end, interval), basis=basis, method=method, confidence=confidence, n_simulations=n_simulations, random_state=random_state)
 
 
 def _portfolio_beta_live(
     portfolio: Portfolio, registry: DataRegistry,
     benchmark_history_or_asset: object,
     start=None, end=None, interval="1d",
-    method=ReturnCalculationMethod.LOG,
 ) -> float:
     from finkritq.asset import Asset
     data = _fetch(portfolio, registry, start, end, interval)
-    portfolio_returns = data.portfolio_returns(method=method)
+    # Portfolio returns are always simple; match the benchmark convention to it.
+    portfolio_returns = data.realized_returns()
     if isinstance(benchmark_history_or_asset, Asset):
         bh = registry.history(benchmark_history_or_asset, start=start, end=end, interval=interval)
     else:
         bh: PriceHistory = benchmark_history_or_asset
-    benchmark_returns = periodic_returns(bh.close, method=method)
+    benchmark_returns = periodic_returns(bh.close, ReturnCalculationMethod.SIMPLE)
     return beta_from_returns(portfolio_returns, benchmark_returns)
 
 

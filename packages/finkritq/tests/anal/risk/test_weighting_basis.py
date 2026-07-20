@@ -24,7 +24,7 @@ from finkritq.anal.risk.drawdown import (
     portfolio_drawdown,
     portfolio_maximum_drawdown,
 )
-from finkritq.datatype import ReturnCalculationMethod, WeightingBasis
+from finkritq.datatype import WeightingBasis
 
 
 class TestConstantMixIdentity:
@@ -113,7 +113,7 @@ class TestConstantMixDrawdownReconstruction:
         # The reconstruction must compound simple returns; a log-return series
         # fed to 1+r would be subtly wrong. Guard the intended convention.
         pd = two_stock_portfolio_data
-        simple = pd.constant_mix_returns(ReturnCalculationMethod.SIMPLE)
+        simple = pd.constant_mix_returns()
         wealth = np.cumprod(1.0 + simple)
         expected_mdd = float(
             ((wealth - np.maximum.accumulate(wealth)) / np.maximum.accumulate(wealth)).min()

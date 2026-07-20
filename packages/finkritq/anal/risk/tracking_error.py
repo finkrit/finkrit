@@ -122,7 +122,6 @@ def portfolio_tracking_error(
     portfolio_data: PortfolioData,
     benchmark: PriceHistory,
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     annualized: bool = True,
     periods_per_year: int = 252,
 ) -> float:
@@ -130,16 +129,19 @@ def portfolio_tracking_error(
     Tracking error of a portfolio against a benchmark.
 
     The portfolio return series (selected by `basis`) and the benchmark returns
-    (aligned to the portfolio's dates) are differenced period-by-period. See
-    WeightingBasis.
+    (aligned to the portfolio's dates) are differenced period-by-period. Both are
+    simple returns (portfolio returns are always simple), so there is no
+    `method`. See WeightingBasis.
     """
 
     portfolio_returns = (
-        portfolio_data.constant_mix_returns(method)
+        portfolio_data.constant_mix_returns()
         if basis == WeightingBasis.CONSTANT_MIX
-        else portfolio_data.realized_returns(method)
+        else portfolio_data.realized_returns()
     )
-    benchmark_returns = periodic_returns(portfolio_data.aligned_close(benchmark), method)
+    benchmark_returns = periodic_returns(
+        portfolio_data.aligned_close(benchmark), ReturnCalculationMethod.SIMPLE
+    )
 
     return tracking_error_from_returns(
         portfolio_returns,

@@ -111,7 +111,6 @@ def semivariance_asset(
 def portfolio_semivariance(
     portfolio_data: PortfolioData,
     basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     target: float = 0.0,
     annualized: bool = True,
     periods_per_year: int = 252,
@@ -120,15 +119,16 @@ def portfolio_semivariance(
     Compute the semivariance of a portfolio.
 
     `basis` selects the realized (BUY_AND_HOLD, default) or ex-ante
-    (CONSTANT_MIX) return basis. See WeightingBasis for details.
+    (CONSTANT_MIX) return basis; see WeightingBasis. Portfolio returns are always
+    simple, so there is no `method`.
     """
 
     # Select the return series for the requested basis (default BUY_AND_HOLD,
     # the realized value path), then measure downside dispersion below `target`.
     returns = (
-        portfolio_data.constant_mix_returns(method)
+        portfolio_data.constant_mix_returns()
         if basis == WeightingBasis.CONSTANT_MIX
-        else portfolio_data.realized_returns(method)
+        else portfolio_data.realized_returns()
     )
 
     return semivariance_from_returns(

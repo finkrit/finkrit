@@ -143,15 +143,18 @@ def covariance_matrix_from_returns(
 
 def covariance_matrix(
     portfolio_data: PortfolioData,
-    method: ReturnCalculationMethod = ReturnCalculationMethod.LOG,
     annualized: bool = True,
     periods_per_year: int = 252,
 ) -> NDArray[np.float64]:
     """
     Compute the covariance matrix of all assets in a portfolio.
+
+    Uses SIMPLE asset returns and takes no `method`: this Σ feeds portfolio
+    aggregation (wᵀΣw, MCTR/CCTR), which is only exact for simple returns. Pairwise
+    `covariance`/`covariance_from_*` keep `method` for single-asset use.
     """
 
-    returns = portfolio_data.return_matrix(method)
+    returns = portfolio_data.return_matrix(ReturnCalculationMethod.SIMPLE)
 
     return covariance_matrix_from_returns(
         returns,

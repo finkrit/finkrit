@@ -127,7 +127,7 @@ class TestPortfolioTotalReturn:
         # asset returns; total return compounds those. Guard against a log-return
         # regression (exp(sum(w.log_r)) - 1 is NOT the constant-mix total return).
         pd = two_stock_portfolio_data
-        simple_series = pd.constant_mix_returns(ReturnCalculationMethod.SIMPLE)
+        simple_series = pd.constant_mix_returns()
         expected = float(np.prod(1.0 + simple_series) - 1.0)
         assert portfolio_total_return(pd, basis=WeightingBasis.CONSTANT_MIX) == pytest.approx(expected)
 

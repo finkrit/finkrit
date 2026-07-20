@@ -188,13 +188,6 @@ class TestPortfolioCVaR:
 
         assert cvar >= var - 1e-10
 
-    @pytest.mark.parametrize("return_method", list(ReturnCalculationMethod))
-    def test_all_return_methods(self, two_stock_portfolio_data, return_method):
-        assert portfolio_conditional_value_at_risk(
-            two_stock_portfolio_data,
-            return_method=return_method,
-        ) > 0.0
-
     def test_confidence_increases_cvar(self, two_stock_portfolio_data):
         c95 = portfolio_conditional_value_at_risk(two_stock_portfolio_data, confidence=0.95)
         c99 = portfolio_conditional_value_at_risk(two_stock_portfolio_data, confidence=0.99)
