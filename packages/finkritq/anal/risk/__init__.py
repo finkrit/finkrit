@@ -46,6 +46,10 @@ from finkritq.anal.risk.concentration import (
     portfolio_concentration,
     portfolio_exposure,
 )
+from finkritq.anal.risk.projection import (
+    ForwardRange,
+    forward_return_range,
+)
 
 __all__ = [
     # beta
@@ -90,4 +94,6 @@ __all__ = [
     "herfindahl_index", "effective_holdings", "concentration_ratio", "max_weight",
     "exposure_by_group", "portfolio_concentration", "portfolio_exposure",
     "ConcentrationSummary",
+    # forward projection
+    "forward_return_range", "ForwardRange",
 ]
