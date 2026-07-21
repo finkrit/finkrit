@@ -36,6 +36,16 @@ from finkritq.anal.risk.tracking_error import (
     tracking_error_from_returns,
     portfolio_tracking_error,
 )
+from finkritq.anal.risk.concentration import (
+    ConcentrationSummary,
+    concentration_ratio,
+    effective_holdings,
+    exposure_by_group,
+    herfindahl_index,
+    max_weight,
+    portfolio_concentration,
+    portfolio_exposure,
+)
 
 __all__ = [
     # beta
@@ -76,4 +86,8 @@ __all__ = [
     # tracking error
     "tracking_error", "tracking_error_asset", "tracking_error_from_prices",
     "tracking_error_from_returns", "portfolio_tracking_error",
+    # concentration / exposure
+    "herfindahl_index", "effective_holdings", "concentration_ratio", "max_weight",
+    "exposure_by_group", "portfolio_concentration", "portfolio_exposure",
+    "ConcentrationSummary",
 ]
