@@ -64,6 +64,15 @@ from finkritq.anal.performance.jensens_alpha import (
     jensens_alpha_from_returns,
     portfolio_jensens_alpha,
 )
+from finkritq.anal.performance.flows import (
+    money_weighted_return,
+    time_weighted_return,
+)
+from finkritq.anal.performance.attribution import (
+    AttributionResult,
+    SegmentAttribution,
+    brinson_attribution,
+)
 
 __all__ = [
     # total (cumulative) return
@@ -114,4 +123,11 @@ __all__ = [
     "jensens_alpha",
     "jensens_alpha_asset",
     "portfolio_jensens_alpha",
+    # cash-flow-aware returns
+    "time_weighted_return",
+    "money_weighted_return",
+    # attribution
+    "brinson_attribution",
+    "AttributionResult",
+    "SegmentAttribution",
 ]

@@ -1,5 +1,6 @@
 # finkrit/packages/finkritq/datatype/__init__.py
 from .assettype import AssetType
+from .cashflow import CashFlow, flows_to_series
 from .currency import Currency
 from .market import Exchange, MarketIndex
 # ReturnCalculationMethod lives with the returns transform it parameterizes (in
@@ -12,6 +13,8 @@ from .pricehistory import PriceHistory
 
 __all__ = [
     "AssetType",
+    "CashFlow",
+    "flows_to_series",
     "Currency",
     "Exchange",
     "MarketIndex",
