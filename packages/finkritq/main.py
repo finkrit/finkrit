@@ -1,17 +1,29 @@
 # finkrit/packages/finkritq/main.py
 """
-Runnable example: build a fake portfolio (no network) and run every finkritq
-analytic pillar over it, risk, performance, and optimization.
+Runnable example: run every finkritq analytic pillar (risk, performance,
+optimization, tax) over a portfolio, printing the results to the terminal.
 
-    python -m finkritq
+Two data sources, same report:
 
-The data is synthetic and seeded, so the numbers are reproducible. Asset returns
+    python -m finkritq              fake, seeded, offline synthetic market
+    python -m finkritq fake         same as above (explicit)
+    python -m finkritq real         live daily data downloaded per ticker
+    python -m finkritq real NVDA KO PG --benchmark SPY --years 3
+
+Fake mode needs no network and is fully reproducible (seed 0): asset returns
 are driven by a shared market factor plus idiosyncratic noise, so beta and the
-benchmark-relative metrics are meaningful.
+benchmark-relative metrics are meaningful. Real mode downloads adjusted daily
+closes through the registered history provider and runs the identical analytics
+on live prices. Holdings and tax lots are always illustrative (you cannot
+download someone's share count or cost basis), but in real mode the cost basis
+is anchored to the downloaded prices so gains, losses, and harvest candidates
+reflect real moves.
 """
 from __future__ import annotations
 
-from datetime import date
+import argparse
+from concurrent.futures import ThreadPoolExecutor
+from datetime import date, timedelta
 from decimal import Decimal
 
 import numpy as np
@@ -43,6 +55,7 @@ from finkritq.anal.risk import (
     portfolio_volatility,
 )
 from finkritq.asset import Stock
+from finkritq.data.registry import DataRegistry
 from finkritq.datatype import Currency, Exchange, PriceHistory
 from finkritq.optimize import (
     LotSaleMethod,
@@ -58,12 +71,37 @@ from finkritq.optimize import (
 )
 from finkritq.portfolio import Portfolio, PortfolioData, Position, TaxLot
 
-_N = 120        # return intervals -> 121 price observations
-_AS_OF = date(2024, 5, 1)   # reference date for holding-period / wash-sale checks
+_N = 120        # return intervals in fake mode -> 121 price observations
+_AS_OF = date(2024, 5, 1)   # fake-mode reference date for holding-period / wash-sale
+
+# A small sector lookup so the default real basket buckets sensibly. Anything not
+# listed falls back to "Equity" (see _sector_of).
+_KNOWN_SECTORS = {
+    "AAPL": "Technology", "MSFT": "Technology", "NVDA": "Technology",
+    "GOOGL": "Communication", "META": "Communication",
+    "JPM": "Financials", "BAC": "Financials",
+    "XOM": "Energy", "CVX": "Energy",
+    "JNJ": "Healthcare", "PFE": "Healthcare",
+    "KO": "Staples", "PG": "Staples", "WMT": "Staples",
+}
+_DEFAULT_BASKET = [
+    "AAPL", "MSFT", "NVDA", "GOOGL", "META",   # tech / communication
+    "JPM", "XOM", "JNJ", "KO", "WMT",          # financials, energy, healthcare, staples
+]
+_DEFAULT_BENCHMARK = "SPY"
+# A concrete historical window so the default run is reproducible and does not
+# depend on the calendar. Override with --start / --end.
+_DEFAULT_START = date(2022, 1, 3)
+_DEFAULT_END = date(2024, 12, 31)
+
+
+def _stock(ticker: str) -> Stock:
+    return Stock(ticker=ticker, currency=Currency.USD, exchange=Exchange.NASDAQ,
+                 company_name=f"{ticker} Corp")
 
 
 # ---------------------------------------------------------------------------
-# Synthetic, seeded market (no network)
+# Fake source: a synthetic, seeded market (no network)
 # ---------------------------------------------------------------------------
 
 def _dates(n: int) -> np.ndarray:
@@ -76,19 +114,12 @@ def _history(close: np.ndarray) -> PriceHistory:
     n = len(close)
     return PriceHistory(
         dates=_dates(n),
-        open=close,
-        high=close,
-        low=close,
-        close=close,
+        open=close, high=close, low=close, close=close,
         volume=np.ones(n, dtype=np.int64),
     )
 
 
-def _stock(ticker: str) -> Stock:
-    return Stock(ticker=ticker, currency=Currency.USD, exchange=Exchange.NASDAQ, company_name=f"{ticker} Corp")
-
-
-def _position(stock: Stock, quantity: str, position_id: str, lot_id: str) -> Position:
+def _fake_position(stock: Stock, quantity: str, position_id: str, lot_id: str) -> Position:
     # Two lots per position so the tax features have something to chew on: an old
     # cheap long-term lot (a gain) and a recent expensive lot (a likely loss that
     # is harvestable, and the one HIFO sells first).
@@ -100,7 +131,7 @@ def _position(stock: Stock, quantity: str, position_id: str, lot_id: str) -> Pos
     return Position(id=position_id, asset=stock, lots=lots)
 
 
-def _build() -> tuple[PortfolioData, PriceHistory]:
+def build_synthetic() -> tuple[PortfolioData, PriceHistory, date, dict[str, str]]:
     rng = np.random.default_rng(0)
     market = rng.normal(0.0009, 0.008, _N)  # market factor per-period returns
 
@@ -110,11 +141,11 @@ def _build() -> tuple[PortfolioData, PriceHistory]:
 
     aaa, bbb, ccc = _stock("AAA"), _stock("BBB"), _stock("CCC")
     positions = [
-        _position(aaa, "100", "p-aaa", "l-aaa"),
-        _position(bbb, "50", "p-bbb", "l-bbb"),
-        _position(ccc, "75", "p-ccc", "l-ccc"),
+        _fake_position(aaa, "100", "p-aaa", "l-aaa"),
+        _fake_position(bbb, "50", "p-bbb", "l-bbb"),
+        _fake_position(ccc, "75", "p-ccc", "l-ccc"),
     ]
-    portfolio = Portfolio(id="demo", name="Demo Portfolio", positions=positions)
+    portfolio = Portfolio(id="demo", name="Demo Portfolio (synthetic)", positions=positions)
 
     histories = {
         aaa: _history(series(beta=1.2, drift=0.0004, idio=0.008)),
@@ -124,11 +155,87 @@ def _build() -> tuple[PortfolioData, PriceHistory]:
     data = PortfolioData(portfolio=portfolio, _histories=histories)
 
     benchmark = _history(1000.0 * np.exp(np.cumsum(np.insert(market, 0, 0.0))))
-    return data, benchmark
+    sectors = {"AAA": "Technology", "BBB": "Financials", "CCC": "Technology"}
+    return data, benchmark, _AS_OF, sectors
 
 
 # ---------------------------------------------------------------------------
-# Reporting
+# Real source: live daily data through the history provider
+# ---------------------------------------------------------------------------
+
+def _real_position(stock: Stock, history: PriceHistory, as_of: date) -> Position:
+    # Illustrative holding on top of real prices: 100 shares in two lots, with the
+    # cost basis anchored to the downloaded series so the tax numbers are real.
+    # Old lot: bought long ago and below the earliest close (a long-term gain).
+    # New lot: bought recently and above the latest close (a short-term loss that
+    # shows up as a harvest candidate).
+    close = history.close
+    half = Decimal("50")
+    old_cost = Decimal(str(round(float(close[0]) * 0.80, 2)))
+    new_cost = Decimal(str(round(float(close[-1]) * 1.15, 2)))
+    lots = (
+        TaxLot(id=f"{stock.ticker}-old", quantity=half, cost_per_share=old_cost,
+               acquired=as_of - timedelta(days=800)),
+        TaxLot(id=f"{stock.ticker}-new", quantity=half, cost_per_share=new_cost,
+               acquired=as_of - timedelta(days=45)),
+    )
+    return Position(id=f"p-{stock.ticker}", asset=stock, lots=lots)
+
+
+def build_real(
+    tickers: list[str],
+    benchmark_ticker: str,
+    start: date,
+    end: date,
+) -> tuple[PortfolioData, PriceHistory, date, dict[str, str]]:
+    # Lazy import so fake mode never needs the network stack, and a missing
+    # dependency produces a clear message instead of an import traceback at startup.
+    try:
+        from finkritq.data.providers import YFinanceProvider
+    except ImportError as exc:
+        raise SystemExit(
+            "Real mode needs the data-provider dependencies. Install them in your "
+            f"environment (for example: pip install yfinance pandas loguru). [{exc}]"
+        ) from exc
+
+    registry = DataRegistry()
+    registry.register_history(YFinanceProvider())
+
+    stocks = [_stock(ticker) for ticker in tickers]
+
+    # Download every holding and the benchmark concurrently: these are
+    # independent network calls, so fetching them in a thread pool turns N
+    # round-trips into roughly one. executor.map preserves input order, so the
+    # results line up with `to_fetch` without any bookkeeping. Cap the pool so a
+    # large basket does not open an unbounded number of connections at once.
+    def fetch(stock: Stock) -> PriceHistory:
+        return registry.history(stock, start=start, end=end)
+
+    to_fetch = stocks + [_stock(benchmark_ticker)]
+    with ThreadPoolExecutor(max_workers=min(len(to_fetch), 8)) as executor:
+        fetched = list(executor.map(fetch, to_fetch))
+    raw, benchmark = fetched[:-1], fetched[-1]
+
+    # Align the holdings to a common calendar so PortfolioData is happy and every
+    # series covers identical dates.
+    aligned = PriceHistory.align_many(raw)
+    histories = dict(zip(stocks, aligned))
+
+    as_of = end
+    positions = [_real_position(stock, histories[stock], as_of) for stock in stocks]
+    portfolio = Portfolio(
+        id="live",
+        name=f"Live Portfolio ({', '.join(tickers)})",
+        positions=positions,
+    )
+    data = PortfolioData(portfolio=portfolio, _histories=histories)
+
+    sectors = {ticker: _KNOWN_SECTORS.get(ticker, "Equity") for ticker in tickers}
+    return data, benchmark, as_of, sectors
+
+
+# ---------------------------------------------------------------------------
+# Reporting (shared by both sources, generalized to any number of holdings)
 # ---------------------------------------------------------------------------
 
 def _header(title: str) -> None:
@@ -146,12 +253,25 @@ def _weights(label: str, weights: dict) -> None:
         print(f"    {asset.ticker:<6} {w * 100:7.2f}%")
 
 
-def main() -> None:
-    data, benchmark = _build()
+def _note(text: str) -> None:
+    # One-line caption explaining the operation whose output follows.
+    print(f"  > {text}")
+
+
+def report(
+    data: PortfolioData,
+    benchmark: PriceHistory,
+    as_of: date,
+    sectors: dict[str, str],
+) -> None:
+    assets = data.assets
+    # Equal-weight target model, so drift and rebalance trades are meaningful for
+    # any basket without hand-picking numbers per run.
+    model = {asset: 1.0 / len(assets) for asset in assets}
 
     _header("PORTFOLIO")
     print(f"  {data.portfolio.name}: {data.portfolio.position_count} positions, "
-          f"{len(data)} observations")
+          f"{len(data)} observations, {data.start} -> {data.end}")
     _weights("current weights (by market value)", data.weights)
 
     _header("RISK")
@@ -182,9 +302,8 @@ def main() -> None:
         print(f"    {point.expected_return * 100:7.2f}%  ->  {point.volatility * 100:7.2f}%")
 
     _header("REBALANCING & TAX")
-    assets = data.assets
-    model = {assets[0]: 0.34, assets[1]: 0.33, assets[2]: 0.33}
-    print(f"  total drift from model: {total_drift(data, model) * 100:.2f}%")
+    _note("drift-band rebalance: sell overweights and buy underweights back to the target model")
+    print(f"  total drift from equal-weight model: {total_drift(data, model) * 100:.2f}%")
     print("  rebalance trades (drift-ranked):")
     for trade in rebalance_to_model(data, model):
         side = "BUY " if trade.is_buy else "SELL"
@@ -192,49 +311,65 @@ def main() -> None:
               f"   (drift {trade.drift * 100:+.1f}%)")
 
     prices = {asset: Decimal(str(round(price, 2))) for asset, price in data.latest_prices.items()}
-    report = harvest_candidates(data.portfolio, prices, _AS_OF)
-    print(f"  tax-loss harvest: ${report.total_harvestable_loss:,.0f} harvestable"
-          f"  (ST ${report.short_term_loss:,.0f} / LT ${report.long_term_loss:,.0f})")
-    for candidate in report.candidates:
+    _note("tax-loss harvesting: lots sitting far enough in the red to realize, wash-sale aware")
+    harvest = harvest_candidates(data.portfolio, prices, as_of)
+    print(f"  tax-loss harvest: ${harvest.total_harvestable_loss:,.0f} harvestable"
+          f"  (ST ${harvest.short_term_loss:,.0f} / LT ${harvest.long_term_loss:,.0f})")
+    for candidate in harvest.candidates:
         term = "LT" if candidate.is_long_term else "ST"
-        print(f"    {candidate.asset.ticker:<5} lot {candidate.lot.id:<10}"
+        print(f"    {candidate.asset.ticker:<5} lot {candidate.lot.id:<12}"
               f" loss ${candidate.unrealized_loss:>8,.0f}  ({term})")
 
     first = data.portfolio.positions[0]
+    _note("lot selection: which tax lots a sale draws from (HIFO takes highest cost first)")
     sale = select_lots_to_sell(
-        first, first.quantity / 2, prices[first.asset], _AS_OF, method=LotSaleMethod.HIFO
+        first, first.quantity / 2, prices[first.asset], as_of, method=LotSaleMethod.HIFO
     )
     print(f"  HIFO sell {sale.quantity_sold} {first.asset.ticker}:"
           f" realized ${sale.realized_gain:,.0f}"
           f"  (ST ${sale.short_term_gain:,.0f} / LT ${sale.long_term_gain:,.0f})")
 
+    _note("cash-flow investing: put new cash into the underweights only, no full-book churn")
     plan = invest_cashflow(data, model, cash=50_000.0, set_aside=5_000.0)
     print(f"  cash deposit $50,000 (hold back $5,000) -> deploy ${plan.cash_deployed:,.0f}:")
     for trade in plan.trades:
         print(f"    BUY  {trade.asset.ticker:<5} ${trade.trade_value:>10,.0f}")
 
-    budgeted = tax_aware_rebalance(data, model, prices, _AS_OF, gain_budget=200.0)
+    _note("tax-aware rebalance: move toward the model but cap realized gains, harvest to fund it")
+    budgeted = tax_aware_rebalance(data, model, prices, as_of, gain_budget=200.0)
     deferred = f", deferred {[a.ticker for a in budgeted.deferred]}" if budgeted.deferred else ""
     print(f"  tax-budgeted rebalance (gain budget $200):"
           f" realized ${budgeted.realized_gain:,.0f}, harvested ${budgeted.harvested_loss:,.0f}{deferred}")
 
     _header("RETURNS WITH FLOWS (TWR vs MWR)")
+    _note("an investor drip-feeds cash over time, so the two return measures diverge")
     actual = np.asarray(data.value, dtype=np.float64)
-    flows = np.zeros(len(actual))
-    mid = len(actual) // 2
-    flows[mid] = 20_000.0
+    n = len(actual)
+    flows = np.zeros(n)
     actual_with_flow = actual.copy()
-    actual_with_flow[mid:] += 20_000.0
-    print("  with a $20,000 contribution midway (annualized):")
+    # Recurring contributions, like an investor adding cash every so often. Each
+    # deposit buys into the portfolio and earns its return from that point on, so
+    # a contribution at t adds C * (V[s]/V[t]) to every later value V[s], not a
+    # dead lump of cash. Sizing the deposit off the starting value keeps it
+    # proportional across baskets of any size.
+    contribution = round(actual[0] * 0.05, -2)
+    step = max(n // 9, 1)                       # about eight deposits across the window
+    for t in range(step, n, step):
+        flows[t] = contribution
+        actual_with_flow[t:] += contribution * (actual[t:] / actual[t])
+    n_deposits = int(np.count_nonzero(flows))
+    print(f"  {n_deposits} contributions of ${contribution:,.0f} "
+          f"(${flows.sum():,.0f} added over the window, annualized):")
     _row("time-weighted (manager skill)",
          time_weighted_return(actual_with_flow, flows, annualized=True), pct=True)
     _row("money-weighted / IRR (client)",
          money_weighted_return(actual_with_flow, flows, annualized=True), pct=True)
 
     _header("ATTRIBUTION (allocation vs selection)")
-    portfolio_returns = {asset: total_return_from_prices(data[asset].close) for asset in data.assets}
-    benchmark_return = total_return_from_prices(benchmark.close)
-    benchmark_returns = {asset: benchmark_return for asset in data.assets}
+    portfolio_returns = {asset: total_return_from_prices(data[asset].close) for asset in assets}
+    benchmark_close = data.aligned_close(benchmark)   # benchmark sampled on portfolio dates
+    benchmark_return = total_return_from_prices(benchmark_close)
+    benchmark_returns = {asset: benchmark_return for asset in assets}
     attribution = brinson_attribution(data.weights, model, portfolio_returns, benchmark_returns)
     _row("allocation effect", attribution.allocation, pct=True)
     _row("selection effect", attribution.selection, pct=True)
@@ -246,12 +381,53 @@ def main() -> None:
     _row("herfindahl index", concentration.herfindahl)
     _row("effective holdings", concentration.effective_holdings)
     _row("largest position", concentration.max_weight, pct=True)
-    sectors = {"AAA": "Technology", "BBB": "Financials", "CCC": "Technology"}
-    exposure = exposure_by_group(data.weights, lambda asset: sectors[asset.ticker])
+    exposure = exposure_by_group(data.weights, lambda asset: sectors.get(asset.ticker, "Equity"))
     print("  sector exposure:")
     for sector, weight in sorted(exposure.items(), key=lambda kv: kv[1], reverse=True):
         print(f"    {sector:<14} {weight * 100:6.2f}%")
     print()
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+def _banner(source: str) -> None:
+    line = "=" * 60
+    print(line)
+    print(f"  finkritq analytics demo   source: {source}")
+    print(line)
+
+
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(
+        prog="python -m finkritq",
+        description="Run every finkritq pillar over a fake or a live portfolio.",
+    )
+    parser.add_argument("mode", nargs="?", choices=["fake", "real"], default="fake",
+                        help="fake = offline seeded market (default), real = live download")
+    parser.add_argument("tickers", nargs="*",
+                        help=f"real-mode tickers (default: {' '.join(_DEFAULT_BASKET)})")
+    parser.add_argument("--benchmark", default=_DEFAULT_BENCHMARK,
+                        help=f"real-mode benchmark ticker (default: {_DEFAULT_BENCHMARK})")
+    parser.add_argument("--start", type=date.fromisoformat, default=_DEFAULT_START,
+                        help=f"real-mode window start, YYYY-MM-DD (default: {_DEFAULT_START})")
+    parser.add_argument("--end", type=date.fromisoformat, default=_DEFAULT_END,
+                        help=f"real-mode window end, YYYY-MM-DD (default: {_DEFAULT_END})")
+    args = parser.parse_args(argv)
+
+    if args.mode == "real":
+        tickers = args.tickers or _DEFAULT_BASKET
+        if args.start >= args.end:
+            parser.error(f"--start ({args.start}) must be before --end ({args.end})")
+        _banner(f"live download, {len(tickers)} holdings, {args.start} -> {args.end}, "
+                f"benchmark {args.benchmark}")
+        data, benchmark, as_of, sectors = build_real(tickers, args.benchmark, args.start, args.end)
+    else:
+        _banner("synthetic, seeded, offline")
+        data, benchmark, as_of, sectors = build_synthetic()
+
+    report(data, benchmark, as_of, sectors)
 
 
 if __name__ == "__main__":
