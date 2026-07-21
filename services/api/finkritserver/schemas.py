@@ -19,14 +19,11 @@ from finagent.store import DEFAULT_PORTFOLIO_ID
 
 
 class HoldingSpec(BaseModel):
-    """One line item in a portfolio. Custodian/account details are omitted --
-    they are irrelevant to risk analysis, so the server synthesizes a default
-    account. One lot per holding for now (v1, risk-only); a holding posted
-    twice for the same ticker merges into multiple lots on the same position
-    (see finkritq.Account.add_position) rather than being dropped, so this
-    already supports the "same ticker, two purchases" case at the API level --
-    it just doesn't let a single request describe multiple lots directly.
-    Revisit if/when tax-lot-aware features need per-lot detail in one call."""
+    """One line item in a portfolio: a ticker with a quantity and a cost basis.
+    Ownership details (custodian, account, registration) are omitted, since they
+    are irrelevant to risk and performance analysis and belong to the RIA layer,
+    not finq. One tax lot per holding for now (v1). Revisit if tax-lot features
+    need per-lot detail within a single request."""
 
     ticker: str
     quantity: float = Field(gt=0)

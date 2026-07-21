@@ -17,10 +17,7 @@ from finkritq.datatype import (
     Exchange,
     PriceHistory,
 )
-from finkritq.portfolio import Account, Lot, Portfolio, Position
-from finkritq.portfolio.custodian import Custodian
-from finkritq.datatype import AccountRegistrationType, CustodianType
-from finkritq.portfolio import PortfolioData
+from finkritq.portfolio import Portfolio, Position, PortfolioData, TaxLot
 
 
 # ---------------------------------------------------------------------------
@@ -67,8 +64,8 @@ def _make_stock(ticker: str) -> Stock:
     )
 
 
-def _make_position(stock: Stock, account: Account, quantity: str, position_id: str, lot_id: str) -> Position:
-    lot = Lot(
+def _make_position(stock: Stock, quantity: str, position_id: str, lot_id: str) -> Position:
+    lot = TaxLot(
         id=lot_id,
         quantity=Decimal(quantity),
         cost_per_share=Decimal("100"),
@@ -82,20 +79,14 @@ def make_portfolio_data() -> PortfolioData:
     stock_a = _make_stock("AAA")
     stock_b = _make_stock("BBB")
 
-    custodian = Custodian(type=CustodianType.SCHWAB)
-    account = Account(
-        id="acct-1",
-        account_number="1234",
-        name="Test Account",
-        custodian=custodian,
-        account_registration_type=AccountRegistrationType.INDIVIDUAL,
+    portfolio = Portfolio(
+        id="port-1",
+        name="Test Portfolio",
+        positions=[
+            _make_position(stock_a, "10", "pos-a", "lot-a"),
+            _make_position(stock_b, "5", "pos-b", "lot-b"),
+        ],
     )
-
-    pos_a = _make_position(stock_a, account, "10", "pos-a", "lot-a")
-    pos_b = _make_position(stock_b, account, "5", "pos-b", "lot-b")
-    account.positions = [pos_a, pos_b]
-
-    portfolio = Portfolio(id="port-1", name="Test Portfolio", accounts=[account])
 
     return PortfolioData(
         portfolio=portfolio,

@@ -14,14 +14,11 @@ from finkritq.asset import Asset, Stock
 from finkritq.data import DataRegistry
 from finkritq.data.interfaces import HistoryProvider
 from finkritq.datatype import (
-    AccountRegistrationType,
     Currency,
-    CustodianType,
     Exchange,
     PriceHistory,
 )
-from finkritq.portfolio import Account, Lot, Portfolio, Position
-from finkritq.portfolio.custodian import Custodian
+from finkritq.portfolio import Portfolio, Position, TaxLot
 
 _DATES = np.array(
     [np.datetime64("2024-01-02", "D") + np.timedelta64(i, "D") for i in range(30)],
@@ -55,8 +52,8 @@ def make_stock(ticker: str) -> Stock:
     return Stock(ticker=ticker, currency=Currency.USD, exchange=Exchange.NASDAQ, company_name=f"{ticker} Corp")
 
 
-def _make_position(stock: Stock, account: Account, quantity: str, position_id: str, lot_id: str) -> Position:
-    lot = Lot(id=lot_id, quantity=Decimal(quantity), cost_per_share=Decimal("100"), acquired=date(2024, 1, 1))
+def _make_position(stock: Stock, quantity: str, position_id: str, lot_id: str) -> Position:
+    lot = TaxLot(id=lot_id, quantity=Decimal(quantity), cost_per_share=Decimal("100"), acquired=date(2024, 1, 1))
     return Position(id=position_id, asset=stock, lots=(lot,))
 
 
@@ -65,15 +62,11 @@ def make_portfolio(portfolio_id: str = "port-1") -> Portfolio:
     stock_a = make_stock("AAA")
     stock_b = make_stock("BBB")
 
-    custodian = Custodian(type=CustodianType.SCHWAB)
-    account = Account(
-        id="acct-1",
-        account_number="1234",
-        name="Test Account",
-        custodian=custodian,
-        account_registration_type=AccountRegistrationType.INDIVIDUAL,
+    return Portfolio(
+        id=portfolio_id,
+        name="Test Portfolio",
+        positions=[
+            _make_position(stock_a, "10", "pos-a", "lot-a"),
+            _make_position(stock_b, "5", "pos-b", "lot-b"),
+        ],
     )
-    account.add_position(_make_position(stock_a, account, "10", "pos-a", "lot-a"))
-    account.add_position(_make_position(stock_b, account, "5", "pos-b", "lot-b"))
-
-    return Portfolio(id=portfolio_id, name="Test Portfolio", accounts=[account])
