@@ -16,6 +16,7 @@ from finkritq.portfolio import Portfolio
 
 if TYPE_CHECKING:
     from finkritq.data.registry import DataRegistry
+    from finkritq.portfolio import Position
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,21 +93,29 @@ class PortfolioData:
     def dates(self) -> NDArray[np.datetime64]:
         return next(iter(self._histories.values())).dates
 
+    @staticmethod
+    def _quantity(position: "Position") -> float:
+        # The single Decimal->float boundary for holdings. The domain model keeps
+        # share counts as exact Decimals, the analytics work in float, so every
+        # quantity crosses to float here and nowhere else, keeping the conversion
+        # in one greppable place.
+        return float(position.quantity)
+
     @property
     def value(self) -> NDArray[np.float64]:
         """
         Portfolio market value over the lookback window.
 
-        Convention: *current* holdings are applied across the whole history --
+        Convention: *current* holdings are applied across the whole history,
         i.e. today's quantities times each day's close. TaxLot `acquired` dates
-        are intentionally ignored; this is the standard "current-composition" basis
+        are intentionally ignored, this is the standard "current-composition" basis
         for risk analytics (what is today's portfolio's risk, given how these
         assets have historically behaved?), NOT a position-aware backtest of
         what you actually held on each past date.
         """
         values = np.zeros(len(self), dtype=np.float64)
         for position in self.portfolio.positions:
-            values += (self[position.asset].close * float(position.quantity))
+            values += (self[position.asset].close * self._quantity(position))
 
         return values
     
@@ -142,11 +151,11 @@ class PortfolioData:
         # Accumulate market value per asset: the same asset can appear in
         # more than one position, so we sum rather than overwrite.
         # (A dict comprehension keyed by asset would silently drop all but the
-        # last position of a repeated asset -- and disagree with .value, which
+        # last position of a repeated asset, and disagree with .value, which
         # already sums across positions.)
         values: dict[Asset, float] = {}
         for position in self.portfolio.positions:
-            market_value = self.latest_prices[position.asset] * float(position.quantity)
+            market_value = self.latest_prices[position.asset] * self._quantity(position)
             values[position.asset] = values.get(position.asset, 0.0) + market_value
 
         total = sum(values.values())
@@ -194,7 +203,7 @@ class PortfolioData:
     # ------------------------------------------------------------------------
     # Portfolio return series with the two WeightingBasis choices.
     #
-    # A multi-asset portfolio has no single return series; you first choose what
+    # A multi-asset portfolio has no single return series, you first choose what
     # stays constant as prices move (see datatype.WeightingBasis for the full
     # explanation). These two methods are the concrete constructions of that
     # choice, and every portfolio_* risk metric ultimately consumes one of them.
@@ -207,7 +216,7 @@ class PortfolioData:
         Holds today's SHARE COUNTS fixed and lets weights drift: the SIMPLE
         return of the actual dollar value path, V(t) = Σ q_i·P_i(t). `self.value`
         already applies today's quantities across the whole history, so its period
-        returns ARE the buy-and-hold portfolio returns -- no weighting step here.
+        returns ARE the buy-and-hold portfolio returns, no weighting step here.
 
         Portfolio returns are always simple, so there is no `method`: a portfolio
         return is a simple return by nature (see `constant_mix_returns`), so the
@@ -216,7 +225,7 @@ class PortfolioData:
         `periodic_returns` still take `method`).
         """
 
-        # self.value is the value path (one number per day); its simple returns
+        # self.value is the value path (one number per day), its simple returns
         # are the portfolio returns directly. Nothing per-asset to combine.
         return periodic_returns(self.value, ReturnCalculationMethod.SIMPLE)
 
@@ -233,11 +242,11 @@ class PortfolioData:
         Simple is not a choice here: Σ_i w_i r_i is a valid portfolio return only
         for simple returns (log returns do not sum across assets). By linearity of
         variance, Var(Σ_i w_i r_i) = wᵀΣw exactly, so this series' variance equals
-        the quadratic form `portfolio_variance` uses under CONSTANT_MIX -- the
+        the quadratic form `portfolio_variance` uses under CONSTANT_MIX, the
         series and matrix forms are two views of the same number.
         """
 
-        # weight_vector is (n_assets,); return_matrix is (n_assets, n_periods).
+        # weight_vector is (n_assets,), return_matrix is (n_assets, n_periods).
         # The matmul contracts the asset axis, giving the (n_periods,)
         # weighted-sum return series r_p(t) = Σ_i w_i · r_i(t).
         return self.weight_vector @ self.return_matrix(ReturnCalculationMethod.SIMPLE)
@@ -258,7 +267,7 @@ class PortfolioData:
         alpha) need the benchmark measured on the same periods as the portfolio.
         Rather than assume the two were fetched over identical calendars, we index
         the benchmark by date so its returns line up period-for-period with the
-        portfolio's own. Extra benchmark dates are ignored; a benchmark missing
+        portfolio's own. Extra benchmark dates are ignored, a benchmark missing
         any portfolio date is an alignment error and raises.
         """
         close_by_date = dict(zip(benchmark.dates.tolist(), benchmark.close))

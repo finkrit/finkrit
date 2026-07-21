@@ -55,6 +55,7 @@ from finkritq.optimize.taxrebalance import (
     TaxRebalancePlan,
     TaxRebalanceSell,
     tax_aware_rebalance,
+    tax_aware_rebalance_to_policy,
 )
 
 __all__ = [
@@ -97,4 +98,5 @@ __all__ = [
     "TaxRebalancePlan",
     "TaxRebalanceSell",
     "tax_aware_rebalance",
+    "tax_aware_rebalance_to_policy",
 ]

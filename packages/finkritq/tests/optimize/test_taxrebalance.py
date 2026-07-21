@@ -10,7 +10,8 @@ from decimal import Decimal
 
 import numpy as np
 
-from finkritq.optimize import tax_aware_rebalance
+from finkritq.optimize import tax_aware_rebalance, tax_aware_rebalance_to_policy
+from finkritq.policy import Policy, Restriction, RestrictionKind
 from finkritq.portfolio import Portfolio, PortfolioData, Position, TaxLot
 from finkritq.tests.fixtures import make_price_history, make_stock
 
@@ -89,3 +90,38 @@ class TestReplacementSecurity:
         )
         assert substitute in plan.replacement_buys
         assert plan.replacement_buys[substitute] > 0
+
+
+class TestTaxAwareRebalanceToPolicy:
+
+    def test_on_model_policy_has_no_sells(self):
+        data, ctx = _data({"AAA": ("50", "50"), "BBB": ("50", "50")})
+        s = ctx["stocks"]
+        policy = Policy(target_weights={s["AAA"]: 0.5, s["BBB"]: 0.5})
+        plan = tax_aware_rebalance_to_policy(data, policy, ctx["prices"], _AS_OF)
+        assert plan.sells == []
+        assert plan.deferred == []
+
+    def test_restriction_forces_a_sell_the_target_would_not(self):
+        # AAA is on target (0.5) so a bare rebalance leaves it, but DO_NOT_HOLD
+        # forces it out, and being underwater it is realized as a harvest.
+        data, ctx = _data({"AAA": ("50", "130"), "BBB": ("50", "90")})
+        s = ctx["stocks"]
+        policy = Policy(
+            target_weights={s["AAA"]: 0.5, s["BBB"]: 0.5},
+            restrictions=(Restriction(s["AAA"], RestrictionKind.DO_NOT_HOLD),),
+        )
+        plan = tax_aware_rebalance_to_policy(data, policy, ctx["prices"], _AS_OF)
+        assert {sell.asset for sell in plan.sells} == {s["AAA"]}
+        assert plan.sells[0].is_harvest is True
+
+    def test_policy_path_respects_the_gain_budget(self):
+        # AAA (drift .2) and CCC (drift .1) are both gains, an $800 budget fits AAA
+        # but not both, so CCC defers, same budgeting the model path does.
+        data, ctx = _data({"AAA": ("50", "50"), "CCC": ("40", "50"), "BBB": ("10", "90")})
+        s = ctx["stocks"]
+        policy = Policy(target_weights={s["AAA"]: 0.3, s["BBB"]: 0.4, s["CCC"]: 0.3})
+        plan = tax_aware_rebalance_to_policy(data, policy, ctx["prices"], _AS_OF, gain_budget=800.0)
+        sold = {sell.asset for sell in plan.sells}
+        assert s["AAA"] in sold
+        assert s["CCC"] in plan.deferred

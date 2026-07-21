@@ -24,7 +24,8 @@ from decimal import Decimal
 
 from finkritq.asset import Asset
 from finkritq.optimize.lotselection import LotSaleMethod, SaleResult, select_lots_to_sell
-from finkritq.optimize.rebalance import rebalance_to_model
+from finkritq.optimize.rebalance import RebalanceTrade, rebalance_to_model, rebalance_to_policy
+from finkritq.policy import Policy
 from finkritq.portfolio import PortfolioData, Position
 
 
@@ -64,25 +65,21 @@ def _aggregate_position(portfolio_data: PortfolioData, asset: Asset) -> Position
     return Position(id=f"agg-{asset.ticker}", asset=asset, lots=lots)
 
 
-def tax_aware_rebalance(
+def _tax_budgeted_plan(
     portfolio_data: PortfolioData,
-    target_weights: dict[Asset, float],
+    trades: list[RebalanceTrade],
     prices: dict[Asset, Decimal],
     as_of: date,
-    gain_budget: float = float("inf"),
-    tolerance: float = 0.0,
-    method: LotSaleMethod = LotSaleMethod.HIFO,
-    replacements: dict[Asset, Asset] | None = None,
+    gain_budget: float,
+    method: LotSaleMethod,
+    replacements: dict[Asset, Asset] | None,
 ) -> TaxRebalancePlan:
-    """
-    Rebalance toward ``target_weights`` under a ``gain_budget`` (max net realized
-    capital gain in dollars, default unlimited). Losses are always realized, gains
-    are realized drift-first until the net gain would exceed the budget, then
-    deferred. ``replacements`` maps a harvested asset to a substitute bought with
-    the proceeds.
-    """
+    # Shared engine for both entry points: given proposed trades, realize the
+    # sells drift-first under the gain budget (losses always, gains until the
+    # budget is hit, the rest deferred), reinvesting harvest proceeds into a
+    # replacement where one is mapped. Where the trades came from (a bare target
+    # or a Policy) is the caller's concern.
     replacements = replacements or {}
-    trades = rebalance_to_model(portfolio_data, target_weights, tolerance=tolerance)
     sell_trades = [t for t in trades if not t.is_buy]  # trade_value < 0
     sells_by_priority = sorted(sell_trades, key=lambda t: abs(t.drift), reverse=True)
 
@@ -136,4 +133,50 @@ def tax_aware_rebalance(
         harvested_loss=harvested,
         gain_budget=gain_budget,
         replacement_buys=replacement_buys,
+    )
+
+
+def tax_aware_rebalance(
+    portfolio_data: PortfolioData,
+    target_weights: dict[Asset, float],
+    prices: dict[Asset, Decimal],
+    as_of: date,
+    gain_budget: float = float("inf"),
+    tolerance: float = 0.0,
+    method: LotSaleMethod = LotSaleMethod.HIFO,
+    replacements: dict[Asset, Asset] | None = None,
+) -> TaxRebalancePlan:
+    """
+    Rebalance toward ``target_weights`` under a ``gain_budget`` (max net realized
+    capital gain in dollars, default unlimited). Losses are always realized, gains
+    are realized drift-first until the net gain would exceed the budget, then
+    deferred. ``replacements`` maps a harvested asset to a substitute bought with
+    the proceeds.
+    """
+    trades = rebalance_to_model(portfolio_data, target_weights, tolerance=tolerance)
+    return _tax_budgeted_plan(
+        portfolio_data, trades, prices, as_of, gain_budget, method, replacements
+    )
+
+
+def tax_aware_rebalance_to_policy(
+    portfolio_data: PortfolioData,
+    policy: Policy,
+    prices: dict[Asset, Decimal],
+    as_of: date,
+    gain_budget: float = float("inf"),
+    method: LotSaleMethod = LotSaleMethod.HIFO,
+    replacements: dict[Asset, Asset] | None = None,
+) -> TaxRebalancePlan:
+    """
+    Tax-budgeted rebalance driven by a ``Policy``: the sells come from
+    ``rebalance_to_policy`` (so drift bands and holding restrictions are honored,
+    a DO_NOT_HOLD name is force-sold, a capped name trimmed) and are then realized
+    under the ``gain_budget`` exactly as ``tax_aware_rebalance`` does. This is the
+    fully honest propose step, respecting the rules AND the tax bill at once,
+    rather than a bare target with a flat tolerance.
+    """
+    trades = rebalance_to_policy(portfolio_data, policy)
+    return _tax_budgeted_plan(
+        portfolio_data, trades, prices, as_of, gain_budget, method, replacements
     )
