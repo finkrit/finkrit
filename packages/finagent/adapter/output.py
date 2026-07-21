@@ -5,13 +5,13 @@ Agent-facing output adapters.
 finkritq's array-returning risk functions hand back raw NDArrays, which
 (a) can't be serialized into a pydantic-ai tool-return message and
 (b) are useless to an LLM even if they could. These adapters run at the
-agent edge only -- finkritq keeps returning full arrays for non-agent
+agent edge only, finkritq keeps returning full arrays for non-agent
 callers. Keyed by ToolContract.name.
 
 Every adapter shares one signature, ``(result, resolved) -> Any``, so the
 compiler can call them all identically (``_adapt(_result, resolved_dict)``).
 ``resolved`` holds the tool's already-resolved domain objects keyed by
-finkritq field name (e.g. ``"portfolio"``); some adapters need it (mapping an
+finkritq field name (e.g. ``"portfolio"``), some adapters need it (mapping an
 array position back to a ticker), some don't, the uniform signature is
 deliberate, not an oversight.
 """
@@ -30,7 +30,7 @@ def _as_float_vector(result: Any) -> np.ndarray:
     """
     Coerce a finkritq array result into a 1-D float ndarray, failing with a
     clear message instead of a cryptic numpy error. In normal operation the
-    binding always returns a valid array; this guards the "in practice" gap
+    binding always returns a valid array, this guards the "in practice" gap
     (a None/garbage result surfaces as a readable TypeError/ValueError).
     """
     try:
@@ -45,7 +45,7 @@ def _as_float_vector(result: Any) -> np.ndarray:
 
 
 def _summarize_drawdown(result: Any, resolved: dict[str, Any]) -> dict[str, float | int]:
-    # `resolved` unused here -- part of the shared OutputAdapter signature.
+    # `resolved` unused here, part of the shared OutputAdapter signature.
     arr = _as_float_vector(result)
     if arr.size == 0:
         return {"max_drawdown": 0.0, "current_drawdown": 0.0, "periods": 0}
@@ -65,7 +65,7 @@ def _summarize_contribution(result: Any, resolved: dict[str, Any]) -> dict[str, 
 
     values = _as_float_vector(result)
     tickers = [asset.ticker for asset in portfolio.assets]
-    # A length mismatch means the vector no longer lines up with the assets --
+    # A length mismatch means the vector no longer lines up with the assets,
     # a real bug we want loud, not a silently-truncated dict from zip().
     if len(tickers) != values.size:
         raise ValueError(
@@ -75,9 +75,21 @@ def _summarize_contribution(result: Any, resolved: dict[str, Any]) -> dict[str, 
     return {ticker: float(v) for ticker, v in zip(tickers, values)}
 
 
+def _summarize_weights(result: Any, resolved: dict[str, Any]) -> dict[str, float]:
+    # `resolved` unused here. The optimizers return a dict keyed by Asset, which
+    # is not JSON-serializable, reshape to ticker -> weight for the LLM.
+    if not isinstance(result, dict):
+        raise TypeError(
+            f"weights adapter expected a dict result, got {type(result).__name__!r}"
+        )
+    return {asset.ticker: round(float(weight), 6) for asset, weight in result.items()}
+
+
 OUTPUT_ADAPTERS: dict[str, OutputAdapter] = {
     "portfolio_drawdown": _summarize_drawdown,
     "asset_drawdown": _summarize_drawdown,
     "portfolio_marginal_contribution_to_risk": _summarize_contribution,
     "portfolio_component_contribution_to_risk": _summarize_contribution,
+    "optimize_minimum_variance": _summarize_weights,
+    "optimize_maximum_sharpe": _summarize_weights,
 }
