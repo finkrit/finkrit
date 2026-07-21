@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 import numpy as np
@@ -163,21 +163,39 @@ def build_synthetic() -> tuple[PortfolioData, PriceHistory, date, dict[str, str]
 # Real source: live daily data through the history provider
 # ---------------------------------------------------------------------------
 
-def _real_position(stock: Stock, history: PriceHistory, as_of: date) -> Position:
-    # Illustrative holding on top of real prices: 100 shares in two lots, with the
-    # cost basis anchored to the downloaded series so the tax numbers are real.
-    # Old lot: bought long ago and below the earliest close (a long-term gain).
-    # New lot: bought recently and above the latest close (a short-term loss that
-    # shows up as a harvest candidate).
+def _to_date(dt64: np.datetime64) -> date:
+    # A single observation date from a history, as a datetime.date.
+    return np.datetime64(dt64, "D").astype(object)
+
+
+def _real_position(stock: Stock, history: PriceHistory, idx: int) -> Position:
+    # Illustrative holding whose buys are REAL: each lot is acquired on an actual
+    # trading day inside the downloaded window and its cost basis is that day's
+    # actual close, so a lot's gain or loss is exactly what the market did between
+    # the buy and the last close. No fabricated tilt, some holdings will show a
+    # gain and some a loss depending on the tape.
+    #
+    # Two lots per position, staggered by `idx` so the book looks bought over time
+    # rather than all on one day:
+    #   old lot  an early-window trading day  -> long-term (held over a year)
+    #   new lot  a recent trading day         -> short-term (held under a year)
+    dates = history.dates
     close = history.close
-    half = Decimal("50")
-    old_cost = Decimal(str(round(float(close[0]) * 0.80, 2)))
-    new_cost = Decimal(str(round(float(close[-1]) * 1.15, 2)))
+    n = len(close)
+
+    old_i = min(5 + idx * 4, n // 4)               # early window, staggered
+    new_i = max(n - 1 - (20 + idx * 8), n // 2)     # last few months, staggered
+
+    old_qty = Decimal(str(40 + idx * 5))            # vary share counts across holdings
+    new_qty = Decimal(str(20 + idx * 3))
+
     lots = (
-        TaxLot(id=f"{stock.ticker}-old", quantity=half, cost_per_share=old_cost,
-               acquired=as_of - timedelta(days=800)),
-        TaxLot(id=f"{stock.ticker}-new", quantity=half, cost_per_share=new_cost,
-               acquired=as_of - timedelta(days=45)),
+        TaxLot(id=f"{stock.ticker}-old", quantity=old_qty,
+               cost_per_share=Decimal(str(round(float(close[old_i]), 2))),
+               acquired=_to_date(dates[old_i])),
+        TaxLot(id=f"{stock.ticker}-new", quantity=new_qty,
+               cost_per_share=Decimal(str(round(float(close[new_i]), 2))),
+               acquired=_to_date(dates[new_i])),
     )
     return Position(id=f"p-{stock.ticker}", asset=stock, lots=lots)
 
@@ -222,7 +240,8 @@ def build_real(
     histories = dict(zip(stocks, aligned))
 
     as_of = end
-    positions = [_real_position(stock, histories[stock], as_of) for stock in stocks]
+    positions = [_real_position(stock, histories[stock], idx)
+                 for idx, stock in enumerate(stocks)]
     portfolio = Portfolio(
         id="live",
         name=f"Live Portfolio ({', '.join(tickers)})",
