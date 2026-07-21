@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from finkritq.asset import Asset
+from finkritq.policy import Policy, RestrictionKind
 from finkritq.portfolio import PortfolioData
 
 
@@ -26,6 +27,7 @@ class RebalanceTrade:
     target_weight: float
     drift: float          # current - target (positive => overweight => sell)
     trade_value: float    # dollars, positive => buy, negative => sell
+    reason: str = "drift" # why the trade was proposed (see rebalance_to_policy)
 
     @property
     def is_buy(self) -> bool:
@@ -96,3 +98,89 @@ def total_drift(
         abs(current.get(asset, 0.0) - target_weights.get(asset, 0.0))
         for asset in assets
     )
+
+
+def rebalance_to_policy(
+    portfolio_data: PortfolioData,
+    policy: Policy,
+) -> list[RebalanceTrade]:
+    """
+    Trades to bring the portfolio into line with a ``Policy``, honoring its bands
+    and holding restrictions. This is ``rebalance_to_model`` that respects the
+    rules, the proposal side of supervision (see policy.compliance for the
+    detection side).
+
+    Rules applied per asset:
+
+      * Restrictions clamp the effective target: DO_NOT_HOLD forces it to 0,
+        MAX_WEIGHT caps it, MIN_WEIGHT floors it.
+      * An asset is traded only if it breaches its own drift band OR a restriction
+        it holds is currently violated (a forced trade even inside the band).
+      * DO_NOT_BUY suppresses buys: if the proposed trade would add to the asset it
+        is dropped, so an underweight restricted name is simply left alone.
+
+    Effective targets are not renormalized, so clamping a holding down leaves the
+    freed weight as cash (underinvested) rather than reshuffling the model. Each
+    trade carries a ``reason`` (drift, do_not_hold, max_weight, min_weight).
+    Returned sorted by drift severity.
+    """
+    total_value = float(portfolio_data.value[-1])
+    current = portfolio_data.weights
+
+    do_not_hold = {r.asset for r in policy.restrictions if r.kind is RestrictionKind.DO_NOT_HOLD}
+    do_not_buy = {r.asset for r in policy.restrictions if r.kind is RestrictionKind.DO_NOT_BUY}
+    max_cap = {r.asset: r.limit for r in policy.restrictions if r.kind is RestrictionKind.MAX_WEIGHT}
+    min_floor = {r.asset: r.limit for r in policy.restrictions if r.kind is RestrictionKind.MIN_WEIGHT}
+
+    assets = set(current) | set(policy.target_weights) | do_not_hold | do_not_buy \
+        | set(max_cap) | set(min_floor)
+
+    trades: list[RebalanceTrade] = []
+    for asset in assets:
+        current_weight = current.get(asset, 0.0)
+
+        # Effective target after restriction clamps.
+        if asset in do_not_hold:
+            target_weight = 0.0
+        else:
+            target_weight = policy.target_weights.get(asset, 0.0)
+            if asset in max_cap:
+                target_weight = min(target_weight, max_cap[asset])
+            if asset in min_floor:
+                target_weight = max(target_weight, min_floor[asset])
+
+        drift = current_weight - target_weight
+        band = policy.band_for(asset).allowed(target_weight)
+
+        # A currently-violated restriction forces a trade even inside the band,
+        # otherwise trade only on a band breach.
+        if asset in do_not_hold and current_weight > 0.0:
+            reason = "do_not_hold"
+        elif asset in max_cap and current_weight > max_cap[asset]:
+            reason = "max_weight"
+        elif asset in min_floor and current_weight < min_floor[asset]:
+            reason = "min_weight"
+        elif abs(drift) > band:
+            reason = "drift"
+        else:
+            continue
+
+        trade_value = (target_weight - current_weight) * total_value
+
+        # Cannot add to a DO_NOT_BUY name: drop the buy, leave it underweight.
+        if trade_value > 0.0 and asset in do_not_buy:
+            continue
+
+        trades.append(
+            RebalanceTrade(
+                asset=asset,
+                current_weight=current_weight,
+                target_weight=target_weight,
+                drift=drift,
+                trade_value=trade_value,
+                reason=reason,
+            )
+        )
+
+    trades.sort(key=lambda trade: abs(trade.drift), reverse=True)
+    return trades

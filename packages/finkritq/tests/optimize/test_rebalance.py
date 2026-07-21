@@ -9,7 +9,8 @@ from decimal import Decimal
 
 import numpy as np
 
-from finkritq.optimize import rebalance_to_model, total_drift
+from finkritq.optimize import rebalance_to_model, rebalance_to_policy, total_drift
+from finkritq.policy import DriftBand, Policy, Restriction, RestrictionKind
 from finkritq.portfolio import Portfolio, PortfolioData
 from finkritq.tests.fixtures import make_position, make_price_history, make_stock
 
@@ -82,3 +83,68 @@ class TestTotalDrift:
         data, s = _data({"AAA": "50", "BBB": "50"})
         target = {s["AAA"]: 0.5, s["BBB"]: 0.5}
         assert np.isclose(total_drift(data, target), 0.0)
+
+
+class TestRebalanceToPolicy:
+
+    def test_on_model_no_restrictions_no_trades(self):
+        data, s = _data({"AAA": "50", "BBB": "50"})
+        policy = Policy(target_weights={s["AAA"]: 0.5, s["BBB"]: 0.5})
+        assert rebalance_to_policy(data, policy) == []
+
+    def test_band_breach_trades_with_drift_reason(self):
+        # 0.6/0.4 vs a 0.5/0.5 model, default 5% band -> both breach.
+        data, s = _data({"AAA": "60", "BBB": "40"})
+        policy = Policy(target_weights={s["AAA"]: 0.5, s["BBB"]: 0.5})
+        trades = {t.asset.ticker: t for t in rebalance_to_policy(data, policy)}
+        assert trades["AAA"].reason == "drift"
+        assert np.isclose(trades["AAA"].trade_value, -1000.0)
+
+    def test_within_band_no_trade(self):
+        data, s = _data({"AAA": "60", "BBB": "40"})   # drift 0.10 each
+        policy = Policy(target_weights={s["AAA"]: 0.5, s["BBB"]: 0.5},
+                        default_band=DriftBand(absolute=0.15))
+        assert rebalance_to_policy(data, policy) == []
+
+    def test_do_not_hold_forces_full_sell(self):
+        # BBB is on target, but DO_NOT_HOLD forces it out anyway.
+        data, s = _data({"AAA": "50", "BBB": "50"})
+        policy = Policy(
+            target_weights={s["AAA"]: 0.5, s["BBB"]: 0.5},
+            restrictions=(Restriction(s["BBB"], RestrictionKind.DO_NOT_HOLD),),
+        )
+        trades = {t.asset.ticker: t for t in rebalance_to_policy(data, policy)}
+        assert trades["BBB"].reason == "do_not_hold"
+        assert np.isclose(trades["BBB"].trade_value, -5000.0)
+        assert "AAA" not in trades   # on target, left alone
+
+    def test_max_weight_sells_down_to_cap(self):
+        data, s = _data({"AAA": "60", "BBB": "40"})
+        policy = Policy(
+            target_weights={s["AAA"]: 0.6, s["BBB"]: 0.4},   # on model
+            restrictions=(Restriction(s["AAA"], RestrictionKind.MAX_WEIGHT, limit=0.5),),
+        )
+        trades = {t.asset.ticker: t for t in rebalance_to_policy(data, policy)}
+        assert trades["AAA"].reason == "max_weight"
+        assert np.isclose(trades["AAA"].trade_value, -1000.0)   # 0.6 -> 0.5
+
+    def test_min_weight_buys_up_to_floor(self):
+        data, s = _data({"AAA": "50", "BBB": "50"})
+        policy = Policy(
+            target_weights={s["AAA"]: 0.5, s["BBB"]: 0.5},
+            restrictions=(Restriction(s["BBB"], RestrictionKind.MIN_WEIGHT, limit=0.6),),
+        )
+        trades = {t.asset.ticker: t for t in rebalance_to_policy(data, policy)}
+        assert trades["BBB"].reason == "min_weight"
+        assert np.isclose(trades["BBB"].trade_value, +1000.0)   # 0.5 -> 0.6
+
+    def test_do_not_buy_suppresses_the_buy(self):
+        # AAA is underweight (would buy) but DO_NOT_BUY: leave it, still sell BBB.
+        data, s = _data({"AAA": "40", "BBB": "60"})
+        policy = Policy(
+            target_weights={s["AAA"]: 0.6, s["BBB"]: 0.4},
+            restrictions=(Restriction(s["AAA"], RestrictionKind.DO_NOT_BUY),),
+        )
+        trades = {t.asset.ticker: t for t in rebalance_to_policy(data, policy)}
+        assert "AAA" not in trades              # buy suppressed
+        assert trades["BBB"].is_buy is False    # overweight, sold

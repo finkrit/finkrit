@@ -33,6 +33,7 @@ from finkritq.optimize.meanvariance import (
 from finkritq.optimize.rebalance import (
     RebalanceTrade,
     rebalance_to_model,
+    rebalance_to_policy,
     total_drift,
 )
 from finkritq.optimize.lotselection import (
@@ -78,6 +79,7 @@ __all__ = [
     # rebalancing
     "RebalanceTrade",
     "rebalance_to_model",
+    "rebalance_to_policy",
     "total_drift",
     # tax-aware lot selection
     "LotSaleMethod",

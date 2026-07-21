@@ -30,6 +30,10 @@ from finkritq.policy.suitability import (
     SuitabilityVerdict,
     suitability,
 )
+from finkritq.policy.scan import (
+    BookException,
+    scan_book,
+)
 
 __all__ = [
     # policy model
@@ -49,4 +53,7 @@ __all__ = [
     "suitability",
     "Suitability",
     "SuitabilityVerdict",
+    # book scan
+    "scan_book",
+    "BookException",
 ]
