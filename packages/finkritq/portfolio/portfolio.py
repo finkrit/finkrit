@@ -17,12 +17,9 @@ class Portfolio:
     A set of positions analyzed together -- the quant analysis unit.
 
     This is deliberately lean: just a bag of positions, with no notion of who
-    owns it, where it custodies, or how it is taxed. The ownership/legal graph
-    (household, registration, account, custodian) lives above finq, in the RIA
-    layer, which flattens an account's or a household's holdings *down to* a
-    Portfolio to run analytics. finq never sees an account -- it sees positions
-    and prices. "Portfolio" here is the polymorphic analysis view: whatever set
-    of holdings you point the measures at.
+    owns it, where it custodies, or how it is taxed. finq never sees an account
+    it sees positions and prices. "Portfolio" here is the polymorphic analysis view:
+    whatever set of holdings you point the measures at.
     """
 
     id: str
