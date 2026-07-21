@@ -56,7 +56,16 @@ from finkritq.anal.risk import (
 )
 from finkritq.asset import Stock
 from finkritq.data.registry import DataRegistry
-from finkritq.datatype import Currency, Exchange, PriceHistory
+from finkritq.datatype import Currency, Exchange, PriceHistory, VaREstimationMethod
+from finkritq.policy import (
+    DriftBand,
+    Policy,
+    Restriction,
+    RestrictionKind,
+    RiskTolerance,
+    policy_status,
+    suitability,
+)
 from finkritq.optimize import (
     LotSaleMethod,
     efficient_frontier_portfolio,
@@ -381,7 +390,7 @@ def report(
           f"(${flows.sum():,.0f} added over the window, annualized):")
     _row("time-weighted (manager skill)",
          time_weighted_return(actual_with_flow, flows, annualized=True), pct=True)
-    _row("money-weighted / IRR (client)",
+    _row("money-weighted / IRR (owner)",
          money_weighted_return(actual_with_flow, flows, annualized=True), pct=True)
 
     _header("ATTRIBUTION (allocation vs selection)")
@@ -404,6 +413,38 @@ def report(
     print("  sector exposure:")
     for sector, weight in sorted(exposure.items(), key=lambda kv: kv[1], reverse=True):
         print(f"    {sector:<14} {weight * 100:6.2f}%")
+
+    _header("SUPERVISION (policy & suitability)")
+    # Supervise the portfolio against a policy: the equal-weight model with a 5%
+    # drift band, a concentration cap on the largest holding, and a comfort band
+    # for how much the owner will tolerate losing.
+    top_asset = max(data.weights, key=data.weights.get)
+    policy = Policy(
+        target_weights=model,
+        default_band=DriftBand(absolute=0.05),
+        restrictions=(Restriction(top_asset, RestrictionKind.MAX_WEIGHT, limit=0.30),),
+        risk_tolerance=RiskTolerance(floor_return=-0.15, ceiling_return=0.25),
+    )
+
+    _note("drift and restriction check against the model (breaches are the exceptions)")
+    status = policy_status(data, policy)
+    print(f"  in compliance: {status.in_compliance}   total drift {status.total_drift * 100:.1f}%")
+    for breach in status.drift_breaches:
+        print(f"    DRIFT {breach.asset.ticker:<5} {breach.current_weight * 100:5.1f}%"
+              f" vs {breach.target_weight * 100:5.1f}% target"
+              f"   (drift {breach.drift * 100:+.1f}%, band {breach.allowed * 100:.1f}%)")
+    for violation in status.restriction_violations:
+        print(f"    RULE  {violation.restriction.asset.ticker:<5} {violation.detail}")
+
+    _note("suitability: projected 6-month range vs the owner's comfort band")
+    tolerance = policy.risk_tolerance
+    for method in (VaREstimationMethod.PARAMETRIC, VaREstimationMethod.HISTORICAL):
+        fit = suitability(data, tolerance, method=method)
+        print(f"    {method.value:<11} range [{fit.portfolio_floor * 100:+.1f}%,"
+              f" {fit.portfolio_ceiling * 100:+.1f}%]"
+              f"  tolerance [{tolerance.floor_return * 100:+.1f}%,"
+              f" {tolerance.ceiling_return * 100:+.1f}%]"
+              f"  -> {fit.verdict.value}")
     print()
 
 
