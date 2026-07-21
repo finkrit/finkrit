@@ -163,7 +163,23 @@ class PortfolioData:
             asset: value / total
             for asset, value in values.items()
         }
-    
+
+    @property
+    def start_weights(self) -> dict[Asset, float]:
+        # Market-value weights at the START of the window (first close). This is the
+        # basis for buy-and-hold contribution-to-return, whose per-asset pieces sum
+        # exactly to the portfolio's total return over the window.
+        values: dict[Asset, float] = {}
+        for position in self.portfolio.positions:
+            start_price = self[position.asset].close[0]
+            values[position.asset] = values.get(position.asset, 0.0) + start_price * self._quantity(position)
+
+        total = sum(values.values())
+        return {
+            asset: value / total
+            for asset, value in values.items()
+        }
+
     @property
     def weight_vector(self) -> NDArray[np.float64]:
         weights = self.weights

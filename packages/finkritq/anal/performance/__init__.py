@@ -73,6 +73,13 @@ from finkritq.anal.performance.attribution import (
     SegmentAttribution,
     brinson_attribution,
 )
+from finkritq.anal.performance.contribution import (
+    Contribution,
+    contribution_to_return,
+)
+from finkritq.anal.performance.fees import (
+    net_of_fees,
+)
 
 __all__ = [
     # total (cumulative) return
@@ -130,4 +137,9 @@ __all__ = [
     "brinson_attribution",
     "AttributionResult",
     "SegmentAttribution",
+    # contribution to return
+    "contribution_to_return",
+    "Contribution",
+    # fees
+    "net_of_fees",
 ]
