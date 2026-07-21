@@ -18,8 +18,13 @@ from finkritq.optimize.expected_returns import (
 )
 from finkritq.optimize.meanvariance import (
     FrontierPoint,
+    constrained_efficient_frontier,
+    constrained_max_sharpe_weights,
+    constrained_minimum_variance_weights,
+    constrained_target_return_weights,
     efficient_frontier,
     efficient_frontier_portfolio,
+    ledoit_wolf_shrinkage,
     maximum_sharpe_portfolio,
     minimum_variance_portfolio,
     minimum_variance_weights,
@@ -62,12 +67,18 @@ __all__ = [
     # expected returns
     "expected_returns",
     "expected_returns_from_returns",
-    # weight solvers
+    # weight solvers (unconstrained closed form)
     "minimum_variance_weights",
     "tangency_weights",
     "target_return_weights",
     "efficient_frontier",
     "FrontierPoint",
+    # constrained solvers + covariance shrinkage
+    "constrained_minimum_variance_weights",
+    "constrained_max_sharpe_weights",
+    "constrained_target_return_weights",
+    "constrained_efficient_frontier",
+    "ledoit_wolf_shrinkage",
     # weight statistics
     "portfolio_return_from_weights",
     "portfolio_variance_from_weights",

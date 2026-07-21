@@ -15,6 +15,7 @@ from finkritq.optimize import (
     maximum_sharpe_portfolio,
     minimum_variance_portfolio,
 )
+from finkritq.policy import Policy, Restriction, RestrictionKind
 from finkritq.portfolio import Portfolio, PortfolioData
 from finkritq.tests.fixtures import make_position, make_price_history, make_stock
 
@@ -65,3 +66,35 @@ class TestEfficientFrontierPortfolio:
         assert all(isinstance(p, FrontierPoint) for p in points)
         for p in points:
             assert np.isclose(p.weights.sum(), 1.0)
+
+
+class TestPolicyConstrainedOptimizers:
+
+    def test_long_only_default_has_no_negative_weights(self):
+        weights = minimum_variance_portfolio(_portfolio_data())
+        assert all(w >= -1e-9 for w in weights.values())
+
+    def test_do_not_hold_pins_asset_to_zero(self):
+        data = _portfolio_data()
+        excluded = data.assets[0]
+        policy = Policy(
+            target_weights={a: 0.5 for a in data.assets},
+            restrictions=(Restriction(excluded, RestrictionKind.DO_NOT_HOLD),),
+        )
+        weights = minimum_variance_portfolio(data, policy=policy)
+        assert np.isclose(weights[excluded], 0.0, atol=1e-9)
+        assert np.isclose(sum(weights.values()), 1.0)
+
+    def test_max_weight_caps_the_asset(self):
+        data = _portfolio_data()
+        capped = data.assets[0]
+        policy = Policy(
+            target_weights={a: 0.5 for a in data.assets},
+            restrictions=(Restriction(capped, RestrictionKind.MAX_WEIGHT, limit=0.3),),
+        )
+        weights = minimum_variance_portfolio(data, policy=policy)
+        assert weights[capped] <= 0.3 + 1e-9
+
+    def test_unconstrained_escape_hatch_still_sums_to_one(self):
+        weights = minimum_variance_portfolio(_portfolio_data(), long_only=False, shrinkage=False)
+        assert np.isclose(sum(weights.values()), 1.0)
