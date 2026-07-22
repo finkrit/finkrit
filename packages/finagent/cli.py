@@ -7,14 +7,14 @@ feed, so the numbers are reproducible and nothing is downloaded. The agent
 itself is real and needs a model plus its API key in the environment.
 
     LLM_API_KEY=... python -m finagent --ai openai
-    LLM_API_KEY=... python -m finagent --ai claude
-    LLM_API_KEY=... python -m finagent -m anthropic:claude-opus-4-8
+    LLM_API_KEY=... python -m finagent --ai claude -ag 1
+    LLM_API_KEY=... python -m finagent --ai openai -ag 0
 
-Provider-neutral: LLM_API_KEY holds the key (mapped onto whatever env var the
-chosen provider expects), and the model is picked with --ai/-m, a provider
-shortcut (claude, openai, gemini, groq, mistral) or a full provider:name
-string. Falls back to FINKRIT_MODEL, then a default. Type a question about the
-portfolio's risk, or 'quit' to leave.
+--ai picks the model, a provider shortcut (claude, openai, gemini, groq,
+mistral) or a full provider:name string, keyed by a generic LLM_API_KEY mapped
+onto whatever env var the provider expects. -ag picks the agent: 0 the
+all-encompassing router, 1 risk, 2 optimization, 3 performance. Left off, a menu
+asks. Type a question, or 'quit' to leave.
 """
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ _PROVIDER_KEY_ENV = {
 
 def _resolve_api_key(model: str) -> None:
     # Map the generic LLM_API_KEY onto the env var the chosen provider expects,
-    # leaving a provider-native key already in the environment untouched.
+    # leaving a provider native key already in the environment untouched.
     api_key = os.environ.get("LLM_API_KEY")
     if not api_key:
         return
@@ -75,11 +75,41 @@ def _resolve_api_key(model: str) -> None:
         os.environ[key_env] = api_key
 
 
+# Agent menu. key -> (mode, label, description). mode None is the orchestrator,
+# the other modes name a specialist for Assistant.ask.
+_AGENT_CHOICES: dict[str, tuple[str | None, str, str]] = {
+    "0": (None, "Router (all)", "routes and combines across specialists, costs extra LLM calls"),
+    "1": ("risk", "Risk", "volatility, VaR, drawdown, beta, concentration"),
+    "2": ("optimization", "Optimization", "minimum-variance / maximum-Sharpe allocations"),
+    "3": ("performance", "Performance", "returns, Sharpe / Sortino / Calmar"),
+}
+_AGENT_NAMES = {
+    "all": "0", "router": "0", "risk": "1",
+    "optimization": "2", "optimize": "2", "opt": "2", "performance": "3", "perf": "3",
+}
+
+
+def _prompt_agent_menu() -> str:
+    print("\nWhich agent?")
+    for key, (_, label, desc) in _AGENT_CHOICES.items():
+        tail = "  [Enter]" if key == "0" else ""
+        print(f"  {key}  {label:<15} {desc}{tail}")
+    return input("> ").strip() or "0"
+
+
+def _resolve_agent(raw: str | None) -> tuple[str | None, str]:
+    # Returns (mode, label). raw may be a digit, a name, or None (ask the menu).
+    key = (raw if raw is not None else _prompt_agent_menu()).strip().lower()
+    key = _AGENT_NAMES.get(key, key)
+    mode, label, _ = _AGENT_CHOICES.get(key, _AGENT_CHOICES["0"])
+    return mode, label
+
+
 class _FakeHistoryProvider(HistoryProvider):
     """
     Deterministic seeded daily closes per ticker, no network.
 
-    The per-ticker seed is a stable hash, NOT Python's built-in hash(), which is
+    The per ticker seed is a stable hash, NOT Python's built in hash(), which is
     salted per process and so would give different numbers every run. The series
     also honors the requested [start, end] window, so the lookback the agent
     reports is truthful rather than a fixed hidden range.
@@ -128,9 +158,14 @@ def main(argv: list[str] | None = None) -> None:
         description="Chat with the portfolio agent over a seeded fake portfolio.",
     )
     parser.add_argument(
-        "-a", "--ai", "-m", "--model", dest="ai", default=None,
-        help="provider shortcut (claude, openai, gemini, groq, mistral) or a full "
-             "provider:name string. Overrides FINKRIT_MODEL.",
+        "--ai", dest="ai", default=None,
+        help="model: provider shortcut (claude, openai, gemini, groq, mistral) or a "
+             "full provider:name string. Overrides FINKRIT_MODEL.",
+    )
+    parser.add_argument(
+        "-ag", "--agent", dest="agent", default=None,
+        help="agent: 0 router (all), 1 risk, 2 optimization, 3 performance (or a name). "
+             "Left off, a menu asks.",
     )
     args = parser.parse_args(argv)
 
@@ -139,22 +174,23 @@ def main(argv: list[str] | None = None) -> None:
     else:
         model = os.environ.get("FINKRIT_MODEL", _DEFAULT_MODEL)
     _resolve_api_key(model)
+
     assistant = Assistant(model=model, store=InMemoryStore(), registry=_registry())
     assistant.register_portfolio(make_fake_portfolio())
 
+    mode, label = _resolve_agent(args.agent)
+    prompt = "router" if mode is None else mode
+
     print("=" * 64)
-    print(f"  finagent CLI   model: {model}   (fake data, no network)")
+    print(f"  finagent CLI   model: {model}   agent: {label}   (fake data)")
     print("=" * 64)
     print("  Holdings: " + ", ".join(f"{q} {t}" for t, q in _HOLDINGS.items()))
-    print("  Ask about the portfolio's risk. Try:")
-    print("    - what is my portfolio's volatility?")
-    print("    - what's my value at risk and max drawdown?")
-    print("    - what's my beta to the S&P 500?")
+    print("  Ask about risk, performance, or the optimal allocation.")
     print("  Type 'quit' to exit.")
 
     while True:
         try:
-            question = input("\nyou > ").strip()
+            question = input(f"\n{prompt} > ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
             break
@@ -163,10 +199,10 @@ def main(argv: list[str] | None = None) -> None:
         if question.lower() in {"quit", "exit", "q"}:
             break
         try:
-            answer = assistant.ask(question)
+            answer = assistant.route(question) if mode is None else assistant.ask(question, agent=mode)
         except Exception as exc:  # noqa: BLE001 - a CLI should not crash on one bad turn
             print(f"\nerror: {exc}")
-            print("(if this is a model/auth error, set LLM_API_KEY and FINKRIT_MODEL)")
+            print("(if this is a model/auth error, set LLM_API_KEY and --ai)")
             continue
         print(f"\nagent > {answer}")
 

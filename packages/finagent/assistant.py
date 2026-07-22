@@ -12,6 +12,9 @@ from finkritq.data.providers import MemoizingHistoryProvider, YFinanceProvider
 from finkritq.datatype import MarketIndex
 from finkritq.portfolio import Portfolio
 
+from finagent.agent.optimization import OptimizationAgent
+from finagent.agent.orchestrator import Orchestrator
+from finagent.agent.performance import PerformanceAgent
 from finagent.agent.risk import RiskAgent
 from finagent.deps import AgentDeps
 from finagent.ingest import ParsedPortfolio, parse_portfolio_csv, parse_portfolio_csv_async
@@ -27,11 +30,15 @@ class Assistant:
         assistant = Assistant(model="anthropic:claude-sonnet-5")
         assistant.register_portfolio(portfolio)
 
-        assistant.ask("What's my portfolio's volatility?")   # conversational (LLM)
+        assistant.ask("What's my portfolio's volatility?")   # risk specialist (default)
+        assistant.ask("...", agent="optimization")            # a named specialist
+        assistant.route("Review my portfolio")                # orchestrator, fans out
         assistant.risk.report("port-1", assistant.deps)       # typed, deterministic
 
-    Today `ask` routes to the risk specialist directly. When more specialists
-    exist (optimization, ...) this becomes an orchestrator that delegates.
+    Holds the three specialists (risk, performance, optimization) plus an
+    orchestrator. `ask` targets one specialist directly (default risk, no routing
+    overhead), `route` delegates through the orchestrator, which can call several
+    specialists and combine them.
     """
 
     def __init__(
@@ -40,7 +47,7 @@ class Assistant:
         store: Store | None = None,
         registry: DataRegistry | None = None,
     ) -> None:
-        # model is optional -- a dashboard-only user can construct an Assistant
+        # model is optional, a dashboard-only user can construct an Assistant
         # and call .report()/.risk.report() with no LLM and no API key. .ask()
         # raises a clear error if no model was configured (F-1).
         self._store = store or InMemoryStore()
@@ -49,6 +56,14 @@ class Assistant:
 
         self._model = model
         self.risk = RiskAgent(model=model)
+        self.performance = PerformanceAgent(model=model)
+        self.optimization = OptimizationAgent(model=model)
+        self._specialists = {
+            "risk": self.risk,
+            "performance": self.performance,
+            "optimization": self.optimization,
+        }
+        self.orchestrator = Orchestrator(model, self.risk, self.performance, self.optimization)
 
     @property
     def deps(self) -> AgentDeps:
@@ -63,14 +78,20 @@ class Assistant:
     def register_asset(self, asset: Asset) -> None:
         self._store.register_asset(asset)
 
-    def ask(self, question: str) -> str:
-        # Sync convenience for scripts/notebooks. Single specialist today;
-        # becomes delegation across specialists later.
-        return self.risk.ask(question, self.deps)
+    def ask(self, question: str, agent: str = "risk") -> str:
+        # Direct to one specialist (default risk), no orchestration overhead.
+        return self._specialists[agent].ask(question, self.deps)
 
-    async def ask_async(self, question: str) -> str:
-        # Async path for the web server. Same routing as ask().
-        return await self.risk.ask_async(question, self.deps)
+    async def ask_async(self, question: str, agent: str = "risk") -> str:
+        return await self._specialists[agent].ask_async(question, self.deps)
+
+    def route(self, question: str) -> str:
+        # The all-encompassing path: the orchestrator picks specialist(s) and
+        # combines them. Costs an extra orchestration loop, see Orchestrator.
+        return self.orchestrator.ask(question, self.deps)
+
+    async def route_async(self, question: str) -> str:
+        return await self.orchestrator.ask_async(question, self.deps)
 
     def report(
         self,
@@ -82,13 +103,13 @@ class Assistant:
     def _require_model(self) -> models.Model | models.KnownModelName | str:
         if self._model is None:
             raise RuntimeError(
-                "This Assistant has no model configured; parsing a portfolio "
+                "This Assistant has no model configured, parsing a portfolio "
                 "upload requires one (it's an LLM extraction, not deterministic)."
             )
         return self._model
 
     def parse_portfolio_csv(self, csv_text: str) -> ParsedPortfolio:
-        # Sync convenience for scripts/notebooks. Does NOT register anything --
+        # Sync convenience for scripts/notebooks. Does NOT register anything,
         # the caller reviews/corrects the result, then register_portfolio()s it.
         return parse_portfolio_csv(csv_text, self._require_model())
 
