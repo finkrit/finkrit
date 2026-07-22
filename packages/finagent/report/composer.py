@@ -1,6 +1,6 @@
 # finagent/report/composer.py
 """
-Deterministic portfolio risk report -- no LLM, no API key.
+Deterministic portfolio risk report, does not use LLMs or no API key.
 
 Fetches PortfolioData (and the benchmark) ONCE, then calls the pre-fetched
 finkritintel bindings against that shared data. This is why both binding

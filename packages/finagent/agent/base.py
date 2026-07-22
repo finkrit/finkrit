@@ -12,9 +12,10 @@ from finagent.deps import AgentDeps
 
 # A spiraling tool loop (the model repeatedly re-calling tools without
 # converging) burns tokens unbounded if nothing stops it. These are starting
-# defaults, not tuned against real usage -- generous enough for a multi-metric
-# risk question, bounded enough to fail fast on a runaway loop. Pass
-# usage_limits=None to CapabilityAgent to opt out entirely.
+# defaults, not tuned against real usage. Assumption is the starting default is
+# generous enough for a multi-metric risk question, bounded enough to fail fast
+#  on a runaway loop. Pass usage_limits=None to CapabilityAgent to opt out entirely.
+# TODO: this needs to be tuned as we get data from users
 DEFAULT_USAGE_LIMITS = UsageLimits(request_limit=15, tool_calls_limit=15)
 
 
@@ -65,14 +66,14 @@ class CapabilityAgent:
 
     def ask(self, question: str, deps: AgentDeps) -> str:
         """
-        Synchronous conversational turn -- for scripts, notebooks, the REPL.
+        Synchronous conversational turn for usage in scripts, notebooks, the REPL.
         Spins up its own event loop under the hood (pydantic-ai run_sync).
         """
         return self.agent.run_sync(question, deps=deps, usage_limits=self._usage_limits).output
 
     async def ask_async(self, question: str, deps: AgentDeps) -> str:
         """
-        Async conversational turn -- for servers (FastAPI) and concurrent
+        Async conversational turn for servers (FastAPI etc.) and concurrent
         callers already inside an event loop. Same result as ask(); this is
         the path the web layer uses. (Only the LLM loop is genuinely async
         here; the risk tools it calls remain sync and are threadpooled by
