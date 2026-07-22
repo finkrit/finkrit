@@ -12,8 +12,8 @@ class Capability:
 
     Invariants (enforced here rather than left to each consumer's tests): a
     capability needs a non-empty name and description, and no two of its tools
-    may share a contract name -- an agent framework registers tools by name, so
-    a duplicate would silently shadow or collide.
+    may share a contract name to prevent collision as required by agent framework
+    which registers tools by name.
     """
 
     name: str
