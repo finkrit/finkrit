@@ -1,6 +1,10 @@
 # Built Svelte SPA -- apps/finkritweb's `npm run build` output lands here
 # directly (see apps/finkritweb/vite.config.ts adapter config). Regenerated
 # at build/publish time, not source.
+
+# ai
+.claude
+
 /services/api/finkritserver/static/
 
 # Byte-compiled / optimized / DLL files
