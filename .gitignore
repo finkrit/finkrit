@@ -23,8 +23,11 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Anchored to the repo root: these are Python distutils build artifacts. Left
+# unanchored they also match apps/finkritweb/src/lib, the standard SvelteKit
+# shared-code dir, and silently drop it from git.
+/lib/
+/lib64/
 parts/
 sdist/
 var/
