@@ -1,0 +1,68 @@
+# finkritq packaging.
+#
+# The package sources sit flat in this directory (asset/, datatype/, ... with
+# __init__.py at the top), matching the rest of the monorepo. The wheel target
+# below maps that flat tree under the finkritq/ import name at build time, so
+# nothing has to move into a src/ or nested folder. Adding a NEW top level
+# subpackage means adding its name to only-include.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finkritq"
+version = "0.1.0"
+description = "Deterministic portfolio quant core: risk, performance, optimization, and tax."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Souvik Bagchi" }]
+keywords = ["portfolio", "finance", "risk", "quant", "optimization", "tax", "investing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+# Core needs only numpy and scipy. The live yfinance data provider pulls the
+# rest, kept optional so the base install stays light. See optional deps below.
+dependencies = [
+    "numpy>=2.0",
+    "scipy>=1.13",
+]
+
+[project.optional-dependencies]
+# pip install finkritq[data] adds the live market data provider.
+data = [
+    "yfinance>=1.0",
+    "pandas>=2.2",
+    "loguru>=0.7",
+]
+
+[project.urls]
+Homepage = "https://github.com/finkrit/finkrit"
+Repository = "https://github.com/finkrit/finkrit"
+
+[tool.hatch.build.targets.wheel]
+# The flat package contents, shipped under the finkritq/ prefix (see sources).
+only-include = [
+    "__init__.py",
+    "__main__.py",
+    "main.py",
+    "anal",
+    "asset",
+    "data",
+    "datatype",
+    "optimize",
+    "policy",
+    "portfolio",
+    "transform",
+]
+
+[tool.hatch.build.targets.wheel.sources]
+# Empty source prefix maps to finkritq, so asset/foo.py ships as
+# finkritq/asset/foo.py and __init__.py as finkritq/__init__.py.
+"" = "finkritq"
