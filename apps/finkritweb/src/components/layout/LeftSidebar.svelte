@@ -11,8 +11,8 @@
 		     dark mode, the light file a dark wordmark for light mode. -->
 		<img
 			src={ui.theme === 'dark'
-				? '/logo/finkrit-v2-logo-horizontal-dark.png'
-				: '/logo/finkrit-v2-logo-horizontal-light.png'}
+				? '/logo/finkrit-logo-horizontal-dark.png'
+				: '/logo/finkrit-logo-horizontal-light.png'}
 			alt="finkrit"
 		/>
 	</div>
