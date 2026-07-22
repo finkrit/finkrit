@@ -6,7 +6,7 @@ on top.
 
 ## What is in here
 
-finkrit is a small layered monorepo.
+finkrit is a small, layered stack, a quant core with an agent, an API, and a web app built on top.
 
 | Path | Import name | What it does |
 | - | - | - |
@@ -71,4 +71,4 @@ agent and web surfaces to change while the core settles.
 
 ## License
 
-To be decided.
+Apache-2.0. See [LICENSE](LICENSE).
