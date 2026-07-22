@@ -12,13 +12,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finkritq"
-version = "0.1.0"
+version = "0.1.1"
 description = "Deterministic portfolio quant core: risk, performance, optimization, and tax."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
-authors = [{ name = "Souvik Bagchi" }]
+authors = [{ name = "Finkrit" }]
 keywords = ["portfolio", "finance", "risk", "quant", "optimization", "tax", "investing"]
 classifiers = [
     "Development Status :: 3 - Alpha",
