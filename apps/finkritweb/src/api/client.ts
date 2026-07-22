@@ -14,11 +14,12 @@ export interface HoldingDraft {
 	acquired: string; // ISO date
 	exchange?: string;
 	currency?: string;
+	// Per-row note from the parser when it had to guess or normalize a value.
+	// Carried on the draft so the review table can surface it inline.
+	confidence_note?: string | null;
 }
 
-export interface ParsedHolding extends HoldingDraft {
-	confidence_note: string | null;
-}
+export type ParsedHolding = HoldingDraft;
 
 export interface ParsedPortfolio {
 	name: string;

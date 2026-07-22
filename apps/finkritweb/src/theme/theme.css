@@ -8,7 +8,7 @@
  */
 :root {
 	/* ▼▼▼ THE ONE VARIABLE ▼▼▼ */
-	--primary: #5b5bd6;
+	--primary: #12805a;
 	/* ▲▲▲ change this, reskin everything ▲▲▲ */
 
 	--primary-strong: color-mix(in srgb, var(--primary) 82%, black);
@@ -88,8 +88,8 @@ body {
 	color: var(--text);
 	background: var(--bg);
 	-webkit-font-smoothing: antialiased;
-	font-size: 14px;
-	line-height: 1.5;
+	font-size: 15.5px;
+	line-height: 1.55;
 }
 
 button {

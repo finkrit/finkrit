@@ -1,6 +1,14 @@
 <script lang="ts">
+	// Orchestrator only. Owns the stage transitions and the save side effect,
+	// and composes the display pieces. Everything that renders data lives in its
+	// own component (summary, allocation, table, notes), so this file stays a
+	// thin wiring layer rather than a screen that does everything.
 	import PortfolioUpload from './PortfolioUpload.svelte';
-	import PortfolioTable from './PortfolioTable.svelte';
+	import PortfolioSummary from './PortfolioSummary.svelte';
+	import AllocationBar from './AllocationBar.svelte';
+	import HoldingsTable from './HoldingsTable.svelte';
+	import ReviewNotes from './ReviewNotes.svelte';
+	import Section from './Section.svelte';
 	import Button from '$components/ui/Button.svelte';
 	import { api, ApiError } from '$api/client';
 	import { portfolio } from '$stores/portfolio.svelte';
@@ -31,41 +39,51 @@
 	</header>
 
 	{#if portfolio.stage === 'empty'}
-		<PortfolioUpload />
+		<div class="empty">
+			<PortfolioUpload />
+		</div>
 	{:else}
-		{#if portfolio.warnings.length > 0}
-			<div class="warn">
-				<strong>Please review:</strong>
-				<ul>
-					{#each portfolio.warnings as w}<li>{w}</li>{/each}
-				</ul>
+		<div class="stack">
+			<ReviewNotes warnings={portfolio.warnings} />
+
+			<label class="name">
+				Portfolio name
+				<input bind:value={portfolio.name} />
+			</label>
+
+			<div class="top">
+				<Section title="Overview">
+					<PortfolioSummary />
+				</Section>
+				<Section title="Allocation" hint="by cost basis">
+					<div class="panel">
+						<AllocationBar />
+					</div>
+				</Section>
 			</div>
-		{/if}
 
-		<label class="name">
-			Name
-			<input bind:value={portfolio.name} />
-		</label>
+			<Section title="Holdings">
+				<HoldingsTable editable={portfolio.stage === 'review'} />
+			</Section>
 
-		<PortfolioTable editable={portfolio.stage === 'review'} />
+			{#if error}<p class="error">{error}</p>{/if}
 
-		{#if error}<p class="error">{error}</p>{/if}
-
-		{#if portfolio.stage === 'review'}
-			<div class="actions">
-				<Button onclick={save} disabled={saving || portfolio.holdings.length === 0}>
-					{saving ? 'Saving…' : 'Save portfolio'}
-				</Button>
-			</div>
-		{:else}
-			<p class="saved">✓ Saved. Ask about its risk in chat, or open the Risk view.</p>
-		{/if}
+			{#if portfolio.stage === 'review'}
+				<div class="actions">
+					<Button onclick={save} disabled={saving || portfolio.holdings.length === 0}>
+						{saving ? 'Saving…' : 'Save portfolio'}
+					</Button>
+				</div>
+			{:else}
+				<p class="saved">✓ Saved. Ask about its risk in chat, or open the Risk view.</p>
+			{/if}
+		</div>
 	{/if}
 </div>
 
 <style>
 	.view {
-		max-width: 760px;
+		width: 100%;
 	}
 	.head {
 		display: flex;
@@ -75,64 +93,80 @@
 	}
 	h1 {
 		margin: 0;
-		font-size: 22px;
+		font-size: 27px;
 		font-weight: 650;
-		letter-spacing: -0.01em;
+		letter-spacing: -0.015em;
 	}
 	.reupload {
 		background: transparent;
 		border: none;
 		color: var(--primary);
-		font-size: 13px;
+		font-size: 14px;
 	}
 	.reupload:hover {
 		text-decoration: underline;
 	}
-	.warn {
-		background: var(--primary-softer);
-		border: 1px solid var(--primary-soft);
-		border-radius: var(--radius-sm);
-		padding: var(--space-3) var(--space-4);
-		margin-bottom: var(--space-4);
-		font-size: 13px;
+	.empty {
+		display: flex;
+		justify-content: center;
+		padding-top: 7vh;
 	}
-	.warn ul {
-		margin: var(--space-1) 0 0;
-		padding-left: var(--space-4);
-		color: var(--text-muted);
+	.stack {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-6);
 	}
 	.name {
 		display: block;
-		font-size: 12px;
+		font-size: 13px;
 		color: var(--text-muted);
-		margin-bottom: var(--space-4);
 	}
 	.name input {
 		display: block;
 		margin-top: var(--space-1);
 		width: 100%;
-		max-width: 340px;
+		max-width: 360px;
 		border: 1px solid var(--border-strong);
 		border-radius: var(--radius-sm);
-		padding: 7px 10px;
-		font-size: 14px;
+		padding: 9px 12px;
+		font-size: 15px;
 		font-family: inherit;
 	}
 	.name input:focus {
 		outline: none;
 		border-color: var(--primary);
 	}
+	/* Top region uses the width: overview cards beside the allocation panel.
+	   Collapses to a single column when the space gets tight (chat open, or a
+	   narrow window). */
+	.top {
+		display: grid;
+		grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+		gap: var(--space-6);
+		align-items: start;
+	}
+	@media (max-width: 1080px) {
+		.top {
+			grid-template-columns: 1fr;
+		}
+	}
+	.panel {
+		background: var(--surface);
+		border: 1px solid var(--border);
+		border-radius: var(--radius);
+		padding: var(--space-5);
+	}
 	.actions {
-		margin-top: var(--space-5);
+		margin-top: var(--space-1);
 	}
 	.saved {
-		margin-top: var(--space-5);
+		margin: 0;
 		color: var(--positive);
-		font-size: 13px;
+		font-size: 14px;
 	}
 	.error {
 		color: var(--danger);
-		font-size: 13px;
-		margin-top: var(--space-3);
+		font-size: 14px;
+		margin: 0;
 	}
 </style>
