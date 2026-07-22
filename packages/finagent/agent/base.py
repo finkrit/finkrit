@@ -22,7 +22,7 @@ DEFAULT_USAGE_LIMITS = UsageLimits(request_limit=15, tool_calls_limit=15)
 class CapabilityAgent:
     """
     Wraps one finkritintel Capability into a conversational pydantic-ai
-    Agent. The capability is the agent's toolset; the agent is defined by
+    Agent. The capability is the agent's toolset, the agent is defined by
     what it can do. One capability per agent, always-on (no defer_loading:
     a single-capability agent always needs its own tools).
 
@@ -32,7 +32,7 @@ class CapabilityAgent:
     ``ask``/``ask_async`` without a model raises a clear error.
 
     ``usage_limits`` defaults to a bounded ``UsageLimits`` (F-5) so a
-    spiraling tool loop can't burn tokens unbounded; pass ``None`` to disable.
+    spiraling tool loop can't burn tokens unbounded, pass ``None`` to disable.
     """
 
     def __init__(
@@ -53,7 +53,7 @@ class CapabilityAgent:
         if self._agent is None:
             if self._model is None:
                 raise RuntimeError(
-                    "This agent has no model configured; the conversational path "
+                    "This agent has no model configured, the conversational path "
                     "(ask/ask_async) requires one. The deterministic path does not."
                 )
             self._agent = Agent(
@@ -68,16 +68,23 @@ class CapabilityAgent:
         """
         Synchronous conversational turn for usage in scripts, notebooks, the REPL.
         Spins up its own event loop under the hood (pydantic-ai run_sync).
+        ``deps.event_handler``, if set, streams tool-call events live.
         """
-        return self.agent.run_sync(question, deps=deps, usage_limits=self._usage_limits).output
+        return self.agent.run_sync(
+            question, deps=deps, usage_limits=self._usage_limits,
+            event_stream_handler=deps.event_handler,
+        ).output
 
     async def ask_async(self, question: str, deps: AgentDeps) -> str:
         """
         Async conversational turn for servers (FastAPI etc.) and concurrent
-        callers already inside an event loop. Same result as ask(); this is
+        callers already inside an event loop. Same result as ask(), this is
         the path the web layer uses. (Only the LLM loop is genuinely async
-        here; the risk tools it calls remain sync and are threadpooled by
+        here, the risk tools it calls remain sync and are threadpooled by
         pydantic-ai.)
         """
-        result = await self.agent.run(question, deps=deps, usage_limits=self._usage_limits)
+        result = await self.agent.run(
+            question, deps=deps, usage_limits=self._usage_limits,
+            event_stream_handler=deps.event_handler,
+        )
         return result.output

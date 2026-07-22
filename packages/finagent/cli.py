@@ -20,11 +20,16 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import itertools
 import os
+import sys
+import threading
+import time
 from datetime import date, timedelta
 from decimal import Decimal
 
 import numpy as np
+from pydantic_ai.messages import FunctionToolCallEvent
 
 from finkritq.asset import Asset, Stock
 from finkritq.data import DataRegistry
@@ -87,6 +92,60 @@ _AGENT_NAMES = {
     "all": "0", "router": "0", "risk": "1",
     "optimization": "2", "optimize": "2", "opt": "2", "performance": "3", "perf": "3",
 }
+
+
+class _Spinner:
+    """
+    A rotating spinner on its own line while the agent thinks. Runs on a daemon
+    thread so it animates during the blocking agent call, and shares a lock with
+    ``line`` so a step printed mid-spin does not collide with a spinner frame.
+    """
+
+    _FRAMES = ["-", "\\", "|", "/"]
+
+    def __init__(self) -> None:
+        self._stop = threading.Event()
+        self._lock = threading.Lock()
+        self._thread: threading.Thread | None = None
+
+    def _run(self) -> None:
+        for frame in itertools.cycle(self._FRAMES):
+            if self._stop.is_set():
+                break
+            with self._lock:
+                sys.stdout.write(f"\r  {frame} ")
+                sys.stdout.flush()
+            time.sleep(0.12)
+
+    def start(self) -> None:
+        self._stop.clear()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=0.5)
+        with self._lock:
+            sys.stdout.write("\r    \r")   # wipe the spinner frame
+            sys.stdout.flush()
+
+    def line(self, text: str) -> None:
+        # Print a line above the spinner, clearing the current frame first.
+        with self._lock:
+            sys.stdout.write("\r" + text + "\n")
+            sys.stdout.flush()
+
+
+def _make_step_handler(spinner: _Spinner):
+    # Live progress: each tool as it is called, for the orchestrator (ask_risk,
+    # ask_optimization) and the nested specialist tools alike, since the handler
+    # is threaded through deps. Printed through the spinner so they do not clash.
+    async def handler(ctx, stream) -> None:
+        async for event in stream:
+            if isinstance(event, FunctionToolCallEvent):
+                spinner.line(f"    ... {event.part.tool_name}")
+    return handler
 
 
 def _prompt_agent_menu() -> str:
@@ -167,6 +226,10 @@ def main(argv: list[str] | None = None) -> None:
         help="agent: 0 router (all), 1 risk, 2 optimization, 3 performance (or a name). "
              "Left off, a menu asks.",
     )
+    parser.add_argument(
+        "--quiet", action="store_true",
+        help="do not print the live tool-call trace while the agent works.",
+    )
     args = parser.parse_args(argv)
 
     if args.ai:
@@ -175,14 +238,17 @@ def main(argv: list[str] | None = None) -> None:
         model = os.environ.get("FINKRIT_MODEL", _DEFAULT_MODEL)
     _resolve_api_key(model)
 
-    assistant = Assistant(model=model, store=InMemoryStore(), registry=_registry())
+    spinner = _Spinner()
+    handler = None if args.quiet else _make_step_handler(spinner)
+    assistant = Assistant(model=model, store=InMemoryStore(), registry=_registry(),
+                          event_handler=handler)
     assistant.register_portfolio(make_fake_portfolio())
 
     mode, label = _resolve_agent(args.agent)
     prompt = "router" if mode is None else mode
 
     print("=" * 64)
-    print(f"  finagent CLI   model: {model}   agent: {label}   (fake data)")
+    print(f"  finagent CLI   model: {model}   agent: {label}   (synthetic data)")
     print("=" * 64)
     print("  Holdings: " + ", ".join(f"{q} {t}" for t, q in _HOLDINGS.items()))
     print("  Ask about risk, performance, or the optimal allocation.")
@@ -198,12 +264,15 @@ def main(argv: list[str] | None = None) -> None:
             continue
         if question.lower() in {"quit", "exit", "q"}:
             break
+        spinner.start()
         try:
             answer = assistant.route(question) if mode is None else assistant.ask(question, agent=mode)
         except Exception as exc:  # noqa: BLE001 - a CLI should not crash on one bad turn
+            spinner.stop()
             print(f"\nerror: {exc}")
             print("(if this is a model/auth error, set LLM_API_KEY and --ai)")
             continue
+        spinner.stop()
         print(f"\nagent > {answer}")
 
 

@@ -101,8 +101,14 @@ class Orchestrator:
         return self._agent
 
     def ask(self, question: str, deps: AgentDeps) -> str:
-        return self.agent.run_sync(question, deps=deps, usage_limits=self._usage_limits).output
+        return self.agent.run_sync(
+            question, deps=deps, usage_limits=self._usage_limits,
+            event_stream_handler=deps.event_handler,
+        ).output
 
     async def ask_async(self, question: str, deps: AgentDeps) -> str:
-        result = await self.agent.run(question, deps=deps, usage_limits=self._usage_limits)
+        result = await self.agent.run(
+            question, deps=deps, usage_limits=self._usage_limits,
+            event_stream_handler=deps.event_handler,
+        )
         return result.output

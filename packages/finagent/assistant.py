@@ -46,6 +46,7 @@ class Assistant:
         model: models.Model | models.KnownModelName | str | None = None,
         store: Store | None = None,
         registry: DataRegistry | None = None,
+        event_handler=None,
     ) -> None:
         # model is optional, a dashboard-only user can construct an Assistant
         # and call .report()/.risk.report() with no LLM and no API key. .ask()
@@ -53,6 +54,9 @@ class Assistant:
         self._store = store or InMemoryStore()
         self._registry = registry or _default_registry()
         self._store.register_asset(MarketIndex.SP500.as_asset())
+        # Optional live step callback (pydantic-ai event_stream_handler), carried
+        # into deps so it reaches the orchestrator and every nested specialist.
+        self._event_handler = event_handler
 
         self._model = model
         self.risk = RiskAgent(model=model)
@@ -67,7 +71,7 @@ class Assistant:
 
     @property
     def deps(self) -> AgentDeps:
-        return AgentDeps(store=self._store, registry=self._registry)
+        return AgentDeps(store=self._store, registry=self._registry, event_handler=self._event_handler)
 
     def register_portfolio(self, portfolio: Portfolio) -> None:
         self._store.register_portfolio(portfolio)
