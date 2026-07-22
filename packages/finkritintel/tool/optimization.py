@@ -14,9 +14,10 @@ from finkritintel.tool.contract import ToolContract
 OPTIMIZE_MINIMUM_VARIANCE = ToolContract(
     name="optimize_minimum_variance",
     description=(
-        "Compute the minimum-variance (lowest-risk) portfolio weights for the "
-        "holdings, long-only by default, on a shrunk covariance. Returns a weight "
-        "per ticker that sums to 1."
+        "The minimum-variance (lowest-risk) allocation, the long-only weights that "
+        "minimize portfolio volatility on a shrunk covariance, ignoring expected "
+        "return. Use when the goal is the least-risky mix. Returns a weight per ticker "
+        "summing to 1, a proposed target, not a trade."
     ),
     category="optimization",
     tags=("portfolio", "allocation"),
@@ -25,9 +26,10 @@ OPTIMIZE_MINIMUM_VARIANCE = ToolContract(
 OPTIMIZE_MAXIMUM_SHARPE = ToolContract(
     name="optimize_maximum_sharpe",
     description=(
-        "Compute the maximum-Sharpe (best risk-adjusted) portfolio weights for "
-        "the holdings, long-only by default, on a shrunk covariance. Returns a "
-        "weight per ticker that sums to 1."
+        "The maximum-Sharpe (best risk-adjusted) allocation, the long-only weights that "
+        "maximize excess return per unit of volatility on a shrunk covariance. Use when "
+        "the goal is the best return for the risk. Returns a weight per ticker summing "
+        "to 1, a proposed target, not a trade."
     ),
     category="optimization",
     tags=("portfolio", "allocation"),
