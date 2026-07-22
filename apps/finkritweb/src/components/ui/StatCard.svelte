@@ -49,9 +49,9 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
-	.accent .value {
-		color: var(--primary-strong);
-	}
+	/* The accent card keeps a pale tinted background, but the value stays in
+	   normal ink. In a markets UI green means gains, and cost basis is a
+	   neutral figure. Reserve green and red for actual P&L and return. */
 	.sub {
 		font-size: 12.5px;
 		color: var(--text-faint);

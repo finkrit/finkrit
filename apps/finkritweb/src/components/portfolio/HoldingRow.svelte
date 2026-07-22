@@ -26,7 +26,7 @@
 <tr>
 	{#if editable}
 		<td><input class="cell" bind:value={holding.ticker} /></td>
-		<td class="w"><MeterBar fraction={weight} /></td>
+		<td class="w"><MeterBar fraction={weight} color="var(--primary-strong)" /></td>
 		<td><input class="cell num" type="number" bind:value={holding.quantity} /></td>
 		<td><input class="cell num" type="number" bind:value={holding.cost_per_share} /></td>
 		<td class="num money">{money(costBasis, currency)}</td>
@@ -43,7 +43,7 @@
 		</td>
 		<td class="w">
 			<div class="meter">
-				<MeterBar fraction={weight} />
+				<MeterBar fraction={weight} color="var(--primary-strong)" />
 				<span class="pct">{percent(weight)}</span>
 			</div>
 		</td>

@@ -6,7 +6,16 @@
 </script>
 
 <aside class="sidebar">
-	<div class="brand">finkrit</div>
+	<div class="brand">
+		<!-- Green mark plus wordmark. The dark file carries a cream wordmark for
+		     dark mode, the light file a dark wordmark for light mode. -->
+		<img
+			src={ui.theme === 'dark'
+				? '/logo/finkrit-v2-logo-horizontal-dark.png'
+				: '/logo/finkrit-v2-logo-horizontal-light.png'}
+			alt="finkrit"
+		/>
+	</div>
 
 	<nav class="nav">
 		<SidebarSection title="Portfolio" open>
@@ -36,10 +45,12 @@
 		border-right: 1px solid var(--border);
 	}
 	.brand {
-		font-size: 17px;
-		font-weight: 650;
-		letter-spacing: -0.01em;
 		padding: var(--space-5) var(--space-5) var(--space-4);
+	}
+	.brand img {
+		display: block;
+		height: 30px;
+		width: auto;
 	}
 	.nav {
 		flex: 1;
