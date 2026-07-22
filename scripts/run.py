@@ -75,7 +75,17 @@ def resolve_model(model_string: str):
     return infer_model(model_string, provider_factory=provider_factory)
 
 
+def ensure_web_deps() -> None:
+    # Install the web app's node_modules on first use, so running this script
+    # on a fresh clone does not fail before the build or dev server starts.
+    if (WEB_DIR / "node_modules").is_dir():
+        return
+    print(f"Installing web dependencies ({WEB_DIR})...")
+    subprocess.run(["npm", "install"], cwd=WEB_DIR, check=True)
+
+
 def build_frontend() -> None:
+    ensure_web_deps()
     print(f"Building frontend ({WEB_DIR})...")
     subprocess.run(["npm", "run", "build"], cwd=WEB_DIR, check=True)
 
@@ -83,6 +93,7 @@ def build_frontend() -> None:
 def start_vite_dev() -> subprocess.Popen:
     """Start the Vite dev server in its own process group, so we can stop it
     (and the esbuild/vite children it spawns) cleanly when the API exits."""
+    ensure_web_deps()
     print(f"Starting Vite dev server on port {VITE_DEV_PORT} (hot reload)...")
     return subprocess.Popen(
         ["npm", "run", "dev", "--", "--port", str(VITE_DEV_PORT), "--strictPort"],

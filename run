@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+#
+# Bootstrap and launch finkrit. On first run this creates a Python virtual
+# environment, installs the Python and web dependencies, then starts the
+# server and opens your browser. Safe to run again, it skips work already done.
+#
+# Usage from a fresh clone:
+#
+#     cd finkrit
+#     ./run              build the web app once and serve it on one origin
+#     ./run --dev        Vite hot reload for working on the frontend
+#     ./run --model openai:gpt-5
+#
+# Set LLM_API_KEY to enable upload and chat. The dashboard and the risk report
+# work without a key.
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+VENV=.finkritvenv
+PYBIN="$VENV/bin/python"
+
+# System prerequisites the script cannot install for you.
+if ! command -v python3 >/dev/null 2>&1
+then
+  echo "python3 is required. Install Python 3.11 or newer and try again."
+  exit 1
+fi
+if ! command -v npm >/dev/null 2>&1
+then
+  echo "npm (Node.js) is required for the web app. Install Node 18 or newer."
+  exit 1
+fi
+
+# Python virtual environment.
+if [ ! -x "$PYBIN" ]
+then
+  echo "Creating virtual environment in $VENV ..."
+  python3 -m venv "$VENV"
+fi
+
+# Python dependencies. Only reinstall when something is actually missing, so
+# repeat runs start fast.
+if ! "$PYBIN" -c "import uvicorn, fastapi, pydantic_ai, numpy, scipy, yfinance" >/dev/null 2>&1
+then
+  echo "Installing Python dependencies (first run can take a minute) ..."
+  "$PYBIN" -m pip install --quiet --upgrade pip
+  "$PYBIN" -m pip install --quiet -r requirements.txt
+fi
+
+# Web dependencies and launch are handled by run.py, which installs
+# node_modules on first use. Pass through any extra flags.
+exec "$PYBIN" scripts/run.py "$@"

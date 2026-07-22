@@ -19,34 +19,48 @@ finkrit is a small, layered stack, a quant core with an agent, an API, and a web
 `finkritq` is the open core and stands on its own. Everything above it adds
 tools and an agent, and stays optional.
 
-## Quickstart: the web app
-
-One command runs the dashboard and the API together.
+## Quickstart
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-cd apps/finkritweb && npm install && cd ../..
-
-export LLM_API_KEY=sk-...        # any OpenAI, Anthropic, or Google key
-python scripts/run.py --dev      # Vite hot reload alongside the API
+git clone https://github.com/finkrit/finkrit
+cd finkrit
+./run
 ```
 
-Open http://localhost:5173, upload a portfolio CSV, and explore it. The
-dashboard and the risk report work with no key. Only upload and chat call an
-LLM. Drop the `--dev` flag to build the app once and serve it from FastAPI on
-a single origin instead.
+That is the whole thing. On the first run the script creates a virtual
+environment, installs the Python and web dependencies, builds the web app,
+starts the server, and opens your browser. Later runs skip the setup and start
+right away.
 
-Pass `--model` to pick the provider, for example `python scripts/run.py --model openai:gpt-5`.
-Any provider pydantic-ai supports works, keyed by the one `LLM_API_KEY`
-variable.
+Upload a portfolio CSV and explore it. The dashboard and the risk report work
+with no key. To turn on upload and chat, set an LLM key first, then run again:
+
+```bash
+export LLM_API_KEY=sk-...     # any OpenAI, Anthropic, or Google key
+./run
+```
+
+Flags pass straight through:
+
+```bash
+./run --dev                   # Vite hot reload, for working on the frontend
+./run --model openai:gpt-5    # pick the provider and model
+```
+
+Prerequisites: Python 3.11 or newer and Node 18 or newer. The script installs
+everything else.
 
 ## Using the quant core on its own
 
-`finkritq` has no agent or web dependency. A PyPI release is planned. Until
-then, put the sources on your path and import it directly.
+`finkritq` is the open core, published on its own so you can install just the
+quant engine without the agent or web layers.
+
+```bash
+pip install finkritq            # core, numpy and scipy only
+pip install "finkritq[data]"    # adds the live yfinance data provider
+```
+
+From a clone instead of PyPI, put the sources on your path:
 
 ```bash
 PYTHONPATH=packages python -c "from finkritq.asset import Stock; print(Stock)"
