@@ -1,4 +1,9 @@
-# finkrit
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/finkrit-logo-horizontal-dark.png">
+    <img alt="finkrit" src="assets/finkrit-logo-horizontal-light.png" width="260">
+  </picture>
+</p>
 
 Portfolio risk, performance, optimization, and tax analytics. An open core
 quant engine, with an optional conversational agent layer and a web dashboard
@@ -6,7 +11,7 @@ on top.
 
 ## What is in here
 
-finkrit is a small, layered stack, a quant core with an agent, an API, and a web app built on top.
+finkrit is a small, layered stack, a quant core with Agentic AI, an API, and a web app built on top.
 
 | Path | Import name | What it does |
 | - | - | - |
@@ -82,6 +87,21 @@ pytest packages/finkritq     # one package
 
 Early and moving. The layers above `finkritq` are the newest. Expect the
 agent and web surfaces to change while the core settles.
+
+## Disclaimer
+
+finkrit is for educational and informational purposes only. It is not financial,
+investment, or tax advice, and nothing it produces is a recommendation to buy or
+sell any security. Use your own judgment and consult a licensed professional
+before making decisions.
+
+The optional data provider uses [yfinance](https://github.com/ranaroussi/yfinance)
+to pull market data from Yahoo Finance. finkrit and yfinance are not affiliated
+with, endorsed by, or sponsored by Yahoo. That data is subject to Yahoo's terms
+of use and is intended for personal and educational use. Verify anything you rely
+on against an authoritative source.
+
+The software is provided as is, without warranty of any kind.
 
 ## License
 
