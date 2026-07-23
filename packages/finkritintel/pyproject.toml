@@ -1,0 +1,51 @@
+# finkritintel packaging.
+#
+# Flat layout like the rest of the monorepo. The wheel target maps the flat
+# tree under the finkritintel import name at build time, so nothing moves into
+# a src or nested folder. Adding a new top level subpackage means adding its
+# name to only-include.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finkritintel"
+version = "0.1.0"
+description = "finkritq as framework-neutral tool contracts and capabilities for any agent framework."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Finkrit" }]
+keywords = ["portfolio", "finance", "quant", "agent", "tools", "llm", "capabilities"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+# Contracts over finkritq. Deliberately pydantic-free and agent-framework
+# agnostic, so numpy and finkritq are the only runtime needs.
+dependencies = [
+    "finkritq>=0.1",
+    "numpy>=2.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/finkrit/finkrit"
+Repository = "https://github.com/finkrit/finkrit"
+
+[tool.hatch.build.targets.wheel]
+only-include = [
+    "__init__.py",
+    "capability",
+    "integration",
+    "tool",
+]
+
+[tool.hatch.build.targets.wheel.sources]
+# Empty source prefix maps to finkritintel, so tool/foo.py ships as
+# finkritintel/tool/foo.py and __init__.py as finkritintel/__init__.py.
+"" = "finkritintel"
