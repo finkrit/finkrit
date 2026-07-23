@@ -75,6 +75,40 @@ def resolve_model(model_string: str):
     return infer_model(model_string, provider_factory=provider_factory)
 
 
+# Provider native key variables, used only to hint at the right one when no key
+# is found. LLM_API_KEY is the one we actually recommend.
+_PROVIDER_KEY_ENV = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
+    "google-gla": "GEMINI_API_KEY",
+    "google-vertex": "GEMINI_API_KEY",
+    "groq": "GROQ_API_KEY",
+    "mistral": "MISTRAL_API_KEY",
+}
+
+
+def resolve_model_or_warn(model_string: str):
+    """Build the model, or return None with a clear note when the key is
+    missing. The dashboard and risk report need no model, only upload and chat
+    do, so a missing key should degrade gracefully rather than crash the app."""
+    from pydantic_ai.exceptions import UserError
+
+    try:
+        return resolve_model(model_string)
+    except UserError as exc:
+        provider = model_string.split(":", 1)[0] if ":" in model_string else model_string
+        native = _PROVIDER_KEY_ENV.get(provider)
+        print(f"\nNo usable API key for model {model_string!r}.")
+        print(f"  {str(exc).splitlines()[0]}")
+        print("\nSet a key and run again, any of these work:")
+        print("  export LLM_API_KEY=sk-...     one variable for any provider")
+        print("  ./run --key sk-...            the same, on the command line")
+        if native:
+            print(f"  export {native}=sk-...     the provider native variable")
+        print("")
+        return None
+
+
 def ensure_web_deps() -> None:
     # Install the web app's node_modules on first use, so running this script
     # on a fresh clone does not fail before the build or dev server starts.
@@ -134,16 +168,19 @@ def main() -> None:
     parser.add_argument("--dev", action="store_true", help="Vite dev server with hot reload")
     parser.add_argument("--no-browser", action="store_true")
     parser.add_argument("--skip-build", action="store_true", help="reuse the existing build (ignored with --dev)")
+    parser.add_argument("--key", dest="key", default=None,
+                        help="LLM API key, an alternative to the LLM_API_KEY env var")
     args = parser.parse_args()
 
-    if not (os.environ.get("LLM_API_KEY") or os.environ.get("LLM_KEY")):
-        print(
-            "Heads up: LLM_API_KEY is not set, falling back to each provider's own "
-            "default env var (for example ANTHROPIC_API_KEY). Set LLM_API_KEY to use "
-            "one var regardless of the --model provider.\n"
-            "(Dashboard and report still work without any key. Only upload and chat "
-            "need an LLM.)\n"
-        )
+    if args.key:
+        os.environ["LLM_API_KEY"] = args.key
+
+    # A key is required. The only way data enters the app is the CSV upload,
+    # which is an LLM parse, so without a model there is nothing to show.
+    # Resolve it first and stop before any build or server work when missing.
+    model = resolve_model_or_warn(args.model)
+    if model is None:
+        sys.exit(1)
 
     # In --dev the browser opens the Vite origin (hot reload), which proxies
     # /api to FastAPI. Otherwise FastAPI serves the built UI on its own port.
@@ -158,7 +195,6 @@ def main() -> None:
     from finagent.assistant import Assistant
     from finkritserver.app import create_app
 
-    model = resolve_model(args.model)
     assistant = Assistant(model=model)  # real registry (YFinance) + real store
     # In --dev Vite serves the UI, so the API does not need to (and should not,
     # the build may be stale). static_dir=None runs the API bare.

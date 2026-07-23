@@ -10,9 +10,10 @@
 #     ./run              build the web app once and serve it on one origin
 #     ./run --dev        Vite hot reload for working on the frontend
 #     ./run --model openai:gpt-5
+#     ./run --key sk-...
 #
-# Set LLM_API_KEY to enable upload and chat. The dashboard and the risk report
-# work without a key.
+# Set LLM_API_KEY (or pass --key) to enable upload and chat. The dashboard and
+# the risk report work without a key.
 set -euo pipefail
 
 cd "$(dirname "$0")"
