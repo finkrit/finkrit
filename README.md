@@ -27,77 +27,97 @@ tools and an agent, and stays optional.
 ## Quickstart
 
 ```bash
-git clone https://github.com/finkrit/finkrit
-cd finkrit
-export LLM_API_KEY=sk-...     # any OpenAI, Anthropic, or Google key
-./run
+pip install finkrit           # or: pipx install finkrit
+export LLM_API_KEY=sk-...      # any OpenAI, Anthropic, or Google key
+finkrit                        # start the dashboard, opens your browser
 ```
 
-finkrit needs an LLM key to run. Getting a portfolio in means uploading a CSV,
-which the model parses, so the app does not start without one. Any provider
-pydantic-ai supports works, keyed by the single LLM_API_KEY variable. You can
-also pass it inline with `./run --key sk-...`.
+finkrit needs an LLM key. Getting a portfolio in means uploading a CSV, which
+the model parses, so it does not start without one. Any provider pydantic-ai
+supports works, keyed by the single LLM_API_KEY variable, or pass it inline with
+`finkrit --key sk-...`.
 
-On the first run the script creates a virtual environment, installs the Python
-and web dependencies, builds the web app, starts the server, and opens your
-browser. Later runs skip the setup and start right away. Then upload a portfolio
-CSV and explore it.
-
-Flags pass straight through to the server:
-
-```bash
-./run --dev                   # Vite hot reload, for working on the frontend
-./run --key sk-...            # provide the LLM key inline
-./run --model openai:gpt-5    # pick the provider and model
-./run --port 8001             # serve on a different port
-./run --no-browser            # do not open a browser
-```
-
-Prerequisites: Python 3.11 or newer and Node 18 or newer. The script installs
-everything else.
+Prefer the terminal? `finkrit cli` chats with the agent over a portfolio instead.
 
 ## Command line
 
-Two terminal entry points beyond the web app. Both read the sources from
-`packages/`, so run them with that on the path.
+```
+finkrit            start the dashboard (opens your browser)
+finkrit web        the same, explicit
+finkrit cli        chat with the agent in the terminal
+```
+
+The dashboard takes:
+
+```
+finkrit --key sk-...           the LLM key inline (should match provider)
+finkrit --model openai:gpt-5   pick the provider and model (defaults to openai:gpt-5)
+finkrit --port 8001            serve on a different port
+finkrit --dev                  Vite hot reload (source checkout only in case you want to tinker)
+```
 
 ### Chat with the agent
 
-A REPL over a portfolio. By default it uses a seeded offline portfolio.
+`finkrit cli` is a REPL over a portfolio. With no `--file` it uses a seeded
+offline portfolio, 40 AAPL, 30 MSFT, 20 NVDA, 25 JPM, and 35 XOM, each at a cost
+basis of 100 acquired 2022-01-03, priced with deterministic fake data so runs
+are reproducible. Point it at your own holdings with a CSV instead, which
+switches to live market data:
 
 ```bash
-PYTHONPATH=packages python -m finagent --key sk-...
+finkrit cli --file my_holdings.csv
 ```
 
-Point it at your own holdings with a CSV, which switches to live market data:
+A CSV file has one row per holding, with four columns: ticker, quantity, cost
+per share, and acquired date. For example:
+
+| ticker | quantity | cost_per_share | acquired |
+| - | - | - | - |
+| AAPL | 180 | 142.35 | 2021-05-12 |
+| MSFT | 95 | 238.60 | 2021-02-18 |
+| NVDA | 140 | 168.20 | 2023-03-09 |
+
+Column names are matched case-insensitively against common aliases, so a
+typical brokerage export loads without renaming anything:
+
+| Field | Recognized column names |
+| - | - |
+| Ticker | `ticker`, `symbol` |
+| Quantity | `quantity`, `shares`, `qty`, `units` |
+| Cost per share | `cost_per_share`, `cost basis / share`, `cost basis`, `avg cost`, `cost`, `price`, `price paid` |
+| Acquired | `acquired`, `date acquired`, `purchase date`, `date` |
+
+Dates accept `YYYY-MM-DD`, `MM/DD/YYYY`, `MM/DD/YY`, or `DD-MM-YYYY`. Commas in
+numbers are stripped, extra columns are ignored, and a missing or unreadable
+date falls back to a default.
+
+That strict parser is the `finkrit cli --file` path. The **web upload** is
+looser: the raw file goes to the model, which maps whatever columns and formats
+it finds onto the same four fields and flags anything it had to guess for you to
+review, so almost any layout works there.
+
+```
+-f, --file PATH    load a portfolio CSV, uses live prices
+--ai openai        provider shortcut or a full provider:name string
+-ag 0|1|2|3        router, risk, optimization, performance
+--key sk-...       the LLM key
+--quiet            hide the live tool-call trace
+```
+
+## From source
+
+To hack on finkrit, clone it and use the bootstrap, which sets up a virtual
+environment, installs dependencies, builds the web app, and launches.
 
 ```bash
-PYTHONPATH=packages python -m finagent --key sk-... --file my_holdings.csv
+git clone https://github.com/finkrit/finkrit
+cd finkrit
+export LLM_API_KEY=sk-...
+./run                          # same flags as finkrit web, for example --dev
 ```
 
-The CSV needs a ticker, quantity, cost per share, and acquired date. Common
-column names (Symbol, Shares, Avg Cost, Purchase Date, and similar) are
-recognized, so a typical brokerage export loads as is.
-
-```
---ai claude|openai|gemini|groq|mistral   or a full provider:name string
--ag 0|1|2|3                              router, risk, optimization, performance
--f, --file PATH                          load a portfolio CSV, uses live prices
---key sk-...                             the LLM key
---quiet                                  hide the live tool-call trace
-```
-
-### Run the quant analytics demo
-
-`finkritq` prints every analytic pillar over a portfolio, no agent involved.
-
-```bash
-PYTHONPATH=packages python -m finkritq                 # seeded, offline
-PYTHONPATH=packages python -m finkritq real NVDA KO PG --benchmark SPY --years 3
-```
-
-Installed from PyPI it is just `python -m finkritq` (real mode needs the
-`finkritq[data]` extra).
+Prerequisites: Python 3.11 or newer and Node 18 or newer. Later runs skip the
+setup.
 
 ## Using the quant core on its own
 
@@ -109,10 +129,12 @@ pip install finkritq            # core, numpy and scipy only
 pip install "finkritq[data]"    # adds the live yfinance data provider
 ```
 
-From a clone instead of PyPI, put the sources on your path:
+It also ships a runnable demo that prints every analytic pillar over a
+portfolio, no agent involved:
 
 ```bash
-PYTHONPATH=packages python -c "from finkritq.asset import Stock; print(Stock)"
+python -m finkritq                                             # seeded, offline
+python -m finkritq real NVDA KO PG --benchmark SPY --years 3   # needs [data]
 ```
 
 ## Development
