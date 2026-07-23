@@ -19,13 +19,14 @@ asks. Type a question, or 'quit' to leave.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import itertools
 import os
 import sys
 import threading
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 import numpy as np
@@ -205,10 +206,73 @@ def make_fake_portfolio(portfolio_id: str = DEFAULT_PORTFOLIO_ID) -> Portfolio:
     return Portfolio(id=portfolio_id, name="Demo Portfolio", positions=positions)
 
 
+def _load_portfolio_from_csv(path: str, portfolio_id: str = DEFAULT_PORTFOLIO_ID) -> Portfolio:
+    """Build a portfolio from a CSV. Recognizes common column names for ticker,
+    quantity, cost per share, and acquired date, so a typical brokerage export
+    loads without editing. A missing cost or date falls back to a default."""
+
+    def pick(row: dict, names: tuple[str, ...], default: str | None = None) -> str | None:
+        lowered = {(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}
+        for name in names:
+            if lowered.get(name):
+                return lowered[name]
+        return default
+
+    def parse_date(value: str | None) -> date:
+        if value:
+            for fmt in ("iso", "%m/%d/%Y", "%m/%d/%y", "%d-%m-%Y"):
+                try:
+                    return date.fromisoformat(value) if fmt == "iso" else datetime.strptime(value, fmt).date()
+                except ValueError:
+                    continue
+        return date(2022, 1, 3)
+
+    positions = []
+    with open(path, newline="") as handle:
+        for i, row in enumerate(csv.DictReader(handle)):
+            ticker = pick(row, ("ticker", "symbol"))
+            if not ticker:
+                continue
+            quantity = pick(row, ("quantity", "shares", "qty", "units"), "0").replace(",", "")
+            cost = pick(row, ("cost_per_share", "cost basis / share", "cost basis",
+                              "avg cost", "cost", "price", "price paid"), "0").replace(",", "")
+            acquired = parse_date(pick(row, ("acquired", "date acquired", "purchase date", "date")))
+            stock = Stock(ticker=ticker.upper(), currency=Currency.USD,
+                          exchange=Exchange.NASDAQ, company_name=f"{ticker.upper()} Corp")
+            lot = TaxLot(id=f"lot-{i}", quantity=Decimal(quantity),
+                         cost_per_share=Decimal(cost), acquired=acquired)
+            positions.append(Position(id=f"pos-{i}", asset=stock, lots=(lot,)))
+    if not positions:
+        raise ValueError(
+            f"No holdings found in {path}. Expect columns like ticker, quantity, cost, acquired."
+        )
+    return Portfolio(id=portfolio_id, name="Portfolio from CSV", positions=positions)
+
+
 def _registry() -> DataRegistry:
     registry = DataRegistry()
     registry.register_history(_FakeHistoryProvider())
     return registry
+
+
+def _real_registry() -> DataRegistry:
+    # Live market data, memoized per session, for a real portfolio loaded from a
+    # file. The fake seeded provider only makes sense for the demo portfolio.
+    from finkritq.data.providers import MemoizingHistoryProvider, YFinanceProvider
+
+    registry = DataRegistry()
+    registry.register_history(MemoizingHistoryProvider(YFinanceProvider()))
+    registry.register_snapshot(YFinanceProvider())
+    return registry
+
+
+def _print_holdings(portfolio: Portfolio) -> None:
+    # Print the loaded holdings so the user can confirm what was parsed.
+    print(f"  {'Ticker':<8}{'Qty':>10}{'Cost/Share':>14}{'Acquired':>14}")
+    for pos in portfolio.positions:
+        qty = sum(lot.quantity for lot in pos.lots)
+        lot = pos.lots[0]
+        print(f"  {pos.asset.ticker:<8}{qty:>10g}{float(lot.cost_per_share):>14.2f}{str(lot.acquired):>14}")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -227,10 +291,22 @@ def main(argv: list[str] | None = None) -> None:
              "Left off, a menu asks.",
     )
     parser.add_argument(
+        "-f", "--file", dest="file", default=None,
+        help="path to a portfolio CSV (ticker, quantity, cost, acquired). Left "
+             "off, a seeded fake portfolio is used. With a file, live prices are used.",
+    )
+    parser.add_argument(
+        "--key", dest="key", default=None,
+        help="LLM API key, an alternative to the LLM_API_KEY env var.",
+    )
+    parser.add_argument(
         "--quiet", action="store_true",
         help="do not print the live tool-call trace while the agent works.",
     )
     args = parser.parse_args(argv)
+
+    if args.key:
+        os.environ["LLM_API_KEY"] = args.key
 
     if args.ai:
         model = _PROVIDER_DEFAULTS.get(args.ai.lower(), args.ai)
@@ -238,19 +314,32 @@ def main(argv: list[str] | None = None) -> None:
         model = os.environ.get("FINKRIT_MODEL", _DEFAULT_MODEL)
     _resolve_api_key(model)
 
+    # A file means a real portfolio with live prices. No file means the seeded
+    # offline demo. The two data sources are not mixed.
+    if args.file:
+        portfolio = _load_portfolio_from_csv(args.file)
+        registry = _real_registry()
+        source = f"live data, {args.file}"
+    else:
+        portfolio = make_fake_portfolio()
+        registry = _registry()
+        source = "synthetic data"
+
     spinner = _Spinner()
     handler = None if args.quiet else _make_step_handler(spinner)
-    assistant = Assistant(model=model, store=InMemoryStore(), registry=_registry(),
+    assistant = Assistant(model=model, store=InMemoryStore(), registry=registry,
                           event_handler=handler)
-    assistant.register_portfolio(make_fake_portfolio())
+    assistant.register_portfolio(portfolio)
 
     mode, label = _resolve_agent(args.agent)
     prompt = "router" if mode is None else mode
 
     print("=" * 64)
-    print(f"  finagent CLI   model: {model}   agent: {label}   (synthetic data)")
+    print(f"  finagent CLI   model: {model}   agent: {label}   ({source})")
     print("=" * 64)
-    print("  Holdings: " + ", ".join(f"{q} {t}" for t, q in _HOLDINGS.items()))
+    if args.file:
+        print(f"  Loaded {len(portfolio.positions)} holdings from {args.file}")
+    _print_holdings(portfolio)
     print("  Ask about risk, performance, or the optimal allocation.")
     print("  Type 'quit' to exit.")
 
