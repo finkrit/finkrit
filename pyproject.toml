@@ -1,0 +1,74 @@
+# finkrit meta-package: the whole stack in one install.
+#
+# pip install finkrit gives the finkrit command plus the agent, the API server,
+# and the built web app. finkritintel and finkritq come as dependencies from
+# PyPI. finagent and finkritserver are leaves, so they ship bundled inside this
+# wheel (force-include below), along with the compiled SvelteKit UI that
+# finkritserver serves. Run npm run build before uv build so that UI is present.
+#
+# The finkrit dispatcher (finkrit/) resolves the bundled siblings normally when
+# installed. Its source-checkout path setup in finkrit/__init__.py is a no-op
+# in an installed wheel.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finkrit"
+version = "0.1.0"
+description = "Portfolio risk, performance, optimization, and tax, with an agent and a web dashboard."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "Finkrit" }]
+keywords = ["portfolio", "finance", "risk", "quant", "optimization", "tax", "agent", "investing"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+    "finkritintel>=0.1",
+    "finkritq[data]>=0.1",
+    "pydantic-ai>=2.0",
+    "pydantic>=2.0",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
+    "numpy>=2.0",
+]
+
+[project.scripts]
+finkrit = "finkrit.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/finkrit/finkrit"
+Repository = "https://github.com/finkrit/finkrit"
+
+[tool.hatch.build.targets.wheel]
+packages = ["finkrit"]
+
+[tool.hatch.build.targets.wheel.force-include]
+# finagent and finkritserver are leaves, bundled rather than published alone.
+# Listed per top-level item so tests stay out (force-include ignores exclude).
+# finkritserver ships its built static UI, populated by npm run build. A new
+# top-level module in either package needs adding here.
+"packages/finagent/__init__.py" = "finagent/__init__.py"
+"packages/finagent/__main__.py" = "finagent/__main__.py"
+"packages/finagent/assistant.py" = "finagent/assistant.py"
+"packages/finagent/cli.py" = "finagent/cli.py"
+"packages/finagent/deps.py" = "finagent/deps.py"
+"packages/finagent/ingest.py" = "finagent/ingest.py"
+"packages/finagent/adapter" = "finagent/adapter"
+"packages/finagent/agent" = "finagent/agent"
+"packages/finagent/report" = "finagent/report"
+"packages/finagent/store" = "finagent/store"
+"services/api/finkritserver/__init__.py" = "finkritserver/__init__.py"
+"services/api/finkritserver/app.py" = "finkritserver/app.py"
+"services/api/finkritserver/portfolio.py" = "finkritserver/portfolio.py"
+"services/api/finkritserver/schemas.py" = "finkritserver/schemas.py"
+"services/api/finkritserver/static" = "finkritserver/static"
