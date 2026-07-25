@@ -18,6 +18,7 @@ from finagent.agent.performance import PerformanceAgent
 from finagent.agent.risk import RiskAgent
 from finagent.deps import AgentDeps
 from finagent.ingest import ParsedPortfolio, parse_portfolio_csv, parse_portfolio_csv_async
+from finagent.logging_model import wrap_model_for_logging
 from finagent.report.metric import RiskMetric
 from finagent.report.report import PortfolioRiskReport
 from finagent.store import InMemoryStore, Store
@@ -58,6 +59,9 @@ class Assistant:
         # into deps so it reaches the orchestrator and every nested specialist.
         self._event_handler = event_handler
 
+        # Wrap once so every agent and the CSV-parse call log their LLM requests
+        # when FINKRIT_LOG_LLM is set (a no-op otherwise, and None stays None).
+        model = wrap_model_for_logging(model)
         self._model = model
         self.risk = RiskAgent(model=model)
         self.performance = PerformanceAgent(model=model)
