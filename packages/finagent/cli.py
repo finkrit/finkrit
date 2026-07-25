@@ -300,6 +300,11 @@ def main(argv: list[str] | None = None) -> None:
         help="LLM API key, an alternative to the LLM_API_KEY env var.",
     )
     parser.add_argument(
+        "--url", dest="url", default=None,
+        help="base url of an OpenAI-compatible endpoint (a local Ollama, LM Studio, "
+             "vLLM, or self-hosted server). No key needed. Set --ai to the model name.",
+    )
+    parser.add_argument(
         "--quiet", action="store_true",
         help="do not print the live tool-call trace while the agent works.",
     )
@@ -308,11 +313,24 @@ def main(argv: list[str] | None = None) -> None:
     if args.key:
         os.environ["LLM_API_KEY"] = args.key
 
+    model: object
     if args.ai:
         model = _PROVIDER_DEFAULTS.get(args.ai.lower(), args.ai)
     else:
         model = os.environ.get("FINKRIT_MODEL", _DEFAULT_MODEL)
-    _resolve_api_key(model)
+
+    if args.url:
+        # Any OpenAI-compatible local or self-hosted endpoint. The provider
+        # prefix is irrelevant, only the bare model name is sent. Local servers
+        # ignore the key, so a placeholder is fine.
+        from pydantic_ai.models.openai import OpenAIChatModel
+        from pydantic_ai.providers.openai import OpenAIProvider
+
+        name = model.split(":", 1)[1] if ":" in model else model
+        key = os.environ.get("LLM_API_KEY") or os.environ.get("LLM_KEY") or "local"
+        model = OpenAIChatModel(name, provider=OpenAIProvider(base_url=args.url, api_key=key))
+    else:
+        _resolve_api_key(model)
 
     # A file means a real portfolio with live prices. No file means the seeded
     # offline demo. The two data sources are not mixed.

@@ -44,14 +44,28 @@ WEB_DIR = REPO_ROOT / "apps" / "finkritweb"
 VITE_DEV_PORT = 5173
 
 
-def resolve_model(model_string: str):
+def resolve_model(model_string: str, url: str | None = None):
     """provider:model_name to a real pydantic-ai Model, authenticated from
     LLM_API_KEY if set (falling back to each provider's own default env var
-    lookup otherwise)."""
+    lookup otherwise).
+
+    With url set, point at any OpenAI-compatible endpoint instead, a local
+    Ollama, LM Studio, vLLM, llama.cpp server, or a self-hosted box. No cloud
+    key is needed, local servers ignore it, so a placeholder is used when none
+    is set. The provider prefix on model_string is irrelevant here, only the
+    bare model name is sent to the endpoint."""
+    llm_key = os.environ.get("LLM_API_KEY") or os.environ.get("LLM_KEY")
+
+    if url:
+        from pydantic_ai.models.openai import OpenAIChatModel
+        from pydantic_ai.providers.openai import OpenAIProvider
+
+        model_name = model_string.split(":", 1)[1] if ":" in model_string else model_string
+        provider = OpenAIProvider(base_url=url, api_key=llm_key or "local")
+        return OpenAIChatModel(model_name, provider=provider)
+
     from pydantic_ai.models import infer_model
     from pydantic_ai.providers import infer_provider, infer_provider_class
-
-    llm_key = os.environ.get("LLM_API_KEY") or os.environ.get("LLM_KEY")
 
     def provider_factory(provider_name: str):
         if llm_key is None:
@@ -73,14 +87,15 @@ _PROVIDER_KEY_ENV = {
 }
 
 
-def resolve_model_or_warn(model_string: str):
+def resolve_model_or_warn(model_string: str, url: str | None = None):
     """Build the model, or return None with a clear note when the key is
-    missing. A key is required, the only way data enters the app is the CSV
-    upload which the model parses, so without one there is nothing to show."""
+    missing. A key is required for a cloud model, the only way data enters the
+    app is the CSV upload which the model parses, so without one there is
+    nothing to show. A local endpoint (url) needs no key."""
     from pydantic_ai.exceptions import UserError
 
     try:
-        return resolve_model(model_string)
+        return resolve_model(model_string, url)
     except UserError as exc:
         provider = model_string.split(":", 1)[0] if ":" in model_string else model_string
         native = _PROVIDER_KEY_ENV.get(provider)
@@ -151,6 +166,10 @@ def main(argv: list[str] | None = None) -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--model", default="openai:gpt-5", help="pydantic-ai model string")
+    parser.add_argument("--url", dest="url", default=None,
+                        help="base url of an OpenAI-compatible endpoint (a local Ollama, "
+                             "LM Studio, vLLM, or self-hosted server). No key needed. Set "
+                             "--model to the served model name.")
     parser.add_argument("--port", type=int, default=8000, help="FastAPI port")
     parser.add_argument("--dev", action="store_true", help="Vite dev server with hot reload")
     parser.add_argument("--no-browser", action="store_true")
@@ -165,7 +184,7 @@ def main(argv: list[str] | None = None) -> None:
     # A key is required. Resolve the model first and stop before any build or
     # server work when missing, rather than starting an app that cannot parse
     # an upload.
-    model = resolve_model_or_warn(args.model)
+    model = resolve_model_or_warn(args.model, args.url)
     if model is None:
         sys.exit(1)
 

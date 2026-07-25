@@ -52,9 +52,26 @@ The dashboard takes:
 ```
 finkrit --key sk-...           the LLM key inline (should match provider)
 finkrit --model openai:gpt-5   pick the provider and model (defaults to openai:gpt-5)
+finkrit --url http://host/v1   run against a local model, no key (see Local model)
 finkrit --port 8001            serve on a different port
 finkrit --dev                  Vite hot reload (source checkout only in case you want to tinker)
 ```
+
+### Local model
+
+Point the agent at any OpenAI-compatible endpoint (a local Ollama, LM Studio,
+vLLM, llama.cpp server, or a self-hosted box) with `--url`. No cloud key is
+needed, and you set the model to whatever the endpoint serves:
+
+```bash
+finkrit --model openai:llama3.1 --url http://localhost:11434/v1
+finkrit cli --ai qwen2.5 --url http://my-box.local:8000/v1
+```
+
+The agent leans on tool calling, so use a tool-capable model (llama 3.1 or 3.3
+70B, qwen2.5-instruct, and similar). Small models often fumble the tool calls.
+And nothing leaves your machine, so a local model keeps the whole conversation
+private.
 
 ### Chat with the agent
 
