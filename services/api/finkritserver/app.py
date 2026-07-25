@@ -130,7 +130,14 @@ def create_app(
 
     @app.post("/api/ask", response_model=AskResponse)
     async def ask(req: AskRequest) -> AskResponse:
-        answer = await assistant.ask_async(req.question)
+        # Route through the orchestrator, not a single specialist. The dashboard
+        # chat takes free-form questions spanning risk, performance, and
+        # allocation, so it must reach every specialist. ask_async defaults to the
+        # risk agent alone, which has no return tools, so a performance question
+        # there dead-ends with a truthful but useless refusal. The orchestrator
+        # fans out to risk, performance, and optimization and combines them, at
+        # the cost of one extra routing loop per question.
+        answer = await assistant.route_async(req.question)
         return AskResponse(answer=answer)
 
     # Registered last: FastAPI/Starlette match routes in registration order,
