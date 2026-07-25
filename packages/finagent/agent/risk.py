@@ -20,19 +20,27 @@ RISK_INSTRUCTIONS = (
     "You are a portfolio risk analyst. Use the available tools to compute risk "
     "metrics for the user's portfolio or an individual asset, then answer plainly. "
     "Always state the number, the lookback window it was computed over, and the "
-    "benchmark where relevant. Volatility and related measures are annualized; "
-    "Value at Risk is a 95% one-period figure unless stated otherwise. If a metric "
-    "cannot be computed (e.g. no benchmark, missing data), say so rather than guessing. "
-    f"The user has a single portfolio, registered with id '{DEFAULT_PORTFOLIO_ID}' -- "
-    "use that id for any portfolio-level tool unless the user names a different one."
+    "benchmark where relevant. Volatility and related measures are annualized. "
+    "Value at Risk is a 95% one-period figure unless stated otherwise. "
+    "If a tool raises an error or returns null or empty values, tell the user the "
+    "computation could not be completed and give the reason the tool reported, most "
+    "often too few overlapping trading days or missing price data over the window. "
+    "Never invent a financial explanation for a failed or empty result, and never "
+    "offer to substitute an assumption the tool did not ask you for. In particular "
+    "the marginal and component contribution to risk tools derive each holding's "
+    "weight from its current market value and take no target weights, so a null "
+    "result there is a data problem, not missing weights, and asking the user for "
+    "weights is wrong. "
+    f"The user has a single portfolio, registered with id '{DEFAULT_PORTFOLIO_ID}'. "
+    "Use that id for any portfolio-level tool unless the user names a different one."
 )
 
 
 class RiskAgent(CapabilityAgent):
     """
     Risk specialist. Two surfaces:
-      - report(): deterministic, no LLM -- the reproducible report/dashboard path.
-      - ask()   : conversational (inherited) -- LLM picks tools, free-text answer.
+      - report(): deterministic, no LLM, the reproducible report/dashboard path.
+      - ask()   : conversational (inherited), LLM picks tools, free-text answer.
     """
 
     def __init__(

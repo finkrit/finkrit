@@ -7,7 +7,7 @@ import functools
 import typing
 from typing import Any, Callable
 
-from pydantic_ai import RunContext
+from pydantic_ai import ModelRetry, RunContext
 from pydantic_ai.capabilities import Capability as PydanticCapability
 
 from finkritintel.capability.base import Capability as FinkritCapability
@@ -20,6 +20,21 @@ from finagent.deps import AgentDeps
 _MISSING = dataclasses.MISSING
 
 
+def _execute_or_retry(binding: ToolBinding, /, **kwargs: Any) -> Any:
+    # A finkritq computation that cannot proceed on the given data raises
+    # ValueError with the reason (too few overlapping observations, missing or
+    # bad prices, an unknown ticker). Translate that into a ModelRetry so the
+    # reason reaches the model and it reports the real problem to the user,
+    # instead of a bare exception aborting the run or a NaN arriving as a null
+    # the model will rationalize with a wrong story. ModelRetry is a pydantic-ai
+    # concept, so this translation belongs here in the adapter, not in the
+    # framework-neutral core or the intel layer.
+    try:
+        return binding.execute(**kwargs)
+    except ValueError as exc:
+        raise ModelRetry(str(exc)) from exc
+
+
 @functools.lru_cache(maxsize=None)
 def compile_tool(binding: ToolBinding) -> Callable[..., Any]:
     """
@@ -27,16 +42,16 @@ def compile_tool(binding: ToolBinding) -> Callable[..., Any]:
     LLM-safe signature (ids/primitives, RunContext[AgentDeps] first),
     whose body resolves domain fields and calls binding.execute(...).
 
-    Generated via exec on real source text, not a **kwargs catch-all --
-    pydantic-ai derives the tool's JSON schema from the function's
+    Generated via exec on real source text, not a **kwargs catch-all. This is
+    because pydantic-ai derives the tool's JSON schema from the function's
     actual signature, so each of the ~20 bindings needs its own
     concrete parameter list. Same technique dataclasses uses internally
-    to generate __init__; the source is built entirely from our own
+    to generate __init__, and the source is built entirely from our own
     ToolBinding data, never from external input.
 
     Memoized (F-7): ToolBinding is frozen/hashable and the compiled output
     depends only on it, so every Assistant()/CapabilityAgent() construction
-    re-running the exec codegen for the same ~20 bindings was pure waste --
+    re-running the exec codegen for the same ~20 bindings was pure waste, and
     the server multiplies that by every request. Cached for the process
     lifetime.
     """
@@ -48,6 +63,7 @@ def compile_tool(binding: ToolBinding) -> Callable[..., Any]:
         "AgentDeps": AgentDeps,
         "_binding": binding,
         "_resolve_field": resolve_field,
+        "_execute": _execute_or_retry,
     }
 
     def param_source(param_name: str, type_key: str, f: "dataclasses.Field[Any]") -> str:
@@ -100,12 +116,12 @@ def compile_tool(binding: ToolBinding) -> Callable[..., Any]:
         resolved_dict = "{" + ", ".join(f"'{k}': {k}" for k in resolved_keys) + "}"
         body_lines = [
             *prep_lines,
-            f"    _result = _binding.execute({call_src})",
+            f"    _result = _execute(_binding, {call_src})",
             f"    return _adapt(_result, {resolved_dict})",
         ]
     else:
         namespace["_return_type"] = binding.output_schema
-        body_lines = [*prep_lines, f"    return _binding.execute({call_src})"]
+        body_lines = [*prep_lines, f"    return _execute(_binding, {call_src})"]
 
     source = f"def {name}({params_src}) -> _return_type:\n" + "\n".join(body_lines) + "\n"
 
