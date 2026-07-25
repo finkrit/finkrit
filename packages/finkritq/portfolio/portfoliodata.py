@@ -82,6 +82,27 @@ class PortfolioData:
             if not np.array_equal(history.dates, first.dates):
                 raise ValueError(f"{asset.ticker} history is not aligned.")
 
+        # Guard the "analyzable" invariant, so a degenerate window fails loud here
+        # rather than silently poisoning every downstream metric with NaN. After
+        # alignment (an intersection of dates), holdings that barely overlap, or a
+        # provider that handed back a one-row or gap-filled frame, can leave too few
+        # common observations or NaN closes. np.cov and friends then return NaN, which
+        # serializes to null and reaches the caller as blank numbers with no reason
+        # attached. Refuse it here instead, naming the count and the offending ticker.
+        n_observations = len(first)
+        if n_observations < 2:
+            raise ValueError(
+                f"Only {n_observations} aligned observation(s) across the holdings, "
+                f"need at least 2 to compute returns. The requested window is likely "
+                f"too short, or the holdings have too few overlapping trading days."
+            )
+        for asset, history in self._histories.items():
+            if not np.all(np.isfinite(history.close)):
+                raise ValueError(
+                    f"{asset.ticker} has non-finite close prices over the window, "
+                    f"the price data has gaps or bad rows and cannot be analyzed."
+                )
+
     def __getitem__(self, asset: Asset) -> PriceHistory:
         return self._histories[asset]
 

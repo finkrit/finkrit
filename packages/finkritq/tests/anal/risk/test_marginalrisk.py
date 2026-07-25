@@ -6,6 +6,8 @@ import pytest
 
 from finkritq.anal.risk.marginalrisk import marginal_contribution_to_risk
 from finkritq.anal.risk.volatility import portfolio_volatility
+from finkritq.portfolio import PortfolioData
+from finkritq.tests.fixtures import make_price_history, make_two_stock_portfolio
 
 
 class TestMarginalContributionToRisk:
@@ -37,4 +39,51 @@ class TestMarginalContributionToRisk:
         np.testing.assert_allclose(
             marginal_contribution_to_risk(two_stock_portfolio_data),
             marginal_contribution_to_risk(two_stock_portfolio_data))
-        
+
+
+class TestMarginalContributionToRiskDegenerateData:
+    """
+    A thin window must fail loud, not return a NaN vector. A NaN MCTR serializes
+    to null for every holding and reaches the caller as blank numbers with no
+    reason attached, which the agent layer then rationalizes with a wrong story.
+    These pin the guards that turn that into a clear error at the source.
+    """
+
+    def test_single_observation_rejected_at_portfolio_data(self):
+        # One aligned observation cannot even form a return series.
+        portfolio, a, b = make_two_stock_portfolio()
+        with pytest.raises(ValueError, match="aligned observation"):
+            PortfolioData(
+                portfolio=portfolio,
+                _histories={
+                    a: make_price_history([100.0]),
+                    b: make_price_history([50.0]),
+                },
+            )
+
+    def test_nan_close_rejected_at_portfolio_data(self):
+        # A gap-filled or bad provider row shows up as a non-finite close.
+        portfolio, a, b = make_two_stock_portfolio()
+        with pytest.raises(ValueError, match="non-finite close"):
+            PortfolioData(
+                portfolio=portfolio,
+                _histories={
+                    a: make_price_history([100.0, float("nan"), 102.0]),
+                    b: make_price_history([50.0, 51.0, 52.0]),
+                },
+            )
+
+    def test_two_observations_rejected_at_covariance(self):
+        # Two closes pass PortfolioData (one return exists) but ddof=1 covariance
+        # needs at least two returns, so MCTR must raise rather than divide by NaN.
+        portfolio, a, b = make_two_stock_portfolio()
+        data = PortfolioData(
+            portfolio=portfolio,
+            _histories={
+                a: make_price_history([100.0, 101.0]),
+                b: make_price_history([50.0, 50.5]),
+            },
+        )
+        with pytest.raises(ValueError, match="at least 2 return observations"):
+            marginal_contribution_to_risk(data)
+

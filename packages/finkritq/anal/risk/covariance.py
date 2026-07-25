@@ -133,6 +133,16 @@ def covariance_matrix_from_returns(
         Array of shape (n_assets, n_periods).
     """
 
+    # ddof=1 needs at least two periods, a single-period slice makes np.cov emit
+    # NaN silently. Fail loud instead, so the caller learns the window is too thin
+    # rather than receiving a NaN covariance that poisons variance, MCTR, and CCTR.
+    n_periods = returns.shape[1] if returns.ndim == 2 else returns.shape[0]
+    if n_periods < 2:
+        raise ValueError(
+            f"Covariance needs at least 2 return observations, got {n_periods}. "
+            f"The lookback window is too short for a covariance based metric."
+        )
+
     covariance = np.cov(returns, rowvar=True, ddof=1)
 
     if annualized:

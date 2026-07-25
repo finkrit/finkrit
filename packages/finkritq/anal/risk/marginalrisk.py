@@ -28,7 +28,14 @@ def marginal_contribution_to_risk(portfolio_data: PortfolioData) -> NDArray[np.f
     weights = portfolio_data.weight_vector
     volatility = portfolio_volatility(portfolio_data)
 
-    if volatility == 0.0:
-        raise ValueError("Portfolio volatility is zero.")
+    # A NaN volatility must be rejected explicitly, NaN == 0.0 is False so the
+    # zero guard alone would let a NaN divisor through and return an all-NaN
+    # vector, which serializes to null for every holding.
+    if not np.isfinite(volatility) or volatility == 0.0:
+        raise ValueError(
+            f"Portfolio volatility is {volatility}, cannot compute marginal "
+            f"contribution to risk. The window likely has too few or degenerate "
+            f"observations."
+        )
     return (covariance @ weights) / volatility
 
