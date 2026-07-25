@@ -121,6 +121,45 @@ review, so almost any layout works there.
 --quiet            hide the live tool-call trace
 ```
 
+### The agents
+
+Under the chat sit four agents, three specialists and a router. Each specialist
+owns one domain and only that domain's tools.
+
+| Agent | Answers | Covers |
+| - | - | - |
+| Risk | how risky, what could be lost | volatility, variance, semivariance, downside deviation, drawdown and maximum drawdown, value at risk and conditional VaR, beta, and each holding's marginal and component contribution to risk |
+| Performance | how it has done | total return, annualized return, and the risk-adjusted Sharpe, Sortino, and Calmar ratios |
+| Optimization | what to hold | the minimum-variance and maximum-Sharpe target weights, long only. Proposed allocations, never trades |
+| Orchestrator | anything, mixed | reads the question, calls whichever specialists can answer, and combines their replies into one |
+
+Target a single specialist with `-ag`, by number or by name:
+
+```bash
+finkrit cli -ag 1                # risk
+finkrit cli -ag performance      # same as -ag 3
+finkrit cli --agent optimization
+```
+
+Numbers are `0` router, `1` risk, `2` optimization, `3` performance. Left off,
+the CLI shows a menu. A single specialist is the direct path, the model sees
+only that domain's tools and answers with no routing overhead, so pick one when
+you already know the domain.
+
+**How the orchestrator works.** The router (agent `0`) is itself an agent whose
+tools each hand a focused sub-question to one specialist. It reads your question,
+decides which specialists it needs, calls them (one or several), and synthesizes
+a single answer. So a mixed question in one message, for example "what is my
+volatility, my annualized return, and the optimal weights?", fans out to all
+three and comes back combined. It never invents or alters a number, it reports
+only what a specialist returned. The tradeoff is one extra model loop around the
+specialists it invokes, which is why a single specialist is cheaper when the
+domain is known.
+
+The **web dashboard always routes through the orchestrator**, so any question,
+risk, performance, or allocation, reaches the right specialist without you
+choosing one.
+
 ## From source
 
 To hack on finkrit, clone it and use the bootstrap, which sets up a virtual
