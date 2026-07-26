@@ -36,6 +36,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/finkrit/finkrit"
 Repository = "https://github.com/finkrit/finkrit"
+Changelog = "https://github.com/finkrit/finkrit/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 only-include = [

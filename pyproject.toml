@@ -16,7 +16,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finkrit"
-version = "0.1.0"
+version = "0.1.1"
 description = "Portfolio risk, performance, optimization, and tax, with an agent and a web dashboard."
 readme = "README.md"
 license = "Apache-2.0"
@@ -48,6 +48,7 @@ finkrit = "finkrit.cli:main"
 [project.urls]
 Homepage = "https://github.com/finkrit/finkrit"
 Repository = "https://github.com/finkrit/finkrit"
+Changelog = "https://github.com/finkrit/finkrit/blob/main/CHANGELOG.md"
 
 [tool.hatch.build.targets.wheel]
 packages = ["finkrit"]
