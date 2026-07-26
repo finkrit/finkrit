@@ -23,15 +23,29 @@ warnings.filterwarnings("ignore", message="Could not generate return schema")
 
 
 def _script_volatility(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
-    """Calls portfolio_volatility on port-1, then answers in text."""
+    """Scripted model that drives the whole /ask path.
+
+    The dashboard routes through the orchestrator, so this one function is
+    invoked for two kinds of agent, each with its own tools and its own message
+    history, and branches on which tools it was handed. On the orchestrator it
+    delegates to the risk specialist via ask_risk. On that specialist it calls
+    portfolio_volatility. Each answers in text once its call has returned.
+    """
+    tool_names = {t.name for t in info.function_tools}
     answered = any(
         isinstance(p, ToolReturnPart) for m in messages for p in getattr(m, "parts", [])
     )
     if answered:
         return ModelResponse(parts=[TextPart("Your portfolio's volatility has been computed.")])
-    return ModelResponse(
-        parts=[ToolCallPart(tool_name="portfolio_volatility", args={"portfolio_id": "port-1"})]
-    )
+    if "ask_risk" in tool_names:
+        return ModelResponse(
+            parts=[ToolCallPart(tool_name="ask_risk", args={"question": "What is the volatility?"})]
+        )
+    if "portfolio_volatility" in tool_names:
+        return ModelResponse(
+            parts=[ToolCallPart(tool_name="portfolio_volatility", args={"portfolio_id": "port-1"})]
+        )
+    return ModelResponse(parts=[TextPart("Your portfolio's volatility has been computed.")])
 
 
 @pytest.fixture

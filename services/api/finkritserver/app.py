@@ -22,6 +22,7 @@ from pathlib import Path
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from pydantic_ai.exceptions import AgentRunError
 
 from finagent.assistant import Assistant
 from finagent.ingest import ParsedPortfolio
@@ -137,8 +138,19 @@ def create_app(
         # there dead-ends with a truthful but useless refusal. The orchestrator
         # fans out to risk, performance, and optimization and combines them, at
         # the cost of one extra routing loop per question.
-        answer = await assistant.route_async(req.question)
-        return AskResponse(answer=answer)
+        try:
+            answer = await assistant.route_async(req.question)
+            return AskResponse(answer=answer)
+        except (PortfolioNotFoundError, AssetNotFoundError) as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except AgentRunError as exc:
+            # The run could not complete: an LLM or provider error, a usage limit,
+            # or a tool that kept failing past its retries. Return a clean 502
+            # instead of a raw traceback, so the dashboard can show a message.
+            raise HTTPException(
+                status_code=502,
+                detail=f"The assistant could not complete the request: {exc}",
+            ) from exc
 
     # Registered last: FastAPI/Starlette match routes in registration order,
     # so the literal /api/* routes above always match before this catch-all

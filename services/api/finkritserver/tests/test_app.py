@@ -2,6 +2,24 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+from pydantic_ai.exceptions import UsageLimitExceeded
+
+from finagent.assistant import Assistant
+from finagent.store import PortfolioNotFoundError
+
+from finkritserver.app import create_app
+
+
+class _RaisingAssistant(Assistant):
+    """An Assistant whose chat path always raises, to drive the /ask error
+    branches. Constructed keyless (no model), route_async never reaches an LLM."""
+
+    def __init__(self, exc: Exception) -> None:
+        super().__init__()
+        self._exc = exc
+
+    async def route_async(self, question: str) -> str:
+        raise self._exc
 
 
 class TestHealth:
@@ -110,3 +128,17 @@ class TestAsk:
 
     def test_ask_rejects_empty_question(self, client: TestClient):
         assert client.post("/api/ask", json={"question": ""}).status_code == 422
+
+    def test_ask_unknown_portfolio_is_404(self):
+        # A portfolio or asset miss escaping the run maps to 404, not a 500.
+        app = create_app(_RaisingAssistant(PortfolioNotFoundError("portfolio 'x' not found")), static_dir=None)
+        r = TestClient(app).post("/api/ask", json={"question": "What's my volatility?"})
+        assert r.status_code == 404
+
+    def test_ask_agent_failure_is_502(self):
+        # An agent run failure (LLM/provider error, usage limit, exhausted retry)
+        # maps to a clean 502 with a readable message, not a raw traceback.
+        app = create_app(_RaisingAssistant(UsageLimitExceeded("request limit exceeded")), static_dir=None)
+        r = TestClient(app).post("/api/ask", json={"question": "What's my volatility?"})
+        assert r.status_code == 502
+        assert "could not complete" in r.json()["detail"]
