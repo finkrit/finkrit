@@ -13,7 +13,22 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 
 ### finkritintel
 
+#### Added
+- A tax capability exposing the read-only tax lens as callable tools: unrealized
+  gains and losses at current prices, tax-loss harvesting candidates net of the
+  wash sale window, and the long versus short term split of the portfolio.
+- The tax bindings read current prices from the snapshot provider and fall back
+  to the most recent history close when no snapshot provider is registered, so
+  they work against an offline registry as well as a live one.
+
 ### finkrit
+
+#### Added
+- A tax specialist in the chat. Ask about unrealized gains, what is harvestable
+  before year end, or how much of the portfolio qualifies for long term
+  treatment. Reachable directly as agent 4 in the CLI (`-ag tax`) and through the
+  orchestrator, which now fans a mixed question out across all four specialists.
+  The specialist is read-only, it describes the tax position and never trades.
 
 ## finkrit 0.1.1 — 2026-07-26
 
