@@ -10,6 +10,7 @@ from finagent.agent.optimization import OptimizationAgent
 from finagent.agent.orchestrator import ORCHESTRATOR_INSTRUCTIONS, Orchestrator
 from finagent.agent.performance import PerformanceAgent
 from finagent.agent.risk import RiskAgent
+from finagent.agent.tax import TaxAgent
 from finagent.deps import AgentDeps
 from finagent.store import DEFAULT_PORTFOLIO_ID, InMemoryStore
 from finagent.tests.fixtures import make_portfolio, make_registry
@@ -43,11 +44,19 @@ def _opt_script(messages, info) -> ModelResponse:
                                              args={"portfolio_id": "port-1"})])
 
 
+def _tax_script(messages, info) -> ModelResponse:
+    if _has_tool_return(messages):
+        return ModelResponse(parts=[TextPart("Your unrealized gains have been computed.")])
+    return ModelResponse(parts=[ToolCallPart(tool_name="portfolio_unrealized_gains",
+                                             args={"portfolio_id": "port-1"})])
+
+
 def _specialists():
     return (
         RiskAgent(model=FunctionModel(_risk_script)),
         PerformanceAgent(model=FunctionModel(_risk_script)),
         OptimizationAgent(model=FunctionModel(_opt_script)),
+        TaxAgent(model=FunctionModel(_tax_script)),
     )
 
 
@@ -60,8 +69,8 @@ class TestOrchestratorDelegation:
             return ModelResponse(parts=[ToolCallPart(tool_name="ask_risk",
                                                      args={"question": "volatility"})])
 
-        risk, performance, optimization = _specialists()
-        orchestrator = Orchestrator(FunctionModel(orch_script), risk, performance, optimization)
+        risk, performance, optimization, tax = _specialists()
+        orchestrator = Orchestrator(FunctionModel(orch_script), risk, performance, optimization, tax)
         answer = orchestrator.ask("how risky am I?", _deps())
         assert "volatility" in answer.lower()
 
@@ -76,9 +85,21 @@ class TestOrchestratorDelegation:
                 ToolCallPart(tool_name="ask_optimization", args={"question": "min variance"}),
             ])
 
-        risk, performance, optimization = _specialists()
-        orchestrator = Orchestrator(FunctionModel(orch_script), risk, performance, optimization)
+        risk, performance, optimization, tax = _specialists()
+        orchestrator = Orchestrator(FunctionModel(orch_script), risk, performance, optimization, tax)
         answer = orchestrator.ask("give me a review", _deps())
+        assert isinstance(answer, str) and answer
+
+    def test_routes_a_tax_question_to_the_tax_specialist(self):
+        def orch_script(messages, info) -> ModelResponse:
+            if _has_tool_return(messages):
+                return ModelResponse(parts=[TextPart("You have unrealized gains of note.")])
+            return ModelResponse(parts=[ToolCallPart(tool_name="ask_tax",
+                                                     args={"question": "unrealized gains"})])
+
+        risk, performance, optimization, tax = _specialists()
+        orchestrator = Orchestrator(FunctionModel(orch_script), risk, performance, optimization, tax)
+        answer = orchestrator.ask("what are my gains?", _deps())
         assert isinstance(answer, str) and answer
 
 

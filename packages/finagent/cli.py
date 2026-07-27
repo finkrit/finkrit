@@ -13,8 +13,8 @@ itself is real and needs a model plus its API key in the environment.
 --ai picks the model, a provider shortcut (claude, openai, gemini, groq,
 mistral) or a full provider:name string, keyed by a generic LLM_API_KEY mapped
 onto whatever env var the provider expects. -ag picks the agent: 0 the
-all-encompassing router, 1 risk, 2 optimization, 3 performance. Left off, a menu
-asks. Type a question, or 'quit' to leave.
+all-encompassing router, 1 risk, 2 optimization, 3 performance, 4 tax. Left off,
+a menu asks. Type a question, or 'quit' to leave.
 """
 from __future__ import annotations
 
@@ -88,10 +88,12 @@ _AGENT_CHOICES: dict[str, tuple[str | None, str, str]] = {
     "1": ("risk", "Risk", "volatility, VaR, drawdown, beta, concentration"),
     "2": ("optimization", "Optimization", "minimum-variance / maximum-Sharpe allocations"),
     "3": ("performance", "Performance", "returns, Sharpe / Sortino / Calmar"),
+    "4": ("tax", "Tax", "unrealized gains, harvestable losses, holding period"),
 }
 _AGENT_NAMES = {
     "all": "0", "router": "0", "risk": "1",
     "optimization": "2", "optimize": "2", "opt": "2", "performance": "3", "perf": "3",
+    "tax": "4",
 }
 
 
@@ -287,8 +289,8 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "-ag", "--agent", dest="agent", default=None,
-        help="agent: 0 router (all), 1 risk, 2 optimization, 3 performance (or a name). "
-             "Left off, a menu asks.",
+        help="agent: 0 router (all), 1 risk, 2 optimization, 3 performance, 4 tax "
+             "(or a name). Left off, a menu asks.",
     )
     parser.add_argument(
         "-f", "--file", dest="file", default=None,

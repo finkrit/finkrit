@@ -16,6 +16,7 @@ from finagent.agent.optimization import OptimizationAgent
 from finagent.agent.orchestrator import Orchestrator
 from finagent.agent.performance import PerformanceAgent
 from finagent.agent.risk import RiskAgent
+from finagent.agent.tax import TaxAgent
 from finagent.deps import AgentDeps
 from finagent.ingest import ParsedPortfolio, parse_portfolio_csv, parse_portfolio_csv_async
 from finagent.logging_model import wrap_model_for_logging
@@ -66,12 +67,16 @@ class Assistant:
         self.risk = RiskAgent(model=model)
         self.performance = PerformanceAgent(model=model)
         self.optimization = OptimizationAgent(model=model)
+        self.tax = TaxAgent(model=model)
         self._specialists = {
             "risk": self.risk,
             "performance": self.performance,
             "optimization": self.optimization,
+            "tax": self.tax,
         }
-        self.orchestrator = Orchestrator(model, self.risk, self.performance, self.optimization)
+        self.orchestrator = Orchestrator(
+            model, self.risk, self.performance, self.optimization, self.tax,
+        )
 
     @property
     def deps(self) -> AgentDeps:

@@ -8,6 +8,7 @@ from finagent.agent.base import DEFAULT_USAGE_LIMITS
 from finagent.agent.optimization import OptimizationAgent
 from finagent.agent.performance import PerformanceAgent
 from finagent.agent.risk import RiskAgent
+from finagent.agent.tax import TaxAgent
 from finagent.deps import AgentDeps
 from finagent.store import DEFAULT_PORTFOLIO_ID
 
@@ -42,6 +43,7 @@ class Orchestrator:
         risk: RiskAgent,
         performance: PerformanceAgent,
         optimization: OptimizationAgent,
+        tax: TaxAgent,
         instructions: str = ORCHESTRATOR_INSTRUCTIONS,
         usage_limits=DEFAULT_USAGE_LIMITS,
     ) -> None:
@@ -49,6 +51,7 @@ class Orchestrator:
         self._risk = risk
         self._performance = performance
         self._optimization = optimization
+        self._tax = tax
         self._instructions = instructions
         self._usage_limits = usage_limits
         self._agent: Agent | None = None
@@ -61,7 +64,9 @@ class Orchestrator:
                     "The orchestrator has no model configured, routing requires one."
                 )
             agent = Agent(self._model, deps_type=AgentDeps, instructions=self._instructions)
-            risk, performance, optimization = self._risk, self._performance, self._optimization
+            risk, performance, optimization, tax = (
+                self._risk, self._performance, self._optimization, self._tax,
+            )
 
             @agent.tool
             async def ask_risk(ctx: RunContext[AgentDeps], question: str) -> str:
@@ -96,6 +101,19 @@ class Orchestrator:
                 performance. The weights are proposed allocations, not trades.
                 """
                 return await optimization.ask_async(question, ctx.deps)
+
+            @agent.tool
+            async def ask_tax(ctx: RunContext[AgentDeps], question: str) -> str:
+                """
+                The portfolio's current tax position at today's prices. Covers
+                unrealized capital gains and losses, tax-loss harvesting candidates
+                (lots trading below cost, net of the wash sale window), and the split
+                of value between long term and short term holdings. Pick this for
+                gains, losses, harvesting, and long-versus-short-term tax questions.
+                Read-only, it describes the tax position and does not trade or
+                rebalance.
+                """
+                return await tax.ask_async(question, ctx.deps)
 
             self._agent = agent
         return self._agent
