@@ -15,13 +15,41 @@ or removed money. This is the GIPS/advisor-skill number.
 cash flows, so it reflects the *client's* realized dollar experience,
 including the timing of their flows.
 
-Both take the actual observed value path plus a per-period external-flow series
-(see datatype.CashFlow / flows_to_series). Sign: a flow > 0 is a contribution.
+Both take the actual observed value path plus a per-period external-flow series,
+which ``flows_to_series`` below builds from dated ``CashFlow`` records. Sign: a
+flow > 0 is a contribution.
 """
 from __future__ import annotations
 
 import numpy as np
 from numpy.typing import NDArray
+
+from finkritq.datatype import CashFlow
+
+
+def flows_to_series(
+    cashflows: list[CashFlow],
+    dates: NDArray[np.datetime64],
+) -> NDArray[np.float64]:
+    """
+    Collapse dated cash flows onto a per-period array aligned to ``dates`` (a
+    portfolio value series' observation dates), summing any flows that land on the
+    same date. Flows dated outside the window are ignored. The result[t] is the net
+    external flow occurring at observation t, ready to feed the TWR/MWR functions.
+
+    Lives here rather than beside CashFlow in datatype/: it converts one
+    representation into another for these two functions to consume, which makes
+    it a transform, and datatype holds vocabulary and containers. CashFlow, the
+    value type, stays there.
+    """
+    day_index = {np.datetime64(day, "D"): i for i, day in enumerate(dates)}
+    series = np.zeros(len(dates), dtype=np.float64)
+    for flow in cashflows:
+        key = np.datetime64(flow.date, "D")
+        index = day_index.get(key)
+        if index is not None:
+            series[index] += flow.amount
+    return series
 
 
 def time_weighted_return(

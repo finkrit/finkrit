@@ -1,6 +1,6 @@
 # finkrit/packages/finkritq/datatype/__init__.py
 from .assettype import AssetType
-from .cashflow import CashFlow, flows_to_series
+from .cashflow import CashFlow
 from .currency import Currency
 from .market import Exchange, MarketIndex
 # ReturnCalculationMethod lives with the returns transform it parameterizes (in
@@ -9,14 +9,15 @@ from .market import Exchange, MarketIndex
 # (datatype -> transform), so there is no cycle.
 from finkritq.transform.returns import ReturnCalculationMethod
 from .risk import VaREstimationMethod, WeightingBasis
+from .tax import LotSaleMethod
 from .pricehistory import PriceHistory
 
 __all__ = [
     "AssetType",
     "CashFlow",
-    "flows_to_series",
     "Currency",
     "Exchange",
+    "LotSaleMethod",
     "MarketIndex",
     "ReturnCalculationMethod",
     "PriceHistory",

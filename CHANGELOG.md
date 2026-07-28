@@ -9,6 +9,18 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 
 ## [Unreleased]
 
+### finkritq
+
+#### Changed
+- `LotSaleMethod` moves to `finkritq.datatype`, where the other method enums
+  live, and is importable from there. The old
+  `finkritq.optimize.lotselection.LotSaleMethod` path still works.
+- `flows_to_series` moves out of `finkritq.datatype` to
+  `finkritq.anal.performance`, beside the two functions that consume its output.
+  It converts one representation into another rather than naming a concept, so
+  it is a transform and that package holds vocabulary. `CashFlow` itself stays.
+  **Breaking** for anyone importing it from `finkritq.datatype`.
+
 ### finkrit
 
 #### Added

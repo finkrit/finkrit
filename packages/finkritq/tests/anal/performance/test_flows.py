@@ -10,7 +10,8 @@ from datetime import date
 import numpy as np
 
 from finkritq.anal.performance import money_weighted_return, time_weighted_return
-from finkritq.datatype import CashFlow, flows_to_series
+from finkritq.datatype import CashFlow
+from finkritq.anal.performance.flows import flows_to_series
 
 
 class TestTimeWeighted:

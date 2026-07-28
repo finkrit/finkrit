@@ -16,15 +16,18 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
-from enum import Enum
 
+from finkritq.datatype.tax import LotSaleMethod
 from finkritq.portfolio import Position, TaxLot
 
-
-class LotSaleMethod(Enum):
-    FIFO = "fifo"   # oldest acquired first (the IRS default)
-    LIFO = "lifo"   # newest acquired first
-    HIFO = "hifo"   # highest cost-per-share first -> minimizes realized gain
+# LotSaleMethod is defined in datatype/, with the other method enums, and is
+# imported back here so `from finkritq.optimize.lotselection import
+# LotSaleMethod` keeps working for anyone already on that path. It cannot be
+# re-exported the other way round, from datatype, the way
+# ReturnCalculationMethod is: that trick relies on transform/returns.py
+# importing nothing from finkritq, while this module needs portfolio, which
+# needs datatype.
+__all__ = ["LotSaleMethod", "RealizedLot", "SaleResult", "select_lots_to_sell"]
 
 
 @dataclass(frozen=True, slots=True)
