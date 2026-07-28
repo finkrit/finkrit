@@ -16,6 +16,11 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   repeating a ticker describes a position built from several purchases, which is
   how a brokerage export reads. Each lot keeps its own cost and acquisition date
   through the upload, the chat CLI, and the analytics.
+- The holdings table shows one row per position rather than one per lot. A
+  ticker bought several times reads as a single holding with its blended cost
+  per share, and expands from the chevron or the ticker to show each purchase
+  with its own cost, date, and share of the position. One control in the header
+  opens or closes every position at once.
 
 #### Fixed
 - Harvesting and the holding period split now see the individual lots. Every
