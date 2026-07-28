@@ -16,7 +16,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finkrit"
-version = "0.1.1"
+version = "0.1.2"
 description = "Portfolio risk, performance, optimization, and tax, with an agent and a web dashboard."
 readme = "README.md"
 license = "Apache-2.0"
@@ -32,7 +32,10 @@ classifiers = [
     "Topic :: Office/Business :: Financial :: Investment",
 ]
 dependencies = [
-    "finkritintel>=0.1",
+    # Pin the floor to the version that actually has what finagent imports. The
+    # tax agent imports finkritintel.capability.tax, which landed in 0.1.1, so a
+    # looser floor would let a resolver pick 0.1.0 and fail on that import.
+    "finkritintel>=0.1.1",
     "finkritq[data]>=0.1",
     "pydantic-ai>=2.0",
     "pydantic>=2.0",

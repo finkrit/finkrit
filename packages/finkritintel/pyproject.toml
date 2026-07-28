@@ -11,7 +11,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finkritintel"
-version = "0.1.0"
+version = "0.1.1"
 description = "finkritq as framework-neutral tool contracts and capabilities for any agent framework."
 readme = "README.md"
 license = "Apache-2.0"

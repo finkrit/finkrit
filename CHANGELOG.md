@@ -9,11 +9,9 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 
 ## [Unreleased]
 
-### finkritq
+## finkritintel 0.1.1 — 2026-07-27
 
-### finkritintel
-
-#### Added
+### Added
 - A tax capability exposing the read-only tax lens as callable tools: unrealized
   gains and losses at current prices, tax-loss harvesting candidates net of the
   wash sale window, and the long versus short term split of the portfolio.
@@ -21,14 +19,36 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   to the most recent history close when no snapshot provider is registered, so
   they work against an offline registry as well as a live one.
 
-### finkrit
+## finkrit 0.1.2 — 2026-07-27
 
-#### Added
+### Fixed
+- The wheel was missing three modules, so the installed command could not start.
+  `finagent/logging_model.py` is imported unconditionally by the assistant, and
+  0.1.1 shipped without it. `finagent/conversation.py` and
+  `finkritserver/conversations.py` were absent for the same reason. A test now
+  reads the wheel manifest and fails when a module exists on disk but is not
+  packaged.
+- The floor on finkritintel is now 0.1.1, the version that actually carries the
+  tax capability finagent imports. The looser pin would let a resolver install
+  0.1.0 and fail on that import.
+
+### Added
 - A tax specialist in the chat. Ask about unrealized gains, what is harvestable
   before year end, or how much of the portfolio qualifies for long term
   treatment. Reachable directly as agent 4 in the CLI (`-ag tax`) and through the
   orchestrator, which now fans a mixed question out across all four specialists.
   The specialist is read-only, it describes the tax position and never trades.
+- The chat remembers the conversation, so a follow up like "and how does that
+  compare" keeps its context. Threads are held per conversation id, bounded, and
+  can be reset.
+- Replies show which specialists answered them, read off the tools the
+  orchestrator actually called rather than anything the model claims.
+- The chat panel can be resized by dragging or with the arrow keys, and
+  remembers its width.
+
+### Changed
+- The dashboard type is now driven by a single root size rather than pixel
+  values spread across every component, and reads larger.
 
 ## finkrit 0.1.1 — 2026-07-26
 
