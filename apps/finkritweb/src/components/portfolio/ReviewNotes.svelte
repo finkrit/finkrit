@@ -19,7 +19,7 @@
 		border: 1px solid var(--primary-soft);
 		border-radius: var(--radius-sm);
 		padding: var(--space-3) var(--space-4);
-		font-size: 13px;
+		font-size: 0.8125rem;
 	}
 	.warn ul {
 		margin: var(--space-1) 0 0;

@@ -28,7 +28,7 @@
 		border: 1px solid transparent;
 		border-radius: var(--radius-sm);
 		padding: 8px 14px;
-		font-size: 13px;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		transition:
 			background 0.12s ease,

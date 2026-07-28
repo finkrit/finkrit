@@ -23,7 +23,7 @@
 		background: var(--surface);
 		border: 1px solid var(--border);
 		border-radius: var(--radius);
-		padding: var(--space-5);
+		padding: var(--space-4);
 		min-width: 0;
 		/* Size the value against the card, not the viewport, so it shrinks to
 		   fit when the column narrows (chat open) instead of truncating. */
@@ -34,14 +34,17 @@
 		border-color: var(--primary-soft);
 	}
 	.label {
-		font-size: 12px;
+		font-size: 0.75rem;
 		font-weight: 600;
 		letter-spacing: 0.03em;
 		text-transform: uppercase;
 		color: var(--text-faint);
 	}
 	.value {
-		font-size: clamp(20px, 9.5cqi, 30px);
+		/* Deliberately below the old ceiling. These are reference figures on a
+		   dense dashboard, not a hero number, and at the larger root size they
+		   were dominating the holdings they are meant to summarize. */
+		font-size: clamp(17px, 7cqi, 23px);
 		font-weight: 660;
 		letter-spacing: -0.015em;
 		font-variant-numeric: tabular-nums;
@@ -53,7 +56,7 @@
 	   normal ink. In a markets UI green means gains, and cost basis is a
 	   neutral figure. Reserve green and red for actual P&L and return. */
 	.sub {
-		font-size: 12.5px;
+		font-size: 0.7812rem;
 		color: var(--text-faint);
 	}
 </style>

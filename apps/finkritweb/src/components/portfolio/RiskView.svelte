@@ -61,7 +61,7 @@
 	}
 	h1 {
 		margin: 0 0 var(--space-5);
-		font-size: 22px;
+		font-size: 1.375rem;
 		font-weight: 650;
 		letter-spacing: -0.01em;
 	}
@@ -75,6 +75,6 @@
 	}
 	.muted {
 		color: var(--text-faint);
-		font-size: 13px;
+		font-size: 0.8125rem;
 	}
 </style>

@@ -19,7 +19,7 @@
 <form class="input" onsubmit={submit}>
 	<input type="text" bind:value={text} {placeholder} />
 	<button type="submit" class="send" disabled={!text.trim() || chat.sending} aria-label="Send">
-		<Icon name="send" size={16} />
+		<Icon name="send" size={18} />
 	</button>
 </form>
 
@@ -31,7 +31,9 @@
 		background: var(--surface);
 		border: 1px solid var(--border-strong);
 		border-radius: 999px;
-		padding: 6px 6px 6px var(--space-4);
+		/* Roomier than the rest of the UI on purpose: this is the primary input
+		   of the product, and a cramped one reads as an afterthought. */
+		padding: 8px 8px 8px var(--space-5);
 		box-shadow: var(--shadow-sm);
 	}
 	.input:focus-within {
@@ -43,7 +45,7 @@
 		border: none;
 		outline: none;
 		background: transparent;
-		font-size: 14px;
+		font-size: 1.0625rem;
 		color: var(--text);
 	}
 	.send {
@@ -51,8 +53,8 @@
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		width: 32px;
-		height: 32px;
+		width: 38px;
+		height: 38px;
 		border: none;
 		border-radius: 999px;
 		background: var(--primary);

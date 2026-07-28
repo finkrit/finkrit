@@ -22,18 +22,18 @@
 		padding: var(--space-4);
 	}
 	.label {
-		font-size: 11.5px;
+		font-size: 0.7188rem;
 		font-weight: 600;
 		color: var(--text-faint);
 	}
 	.value {
-		font-size: 24px;
+		font-size: 1.5rem;
 		font-weight: 650;
 		letter-spacing: -0.01em;
 		font-variant-numeric: tabular-nums;
 	}
 	.sub {
-		font-size: 11.5px;
+		font-size: 0.7188rem;
 		color: var(--text-faint);
 	}
 </style>

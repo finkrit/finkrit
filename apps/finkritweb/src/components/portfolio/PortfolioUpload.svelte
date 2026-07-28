@@ -127,11 +127,11 @@
 	}
 	.lead {
 		font-weight: 600;
-		font-size: 16.5px;
+		font-size: 1.0312rem;
 	}
 	.sub {
 		color: var(--text-faint);
-		font-size: 13.5px;
+		font-size: 0.8438rem;
 	}
 	input {
 		display: none;
@@ -139,6 +139,6 @@
 	.error {
 		margin-top: var(--space-3);
 		color: var(--danger);
-		font-size: 14px;
+		font-size: 0.875rem;
 	}
 </style>

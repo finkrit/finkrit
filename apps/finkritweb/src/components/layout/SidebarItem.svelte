@@ -38,7 +38,7 @@
 		border-radius: var(--radius-sm);
 		padding: 8px var(--space-2);
 		color: var(--text-muted);
-		font-size: 13.5px;
+		font-size: 0.8438rem;
 		font-weight: 450;
 		text-align: left;
 	}

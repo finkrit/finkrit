@@ -50,7 +50,7 @@
 	th {
 		padding: 0 var(--space-3) var(--space-3) 0;
 		border-bottom: 1px solid var(--border-strong);
-		font-size: 12px;
+		font-size: 0.75rem;
 		font-weight: 600;
 		letter-spacing: 0.03em;
 		text-transform: uppercase;

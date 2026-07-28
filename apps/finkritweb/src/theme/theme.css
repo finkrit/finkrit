@@ -77,6 +77,19 @@
 	box-sizing: border-box;
 }
 
+/*
+ * TYPE SCALE — the one place to change how big everything reads.
+ *
+ * Every font-size in the app is expressed in rem, which is relative to this
+ * root size, so raising it scales the whole interface at once. It used to be
+ * hardcoded px everywhere, which meant "make the text bigger" was a change to
+ * thirty files. 18px reads comfortably on a dense dashboard at laptop size,
+ * the browser default of 16px was leaving it cramped.
+ */
+html {
+	font-size: 18px;
+}
+
 html,
 body {
 	margin: 0;
@@ -88,7 +101,7 @@ body {
 	color: var(--text);
 	background: var(--bg);
 	-webkit-font-smoothing: antialiased;
-	font-size: 15.5px;
+	font-size: 0.9688rem;
 	line-height: 1.55;
 }
 

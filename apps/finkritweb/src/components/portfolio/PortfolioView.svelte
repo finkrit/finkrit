@@ -75,7 +75,7 @@
 					</Button>
 				</div>
 			{:else}
-				<p class="saved">✓ Saved. Ask about its risk in chat, or open the Risk view.</p>
+				<p class="saved">✓ Saved. Explore and ask questions about this portfolio.</p>
 			{/if}
 		</div>
 	{/if}
@@ -93,7 +93,7 @@
 	}
 	h1 {
 		margin: 0;
-		font-size: 27px;
+		font-size: 1.6875rem;
 		font-weight: 650;
 		letter-spacing: -0.015em;
 	}
@@ -101,7 +101,7 @@
 		background: transparent;
 		border: none;
 		color: var(--primary);
-		font-size: 14px;
+		font-size: 0.875rem;
 	}
 	.reupload:hover {
 		text-decoration: underline;
@@ -114,11 +114,11 @@
 	.stack {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-6);
+		gap: var(--space-5);
 	}
 	.name {
 		display: block;
-		font-size: 13px;
+		font-size: 0.8125rem;
 		color: var(--text-muted);
 	}
 	.name input {
@@ -129,7 +129,7 @@
 		border: 1px solid var(--border-strong);
 		border-radius: var(--radius-sm);
 		padding: 9px 12px;
-		font-size: 15px;
+		font-size: 0.9375rem;
 		font-family: inherit;
 	}
 	.name input:focus {
@@ -142,7 +142,7 @@
 	.top {
 		display: grid;
 		grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-		gap: var(--space-6);
+		gap: var(--space-5);
 		align-items: start;
 	}
 	@media (max-width: 1080px) {
@@ -162,11 +162,11 @@
 	.saved {
 		margin: 0;
 		color: var(--positive);
-		font-size: 14px;
+		font-size: 0.875rem;
 	}
 	.error {
 		color: var(--danger);
-		font-size: 14px;
+		font-size: 0.875rem;
 		margin: 0;
 	}
 </style>

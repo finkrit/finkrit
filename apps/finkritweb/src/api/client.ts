@@ -111,10 +111,18 @@ export const api = {
 			asJson<PortfolioRiskReport>(r)
 		),
 
-	ask: (question: string) =>
+	// Pass the conversationId returned by the previous turn to keep the thread,
+	// which is what makes a follow-up like "and how does that compare?" work.
+	// Omit it to start fresh, the server then issues a new id.
+	ask: (question: string, conversationId?: string) =>
 		fetch('/api/ask', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ question })
-		}).then((r) => asJson<{ answer: string }>(r))
+			body: JSON.stringify({ question, conversation_id: conversationId ?? null })
+		}).then((r) =>
+			asJson<{ answer: string; conversation_id: string; specialists: string[] }>(r)
+		),
+
+	resetConversation: (conversationId: string) =>
+		fetch(`/api/ask/${conversationId}/reset`, { method: 'POST' })
 };

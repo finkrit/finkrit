@@ -75,7 +75,7 @@
 		display: inline-flex;
 		align-items: center;
 		gap: var(--space-2);
-		font-size: 13.5px;
+		font-size: 0.8438rem;
 	}
 	.dot {
 		width: 10px;

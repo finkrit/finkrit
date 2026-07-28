@@ -72,7 +72,7 @@
 		border-top: 1px solid var(--border);
 		border-radius: var(--radius-sm);
 		color: var(--text-muted);
-		font-size: 13px;
+		font-size: 0.8125rem;
 	}
 	.theme-toggle:hover {
 		background: var(--surface-2);

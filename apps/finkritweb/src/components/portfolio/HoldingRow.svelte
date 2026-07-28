@@ -56,9 +56,9 @@
 
 <style>
 	td {
-		padding: 13px var(--space-3) 13px 0;
+		padding: 9px var(--space-3) 9px 0;
 		border-bottom: 1px solid var(--border);
-		font-size: 15px;
+		font-size: 0.9375rem;
 		vertical-align: middle;
 	}
 	.num {
@@ -76,7 +76,7 @@
 	}
 	.note {
 		margin-left: var(--space-2);
-		font-size: 10.5px;
+		font-size: 0.6562rem;
 		font-weight: 600;
 		text-transform: uppercase;
 		letter-spacing: 0.02em;
@@ -96,7 +96,7 @@
 		gap: var(--space-3);
 	}
 	.pct {
-		font-size: 13.5px;
+		font-size: 0.8438rem;
 		color: var(--text-muted);
 		font-variant-numeric: tabular-nums;
 		min-width: 46px;
@@ -110,7 +110,7 @@
 		border: 1px solid var(--border);
 		border-radius: var(--radius-xs);
 		padding: 5px 8px;
-		font-size: 13px;
+		font-size: 0.8125rem;
 		font-family: inherit;
 	}
 	.cell:focus {
@@ -125,7 +125,7 @@
 		background: transparent;
 		border: none;
 		color: var(--text-faint);
-		font-size: 18px;
+		font-size: 1.125rem;
 		line-height: 1;
 		padding: 0 6px;
 	}

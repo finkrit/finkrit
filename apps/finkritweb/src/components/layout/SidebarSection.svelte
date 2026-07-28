@@ -43,7 +43,7 @@
 		border: none;
 		padding: 6px var(--space-2);
 		color: var(--text-faint);
-		font-size: 11px;
+		font-size: 0.6875rem;
 		font-weight: 600;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;

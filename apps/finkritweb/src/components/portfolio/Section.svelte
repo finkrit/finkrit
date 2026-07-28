@@ -31,14 +31,14 @@
 	}
 	h2 {
 		margin: 0;
-		font-size: 14px;
+		font-size: 0.875rem;
 		font-weight: 600;
 		letter-spacing: 0.03em;
 		text-transform: uppercase;
 		color: var(--text-muted);
 	}
 	.hint {
-		font-size: 13px;
+		font-size: 0.8125rem;
 		color: var(--text-faint);
 	}
 </style>
