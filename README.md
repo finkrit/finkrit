@@ -85,6 +85,54 @@ switches to live market data:
 finkrit cli --file my_holdings.csv
 ```
 
+### Try it on the bundled example
+
+No file of your own yet? `example` loads a sample that ships with finkrit, so
+this works straight after install:
+
+```bash
+finkrit cli --file example
+```
+
+It is a twelve position portfolio built from sixteen tax lots, formatted the way
+a custodian actually exports: dollar signs, quoted thousands separators, and
+`MM/DD/YYYY` dates. Three names were bought more than once, which is the part
+worth paying attention to.
+
+Ask it this:
+
+> Which of my lots are sitting at a loss, and what could I harvest?
+
+AAPL is the case the whole lot-level design exists for. It is one holding of 180
+shares, and as a single blended position its cost basis is $27,431.50, about
+$152.40 a share. At that average the position looks like a straightforward
+winner and there is nothing to harvest. But it is really three purchases:
+
+| Lot | Quantity | Cost / share | Acquired |
+| - | - | - | - |
+| 1 | 100 | $120.40 | 2021-05-12 |
+| 2 | 50 | $180.15 | 2023-03-09 |
+| 3 | 30 | $212.80 | 2024-06-03 |
+
+The 2024 lot cost nearly twice what the 2021 lot did. Whenever AAPL trades
+between those two numbers, that third lot is underwater while the position as a
+whole is up, and it is harvestable even though the holding is profitable.
+Averaging the lots together makes that loss invisible. UNH has the same shape at
+$412.60 against $492.30, and MSFT at $238.60 against $362.45.
+
+Those cost figures come from the file and never change. What the lots are worth
+today depends on live prices, so the answer moves with the market.
+
+Worth also trying:
+
+> How much of this portfolio qualifies for long term treatment?
+
+> What is my volatility, and which holding contributes most to it?
+
+The second one fans out to more than one specialist. In the dashboard you can
+click each specialist's name on the reply to see exactly what it returned before
+the answers were combined.
+
 A CSV file has one row per tax lot, with four columns: ticker, quantity, cost
 per share, and acquired date. For example:
 

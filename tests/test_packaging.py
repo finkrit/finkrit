@@ -84,6 +84,19 @@ def test_every_subpackage_is_packaged(package_dir: Path, dist_name: str):
     )
 
 
+def test_the_example_portfolio_is_packaged():
+    # `finkrit cli --file example` reads this out of the installed package. It is
+    # data rather than a module, so the two guards above cannot see it, and a
+    # missing file surfaces only when a new user runs the one command the README
+    # tells them to run first.
+    included = _force_included()
+    assert "packages/finagent/examples" in included, (
+        "the bundled example portfolio is not in the wheel manifest, so "
+        "`finkrit cli --file example` would fail on a pip install"
+    )
+    assert (REPO_ROOT / "packages" / "finagent" / "examples" / "portfolio.csv").is_file()
+
+
 def test_tests_are_not_packaged():
     # The reason the manifest enumerates instead of including the package whole.
     included = _force_included()

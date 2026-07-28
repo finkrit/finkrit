@@ -208,6 +208,27 @@ def make_fake_portfolio(portfolio_id: str = DEFAULT_PORTFOLIO_ID) -> Portfolio:
     return Portfolio(id=portfolio_id, name="Demo Portfolio", positions=positions)
 
 
+# `--file example` loads the bundled sample instead of a path. Installing from
+# PyPI leaves a user with nothing to point --file at, and hand authoring a CSV
+# before you can see anything is a poor first five minutes. The file ships
+# inside the package so this resolves the same way from a source checkout and
+# from a wheel.
+EXAMPLE = "example"
+
+
+def example_portfolio_path() -> str:
+    """Filesystem path to the bundled example portfolio."""
+    from importlib.resources import files
+
+    path = files("finagent") / "examples" / "portfolio.csv"
+    if not path.is_file():
+        raise ValueError(
+            "The bundled example portfolio is missing from this install. "
+            "Pass a path to your own CSV with --file instead."
+        )
+    return str(path)
+
+
 # Column names a brokerage export might use, matched case-insensitively. Module
 # level rather than inline so the README's table can be checked against them:
 # these grow every time a real export turns up a new spelling, and the docs are
@@ -340,8 +361,9 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "-f", "--file", dest="file", default=None,
-        help="path to a portfolio CSV (ticker, quantity, cost, acquired). Left "
-             "off, a seeded fake portfolio is used. With a file, live prices are used.",
+        help="path to a portfolio CSV (ticker, quantity, cost, acquired), or "
+             "'example' for the bundled multi-lot sample. Left off, a seeded fake "
+             "portfolio is used. With a file, live prices are used.",
     )
     parser.add_argument(
         "--key", dest="key", default=None,
@@ -383,9 +405,10 @@ def main(argv: list[str] | None = None) -> None:
     # A file means a real portfolio with live prices. No file means the seeded
     # offline demo. The two data sources are not mixed.
     if args.file:
-        portfolio = _load_portfolio_from_csv(args.file)
+        path = example_portfolio_path() if args.file == EXAMPLE else args.file
+        portfolio = _load_portfolio_from_csv(path)
         registry = _real_registry()
-        source = f"live data, {args.file}"
+        source = f"live data, {path}"
     else:
         portfolio = make_fake_portfolio()
         registry = _registry()

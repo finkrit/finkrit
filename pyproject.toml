@@ -79,6 +79,10 @@ packages = ["finkrit"]
 "packages/finagent/ingest.py" = "finagent/ingest.py"
 "packages/finagent/logging_model.py" = "finagent/logging_model.py"
 "packages/finagent/adapter" = "finagent/adapter"
+# Data, not code, so the module guard in tests/test_packaging.py does not cover
+# it. `finkrit cli --file example` resolves through importlib.resources and
+# fails at runtime if this is dropped, which is why that test has its own case.
+"packages/finagent/examples" = "finagent/examples"
 "packages/finagent/agent" = "finagent/agent"
 "packages/finagent/report" = "finagent/report"
 "packages/finagent/store" = "finagent/store"
