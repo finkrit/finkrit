@@ -19,11 +19,17 @@ from finagent.store import DEFAULT_PORTFOLIO_ID
 
 
 class HoldingSpec(BaseModel):
-    """One line item in a portfolio: a ticker with a quantity and a cost basis.
+    """One tax lot: a ticker with a quantity, a cost basis, and the date it was
+    acquired.
+
+    One row is one lot, not one holding. Repeat a ticker to describe a position
+    built from several purchases, which is how a brokerage export reads and what
+    the tax analytics need in order to have lots to choose between.
+    `portfolio.build_portfolio` groups rows by instrument into a single Position.
+
     Ownership details (custodian, account, registration) are omitted, since they
-    are irrelevant to risk and performance analysis and belong to the RIA layer,
-    not finq. One tax lot per holding for now (v1). Revisit if tax-lot features
-    need per-lot detail within a single request."""
+    are irrelevant to risk and performance analysis and belong to the
+    proprietary layer, not finq."""
 
     ticker: str
     quantity: float = Field(gt=0)

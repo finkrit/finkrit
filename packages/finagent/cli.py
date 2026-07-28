@@ -229,21 +229,51 @@ def _load_portfolio_from_csv(path: str, portfolio_id: str = DEFAULT_PORTFOLIO_ID
                     continue
         return date(2022, 1, 3)
 
-    positions = []
+    def number(value: str | None, default: str = "0") -> str:
+        # Real exports format money, not bare numbers: "$1,234.56", a trailing
+        # space, sometimes parentheses for a negative. Strip the presentation so
+        # Decimal sees a plain figure.
+        if not value:
+            return default
+        cleaned = value.strip().replace(",", "").replace("$", "").replace("%", "")
+        if cleaned.startswith("(") and cleaned.endswith(")"):
+            cleaned = "-" + cleaned[1:-1]
+        return cleaned or default
+
+    # One row is one tax lot. A ticker bought several times appears on several
+    # rows, and those become several lots under one position, which is what the
+    # tax analytics need in order to have lots to choose between. Insertion
+    # ordered, so positions keep the order the file listed them in.
+    lots_by_ticker: dict[str, list[TaxLot]] = {}
     with open(path, newline="") as handle:
         for i, row in enumerate(csv.DictReader(handle)):
             ticker = pick(row, ("ticker", "symbol"))
             if not ticker:
                 continue
-            quantity = pick(row, ("quantity", "shares", "qty", "units"), "0").replace(",", "")
-            cost = pick(row, ("cost_per_share", "cost basis / share", "cost basis",
-                              "avg cost", "cost", "price", "price paid"), "0").replace(",", "")
+            ticker = ticker.upper()
+            quantity = number(pick(row, ("quantity", "shares", "qty", "units")))
+            # Per share cost only. A total cost column is deliberately not in this
+            # list, since dividing it needs the quantity and the header names are
+            # too close to risk guessing wrong.
+            cost = number(pick(row, (
+                "cost_per_share", "cost per share", "cost/share", "cost basis / share",
+                "cost basis per share", "price per share", "cost basis", "avg cost",
+                "average cost basis", "cost", "price", "price paid",
+            )))
             acquired = parse_date(pick(row, ("acquired", "date acquired", "purchase date", "date")))
-            stock = Stock(ticker=ticker.upper(), currency=Currency.USD,
-                          exchange=Exchange.NASDAQ, company_name=f"{ticker.upper()} Corp")
             lot = TaxLot(id=f"lot-{i}", quantity=Decimal(quantity),
                          cost_per_share=Decimal(cost), acquired=acquired)
-            positions.append(Position(id=f"pos-{i}", asset=stock, lots=(lot,)))
+            lots_by_ticker.setdefault(ticker, []).append(lot)
+
+    positions = [
+        Position(
+            id=f"pos-{index}",
+            asset=Stock(ticker=ticker, currency=Currency.USD,
+                        exchange=Exchange.NASDAQ, company_name=f"{ticker} Corp"),
+            lots=tuple(lots),
+        )
+        for index, (ticker, lots) in enumerate(lots_by_ticker.items())
+    ]
     if not positions:
         raise ValueError(
             f"No holdings found in {path}. Expect columns like ticker, quantity, cost, acquired."

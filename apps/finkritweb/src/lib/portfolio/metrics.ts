@@ -36,18 +36,64 @@ export function weightedHoldings(holdings: HoldingDraft[]): WeightedHolding[] {
 	});
 }
 
+/**
+ * Collapse tax lots into one row per instrument.
+ *
+ * A row in the upload is one lot, not one holding, so buying the same ticker
+ * three times gives three rows. Anything that talks about the PORTFOLIO rather
+ * than about individual purchases (the allocation bar, the position count, the
+ * largest holding) has to aggregate first, otherwise one ticker shows up as
+ * several slices and the counts read as more positions than are actually held.
+ *
+ * Cost per share becomes the quantity weighted average across the lots, which
+ * is the blended basis. The individual lots are still what the tax analytics
+ * use, this is only for display.
+ */
+export function aggregateByTicker(holdings: HoldingDraft[]): WeightedHolding[] {
+	const byTicker = new Map<string, WeightedHolding & { lots: number }>();
+
+	for (const holding of holdings) {
+		// Same ticker on a different exchange or in a different currency is a
+		// different instrument, so it is keyed separately.
+		const key = `${holding.ticker}|${holding.exchange ?? ''}|${holding.currency ?? ''}`;
+		const cb = costBasis(holding);
+		const existing = byTicker.get(key);
+		if (!existing) {
+			byTicker.set(key, { ...holding, costBasis: cb, weight: 0, lots: 1 });
+			continue;
+		}
+		existing.quantity += holding.quantity;
+		existing.costBasis += cb;
+		existing.lots += 1;
+		existing.cost_per_share = existing.quantity > 0 ? existing.costBasis / existing.quantity : 0;
+		// Show the position as first acquired, which is what the holding period
+		// reads from.
+		if (holding.acquired && (!existing.acquired || holding.acquired < existing.acquired)) {
+			existing.acquired = holding.acquired;
+		}
+	}
+
+	const rows = [...byTicker.values()];
+	const total = rows.reduce((sum, r) => sum + r.costBasis, 0);
+	return rows.map((r) => ({ ...r, weight: total > 0 ? r.costBasis / total : 0 }));
+}
+
 export function overview(holdings: HoldingDraft[]): PortfolioOverview {
-	const rows = weightedHoldings(holdings);
+	// Aggregated, because these describe the portfolio rather than individual
+	// purchases. Counting rows would report a ticker bought three times as three
+	// positions, and the largest holding would be the largest single lot.
+	const rows = aggregateByTicker(holdings);
 	const total = rows.reduce((sum, r) => sum + r.costBasis, 0);
 	const currencies = new Set(holdings.map((h) => h.currency ?? 'USD'));
-	// ISO dates sort correctly as plain strings, so no Date parsing needed.
+	// ISO dates sort correctly as plain strings, so no Date parsing needed. Taken
+	// from the lots, so the span covers the first and last purchase.
 	const dates = holdings.map((h) => h.acquired).filter(Boolean).sort();
 	const largest = rows.reduce<WeightedHolding | null>(
 		(top, r) => (top && top.costBasis >= r.costBasis ? top : r),
 		null
 	);
 	return {
-		count: holdings.length,
+		count: rows.length,
 		totalCostBasis: total,
 		currency: currencies.size === 1 ? [...currencies][0] : 'USD',
 		mixedCurrency: currencies.size > 1,

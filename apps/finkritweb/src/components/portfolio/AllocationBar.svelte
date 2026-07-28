@@ -3,12 +3,15 @@
 	// (one accent plus greys): the largest slice is the full accent, each smaller
 	// slice a step lighter, rather than a rainbow. Sorted largest first so the
 	// bar and legend read top down.
-	import { weightedHoldings } from '$lib/portfolio/metrics';
+	import { aggregateByTicker } from '$lib/portfolio/metrics';
 	import { percent } from '$lib/format';
 	import { portfolio } from '$stores/portfolio.svelte';
 
+	// Aggregated by instrument, since a row is a tax lot. A ticker bought three
+	// times is one slice at its combined weight, not three slices, and the keys
+	// below stay unique.
 	const rows = $derived(
-		[...weightedHoldings(portfolio.holdings)].sort((a, b) => b.weight - a.weight)
+		[...aggregateByTicker(portfolio.holdings)].sort((a, b) => b.weight - a.weight)
 	);
 
 	// A graduated scale from deep emerald (largest holding) to pale (smallest),
@@ -25,7 +28,7 @@
 {#if rows.length > 0}
 	<div class="alloc">
 		<div class="bar">
-			{#each rows as row, i (row.ticker)}
+			{#each rows as row, i (row.ticker + row.exchange + row.currency)}
 				<div
 					class="seg"
 					style:width={percent(row.weight, 2)}
@@ -35,7 +38,7 @@
 			{/each}
 		</div>
 		<ul class="legend">
-			{#each rows as row, i (row.ticker)}
+			{#each rows as row, i (row.ticker + row.exchange + row.currency)}
 				<li>
 					<span class="dot" style:background={shade(i, rows.length)}></span>
 					<span class="tk">{row.ticker}</span>

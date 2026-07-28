@@ -85,14 +85,22 @@ switches to live market data:
 finkrit cli --file my_holdings.csv
 ```
 
-A CSV file has one row per holding, with four columns: ticker, quantity, cost
+A CSV file has one row per tax lot, with four columns: ticker, quantity, cost
 per share, and acquired date. For example:
 
 | ticker | quantity | cost_per_share | acquired |
 | - | - | - | - |
-| AAPL | 180 | 142.35 | 2021-05-12 |
+| AAPL | 100 | 120.00 | 2021-05-12 |
+| AAPL | 50 | 180.00 | 2023-03-09 |
 | MSFT | 95 | 238.60 | 2021-02-18 |
 | NVDA | 140 | 168.20 | 2023-03-09 |
+
+**Repeat a ticker for each time you bought it.** AAPL above is one holding of
+150 shares made of two lots, and they stay separate all the way through. That
+matters for tax, because a position can be up overall while individual lots are
+underwater, and those are the ones worth harvesting. Blending them into one
+average cost hides exactly the losses you are looking for. Buy once and a single
+row is all you need.
 
 Column names are matched case-insensitively against common aliases, so a
 typical brokerage export loads without renaming anything:

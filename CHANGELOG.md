@@ -9,6 +9,20 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 
 ## [Unreleased]
 
+### finkrit
+
+#### Added
+- A portfolio can hold several tax lots per ticker. A CSV row is now one lot, so
+  repeating a ticker describes a position built from several purchases, which is
+  how a brokerage export reads. Each lot keeps its own cost and acquisition date
+  through the upload, the chat CLI, and the analytics.
+
+#### Fixed
+- Harvesting and the holding period split now see the individual lots. Every
+  holding used to collapse to a single blended lot, which hid underwater lots
+  behind a position that was up overall, so the losses actually worth harvesting
+  never showed up.
+
 ## finkritintel 0.1.1 — 2026-07-27
 
 ### Added
