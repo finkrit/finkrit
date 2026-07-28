@@ -29,7 +29,10 @@ classifiers = [
 # Contracts over finkritq. Deliberately pydantic-free and agent-framework
 # agnostic, so numpy and finkritq are the only runtime needs.
 dependencies = [
-    "finkritq>=0.1",
+    # 0.1.2 dropped the NaN yfinance row that nulled out every risk metric. The
+    # tax and risk bindings here compute straight off those numbers, so a looser
+    # floor would let a resolver install a finkritq that silently returns nulls.
+    "finkritq>=0.1.2",
     "numpy>=2.0",
 ]
 

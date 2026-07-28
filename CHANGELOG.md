@@ -9,9 +9,9 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 
 ## [Unreleased]
 
-### finkritq
+## finkritq 0.2.0 — 2026-07-28
 
-#### Changed
+### Changed
 - `LotSaleMethod` moves to `finkritq.datatype`, where the other method enums
   live, and is importable from there. The old
   `finkritq.optimize.lotselection.LotSaleMethod` path still works.
@@ -19,11 +19,12 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   `finkritq.anal.performance`, beside the two functions that consume its output.
   It converts one representation into another rather than naming a concept, so
   it is a transform and that package holds vocabulary. `CashFlow` itself stays.
-  **Breaking** for anyone importing it from `finkritq.datatype`.
+  **Breaking** for anyone importing it from `finkritq.datatype`. The minor
+  version carries it, since under semantic versioning a 0.x break bumps there.
 
-### finkrit
+## finkrit 0.1.3 — 2026-07-28
 
-#### Added
+### Added
 - A portfolio can hold several tax lots per ticker. A CSV row is now one lot, so
   repeating a ticker describes a position built from several purchases, which is
   how a brokerage export reads. Each lot keeps its own cost and acquisition date
@@ -33,14 +34,13 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   per share, and expands from the chevron or the ticker to show each purchase
   with its own cost, date, and share of the position. One control in the header
   opens or closes every position at once.
-
 - The specialist pills on a reply are now clickable. Opening one shows the
   sub-question the orchestrator handed that specialist and the answer it gave
   back, verbatim, so a combined reply can be checked against what each domain
   actually said rather than taken on faith. Read off the agent run, not off the
   final text.
 
-#### Fixed
+### Fixed
 - The README, which is the PyPI page, had gone stale: it said three specialists
   when there are four, offered `-ag 0|1|2|3` with no tax agent, and listed half
   the CSV column names the loader accepts. A test now reads the agent registry
