@@ -109,7 +109,7 @@ typical brokerage export loads without renaming anything:
 | - | - |
 | Ticker | `ticker`, `symbol` |
 | Quantity | `quantity`, `shares`, `qty`, `units` |
-| Cost per share | `cost_per_share`, `cost basis / share`, `cost basis`, `avg cost`, `cost`, `price`, `price paid` |
+| Cost per share | `cost_per_share`, `cost per share`, `cost/share`, `cost basis / share`, `cost basis per share`, `price per share`, `cost basis`, `avg cost`, `average cost basis`, `cost`, `price`, `price paid` |
 | Acquired | `acquired`, `date acquired`, `purchase date`, `date` |
 
 Dates accept `YYYY-MM-DD`, `MM/DD/YYYY`, `MM/DD/YY`, or `DD-MM-YYYY`. Commas in
@@ -124,14 +124,14 @@ review, so almost any layout works there.
 ```
 -f, --file PATH    load a portfolio CSV, uses live prices
 --ai openai        provider shortcut or a full provider:name string
--ag 0|1|2|3        router, risk, optimization, performance
+-ag 0|1|2|3|4      router, risk, optimization, performance, tax
 --key sk-...       the LLM key
 --quiet            hide the live tool-call trace
 ```
 
 ### The agents
 
-Under the chat sit four agents, three specialists and a router. Each specialist
+Under the chat sit five agents, four specialists and a router. Each specialist
 owns one domain and only that domain's tools.
 
 | Agent | Answers | Covers |
@@ -139,6 +139,7 @@ owns one domain and only that domain's tools.
 | Risk | how risky, what could be lost | volatility, variance, semivariance, downside deviation, drawdown and maximum drawdown, value at risk and conditional VaR, beta, and each holding's marginal and component contribution to risk |
 | Performance | how it has done | total return, annualized return, and the risk-adjusted Sharpe, Sortino, and Calmar ratios |
 | Optimization | what to hold | the minimum-variance and maximum-Sharpe target weights, long only. Proposed allocations, never trades |
+| Tax | what the IRS sees | unrealized gains and losses per lot, tax-loss harvesting candidates net of the wash sale window, and the long versus short term split. Read only, describes the tax position and never trades |
 | Orchestrator | anything, mixed | reads the question, calls whichever specialists can answer, and combines their replies into one |
 
 Target a single specialist with `-ag`, by number or by name:
@@ -149,7 +150,7 @@ finkrit cli -ag performance      # same as -ag 3
 finkrit cli --agent optimization
 ```
 
-Numbers are `0` router, `1` risk, `2` optimization, `3` performance. Left off,
+Numbers are `0` router, `1` risk, `2` optimization, `3` performance, `4` tax. Left off,
 the CLI shows a menu. A single specialist is the direct path, the model sees
 only that domain's tools and answers with no routing overhead, so pick one when
 you already know the domain.
@@ -158,7 +159,7 @@ you already know the domain.
 tools each hand a focused sub-question to one specialist. It reads your question,
 decides which specialists it needs, calls them (one or several), and synthesizes
 a single answer. So a mixed question in one message, for example "what is my
-volatility, my annualized return, and the optimal weights?", fans out to all
+volatility, my annualized return, and the optimal weights?", fans out to those
 three and comes back combined. It never invents or alters a number, it reports
 only what a specialist returned. The tradeoff is one extra model loop around the
 specialists it invokes, which is why a single specialist is cheaper when the

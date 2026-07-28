@@ -23,6 +23,11 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   opens or closes every position at once.
 
 #### Fixed
+- The README, which is the PyPI page, had gone stale: it said three specialists
+  when there are four, offered `-ag 0|1|2|3` with no tax agent, and listed half
+  the CSV column names the loader accepts. A test now reads the agent registry
+  and the alias tables out of the code and fails the suite when the README
+  disagrees, so the published description cannot silently drift again.
 - Harvesting and the holding period split now see the individual lots. Every
   holding used to collapse to a single blended lot, which hid underwater lots
   behind a position that was up overall, so the losses actually worth harvesting

@@ -208,6 +208,29 @@ def make_fake_portfolio(portfolio_id: str = DEFAULT_PORTFOLIO_ID) -> Portfolio:
     return Portfolio(id=portfolio_id, name="Demo Portfolio", positions=positions)
 
 
+# Column names a brokerage export might use, matched case-insensitively. Module
+# level rather than inline so the README's table can be checked against them:
+# these grow every time a real export turns up a new spelling, and the docs are
+# what a user reads before deciding whether their file will load.
+#
+# The cost list is per share only. A total cost column is deliberately absent,
+# since dividing it needs the quantity and the header names sit too close
+# together ("Cost Per Share" next to "Cost Basis Total") to risk guessing wrong.
+CSV_ALIASES: dict[str, tuple[str, ...]] = {
+    "ticker": ("ticker", "symbol"),
+    "quantity": ("quantity", "shares", "qty", "units"),
+    "cost_per_share": (
+        "cost_per_share", "cost per share", "cost/share", "cost basis / share",
+        "cost basis per share", "price per share", "cost basis", "avg cost",
+        "average cost basis", "cost", "price", "price paid",
+    ),
+    "acquired": ("acquired", "date acquired", "purchase date", "date"),
+}
+
+# Accepted date layouts, in the order they are tried. "iso" is YYYY-MM-DD.
+CSV_DATE_FORMATS: tuple[str, ...] = ("iso", "%m/%d/%Y", "%m/%d/%y", "%d-%m-%Y")
+
+
 def _load_portfolio_from_csv(path: str, portfolio_id: str = DEFAULT_PORTFOLIO_ID) -> Portfolio:
     """Build a portfolio from a CSV. Recognizes common column names for ticker,
     quantity, cost per share, and acquired date, so a typical brokerage export
@@ -222,7 +245,7 @@ def _load_portfolio_from_csv(path: str, portfolio_id: str = DEFAULT_PORTFOLIO_ID
 
     def parse_date(value: str | None) -> date:
         if value:
-            for fmt in ("iso", "%m/%d/%Y", "%m/%d/%y", "%d-%m-%Y"):
+            for fmt in CSV_DATE_FORMATS:
                 try:
                     return date.fromisoformat(value) if fmt == "iso" else datetime.strptime(value, fmt).date()
                 except ValueError:
@@ -247,20 +270,13 @@ def _load_portfolio_from_csv(path: str, portfolio_id: str = DEFAULT_PORTFOLIO_ID
     lots_by_ticker: dict[str, list[TaxLot]] = {}
     with open(path, newline="") as handle:
         for i, row in enumerate(csv.DictReader(handle)):
-            ticker = pick(row, ("ticker", "symbol"))
+            ticker = pick(row, CSV_ALIASES["ticker"])
             if not ticker:
                 continue
             ticker = ticker.upper()
-            quantity = number(pick(row, ("quantity", "shares", "qty", "units")))
-            # Per share cost only. A total cost column is deliberately not in this
-            # list, since dividing it needs the quantity and the header names are
-            # too close to risk guessing wrong.
-            cost = number(pick(row, (
-                "cost_per_share", "cost per share", "cost/share", "cost basis / share",
-                "cost basis per share", "price per share", "cost basis", "avg cost",
-                "average cost basis", "cost", "price", "price paid",
-            )))
-            acquired = parse_date(pick(row, ("acquired", "date acquired", "purchase date", "date")))
+            quantity = number(pick(row, CSV_ALIASES["quantity"]))
+            cost = number(pick(row, CSV_ALIASES["cost_per_share"]))
+            acquired = parse_date(pick(row, CSV_ALIASES["acquired"]))
             lot = TaxLot(id=f"lot-{i}", quantity=Decimal(quantity),
                          cost_per_share=Decimal(cost), acquired=acquired)
             lots_by_ticker.setdefault(ticker, []).append(lot)
