@@ -125,21 +125,51 @@ class TestSpecialistsReported:
     def test_reports_the_specialists_in_call_order(self):
         chat = _assistant(self._fan_out).conversation()
         chat.ask("volatility and harvesting please")
-        assert chat.last_specialists == ["risk", "tax"]
+        assert chat.last_specialist_names == ["risk", "tax"]
 
     def test_is_empty_when_a_specialist_is_threaded_directly(self):
         # No orchestrator means no fan out to report.
         chat = _assistant(_echo_visible_turns).conversation(agent="risk")
         chat.ask("volatility")
         assert chat.last_specialists == []
+        assert chat.last_specialist_names == []
 
     def test_resets_between_turns(self):
         chat = _assistant(self._fan_out).conversation()
         chat.ask("first")
-        assert chat.last_specialists == ["risk", "tax"]
+        assert chat.last_specialist_names == ["risk", "tax"]
         # The second turn's list must describe that turn, not accumulate.
         chat.ask("second")
-        assert chat.last_specialists == ["risk", "tax"]
+        assert chat.last_specialist_names == ["risk", "tax"]
+
+    def test_carries_each_specialist_sub_question_and_answer(self):
+        # The point of showing the work: the reply the specialist actually gave,
+        # paired with the sub-question it was handed, so a user can check the
+        # combined answer against it rather than trust it.
+        chat = _assistant(self._fan_out).conversation()
+        chat.ask("volatility and harvesting please")
+
+        assert [(s.name, s.question) for s in chat.last_specialists] == [
+            ("risk", "vol"), ("tax", "harvest"),
+        ]
+        assert all(s.answer for s in chat.last_specialists)
+
+    def test_a_specialist_called_twice_is_one_pill_but_two_answers(self):
+        # Two sub-questions to one specialist are two different answers worth
+        # reading, and one name worth showing.
+        def twice(messages, info):
+            if len(messages) == 1:
+                return ModelResponse(parts=[
+                    ToolCallPart(tool_name="ask_risk", args={"question": "vol"}),
+                    ToolCallPart(tool_name="ask_risk", args={"question": "drawdown"}),
+                ])
+            return ModelResponse(parts=[TextPart("combined")])
+
+        chat = _assistant(twice).conversation()
+        chat.ask("volatility and drawdown")
+
+        assert chat.last_specialist_names == ["risk"]
+        assert [s.question for s in chat.last_specialists] == ["vol", "drawdown"]
 
 
 class TestTrimming:

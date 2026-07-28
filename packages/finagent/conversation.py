@@ -25,9 +25,15 @@ conversation the user actually had.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
-from pydantic_ai.messages import ModelMessage, ToolCallPart, UserPromptPart
+from pydantic_ai.messages import (
+    ModelMessage,
+    ToolCallPart,
+    ToolReturnPart,
+    UserPromptPart,
+)
 
 from finagent.deps import AgentDeps
 
@@ -67,17 +73,62 @@ def _turn_starts(messages: list[ModelMessage]) -> list[int]:
     ]
 
 
-def _specialists_called(messages: list[ModelMessage]) -> list[str]:
-    """Names of the specialists the orchestrator delegated to in these messages,
-    in call order and without repeats."""
-    called: list[str] = []
+@dataclass(frozen=True, slots=True)
+class SpecialistAnswer:
+    """One specialist's own reply, before the orchestrator folded it into the
+    combined answer."""
+
+    name: str        # risk, performance, optimization, tax
+    question: str    # the sub-question the orchestrator handed it
+    answer: str      # what it returned, verbatim
+
+
+def _specialists_called(messages: list[ModelMessage]) -> list[SpecialistAnswer]:
+    """Each specialist the orchestrator delegated to, with the sub-question it
+    was given and the answer it gave, in call order.
+
+    Read off the run rather than off the final text. The orchestrator is told
+    never to alter a specialist's numbers, but "told not to" is not a guarantee,
+    and the point of showing the work is to let a user check the combined answer
+    against what the specialist actually said. Only the transcript can do that.
+
+    A call is matched to its return by tool_call_id, since a fan out issues
+    several calls before any of them come back and position is not reliable. A
+    call whose return never arrived (the run stopped early, the tool raised) is
+    dropped, because a specialist with no answer has nothing to show.
+    """
+    asked: dict[str, tuple[str, str]] = {}   # call id -> (specialist, sub-question)
+    order: list[str] = []                    # call ids, in the order issued
+    returned: dict[str, str] = {}            # call id -> answer
+
     for message in messages:
         for part in getattr(message, "parts", []):
             if isinstance(part, ToolCallPart):
                 name = SPECIALIST_TOOLS.get(part.tool_name)
-                if name is not None and name not in called:
-                    called.append(name)
-    return called
+                if name is None:
+                    continue
+                asked[part.tool_call_id] = (name, _sub_question(part))
+                order.append(part.tool_call_id)
+            elif isinstance(part, ToolReturnPart) and part.tool_call_id in asked:
+                returned[part.tool_call_id] = str(part.content)
+
+    return [
+        SpecialistAnswer(name=asked[call_id][0], question=asked[call_id][1],
+                         answer=returned[call_id])
+        for call_id in order
+        if call_id in returned
+    ]
+
+
+def _sub_question(part: ToolCallPart) -> str:
+    # Every ask_* tool takes a single question argument. args_as_dict raises on
+    # malformed JSON from the model, which must not take down a reply that
+    # otherwise succeeded, so a bad payload just yields no sub-question.
+    try:
+        args = part.args_as_dict()
+    except Exception:
+        return ""
+    return str(args.get("question", ""))
 
 
 def trim_to_turns(messages: list[ModelMessage], max_turns: int) -> list[ModelMessage]:
@@ -115,7 +166,7 @@ class Conversation:
         self._deps = deps
         self._max_turns = max_turns
         self._messages: list[ModelMessage] = []
-        self._last_specialists: list[str] = []
+        self._last_specialists: list[SpecialistAnswer] = []
 
     @property
     def _current_deps(self) -> AgentDeps:
@@ -146,11 +197,21 @@ class Conversation:
         return result.output
 
     @property
-    def last_specialists(self) -> list[str]:
-        """Which specialists answered the most recent question, in the order the
-        orchestrator called them. Empty when a specialist was threaded directly,
-        since there is no fan out to report in that case."""
+    def last_specialists(self) -> list[SpecialistAnswer]:
+        """What each specialist said on the most recent question, in the order
+        the orchestrator called them. Empty when a specialist was threaded
+        directly, since there is no fan out to report in that case."""
         return list(self._last_specialists)
+
+    @property
+    def last_specialist_names(self) -> list[str]:
+        """Just the names, deduped. The pills above a reply, where the same
+        specialist called twice should still read as one."""
+        seen: list[str] = []
+        for answer in self._last_specialists:
+            if answer.name not in seen:
+                seen.append(answer.name)
+        return seen
 
     def _absorb(self, result: Any) -> None:
         # all_messages() is the prior history plus this turn, which is exactly

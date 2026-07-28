@@ -68,13 +68,27 @@ class AskRequest(BaseModel):
     conversation_id: str | None = None
 
 
+class SpecialistAnswer(BaseModel):
+    """One specialist's own reply, before it was folded into the combined answer."""
+
+    name: str        # risk, performance, optimization, tax
+    question: str    # the sub-question the orchestrator handed it
+    answer: str      # what it returned, verbatim
+
+
 class AskResponse(BaseModel):
     answer: str
     # Always populated, including for a request that omitted it. The client
     # stores it and echoes it back on the next question.
     conversation_id: str
     # Which specialists answered, in call order (risk, performance, optimization,
-    # tax). The UI shows these so a user can see which domains were consulted
-    # rather than take a combined answer on faith. Empty when the orchestrator
-    # answered without delegating.
+    # tax), deduped. The UI shows these as pills so a user can see which domains
+    # were consulted rather than take a combined answer on faith. Empty when the
+    # orchestrator answered without delegating.
     specialists: list[str] = []
+    # The same fan out with each specialist's verbatim reply, read off the run
+    # rather than off the final text. Lets the UI show the work: open the
+    # disclosure and see exactly what the tax specialist said, and check the
+    # combined answer against it. Not deduped, since one specialist asked two
+    # different sub-questions gave two different answers.
+    specialist_answers: list[SpecialistAnswer] = []

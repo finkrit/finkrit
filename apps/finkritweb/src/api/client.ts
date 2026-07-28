@@ -21,6 +21,15 @@ export interface HoldingDraft {
 
 export type ParsedHolding = HoldingDraft;
 
+/** One specialist's own reply, before the orchestrator folded it into the
+ *  combined answer. Read off the agent run rather than off the final text, so
+ *  it is what the specialist actually said and can be checked against. */
+export interface SpecialistAnswer {
+	name: string; // risk, performance, optimization, tax
+	question: string; // the sub-question the orchestrator handed it
+	answer: string;
+}
+
 export interface ParsedPortfolio {
 	name: string;
 	holdings: ParsedHolding[];
@@ -120,7 +129,12 @@ export const api = {
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ question, conversation_id: conversationId ?? null })
 		}).then((r) =>
-			asJson<{ answer: string; conversation_id: string; specialists: string[] }>(r)
+			asJson<{
+				answer: string;
+				conversation_id: string;
+				specialists: string[];
+				specialist_answers: SpecialistAnswer[];
+			}>(r)
 		),
 
 	resetConversation: (conversationId: string) =>

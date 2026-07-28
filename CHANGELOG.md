@@ -34,6 +34,12 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   with its own cost, date, and share of the position. One control in the header
   opens or closes every position at once.
 
+- The specialist pills on a reply are now clickable. Opening one shows the
+  sub-question the orchestrator handed that specialist and the answer it gave
+  back, verbatim, so a combined reply can be checked against what each domain
+  actually said rather than taken on faith. Read off the agent run, not off the
+  final text.
+
 #### Fixed
 - The README, which is the PyPI page, had gone stale: it said three specialists
   when there are four, offered `-ag 0|1|2|3` with no tax agent, and listed half

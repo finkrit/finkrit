@@ -137,6 +137,23 @@ class TestAsk:
         assert r.status_code == 200
         assert "volatility" in r.json()["answer"].lower()
 
+    def test_ask_reports_which_specialists_answered(self, client: TestClient, portfolio_payload: dict):
+        assert client.post("/api/portfolio", json=portfolio_payload).status_code == 200
+        body = client.post("/api/ask", json={"question": "What's my volatility?"}).json()
+        assert body["specialists"] == ["risk"]
+
+    def test_ask_carries_each_specialist_verbatim_answer(self, client: TestClient, portfolio_payload: dict):
+        # Showing the work: the UI opens a pill onto what that specialist
+        # actually returned, so it has to survive the whole way out to JSON and
+        # not just exist on the Conversation.
+        assert client.post("/api/portfolio", json=portfolio_payload).status_code == 200
+        body = client.post("/api/ask", json={"question": "What's my volatility?"}).json()
+
+        fan_out = body["specialist_answers"]
+        assert [s["name"] for s in fan_out] == ["risk"]
+        assert fan_out[0]["question"] == "What is the volatility?"
+        assert fan_out[0]["answer"], "the specialist's own reply must not be empty"
+
     def test_ask_rejects_empty_question(self, client: TestClient):
         assert client.post("/api/ask", json={"question": ""}).status_code == 422
 

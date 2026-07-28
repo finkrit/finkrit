@@ -1,7 +1,7 @@
 // Chat state — a single reactive instance shared across every component that
 // imports it. The right panel opens on the first message and stays until
 // closed; the dock at the bottom is what's visible while it's closed.
-import { api, ApiError } from '$api/client';
+import { api, ApiError, type SpecialistAnswer } from '$api/client';
 
 export type ChatMessage = {
 	role: 'user' | 'assistant';
@@ -10,6 +10,11 @@ export type ChatMessage = {
 	// fan out is visible rather than implied. Absent on user messages and on
 	// answers the orchestrator gave without delegating.
 	specialists?: string[];
+	// The same fan out with each specialist's verbatim reply. A pill opens to
+	// show it, so the combined answer can be checked against what the specialist
+	// actually said instead of taken on faith. Longer than `specialists` when one
+	// specialist was asked two different sub-questions.
+	specialistAnswers?: SpecialistAnswer[];
 };
 
 // Panel width bounds. Wide enough to read a paragraph, capped so the portfolio
@@ -77,12 +82,17 @@ class ChatState {
 		this.messages.push({ role: 'user', text: question });
 		this.sending = true;
 		try {
-			const { answer, conversation_id, specialists } = await api.ask(
+			const { answer, conversation_id, specialists, specialist_answers } = await api.ask(
 				question,
 				this.conversationId
 			);
 			this.conversationId = conversation_id;
-			this.messages.push({ role: 'assistant', text: answer, specialists });
+			this.messages.push({
+				role: 'assistant',
+				text: answer,
+				specialists,
+				specialistAnswers: specialist_answers
+			});
 		} catch (err) {
 			const text = err instanceof ApiError ? err.message : 'Something went wrong.';
 			this.messages.push({ role: 'assistant', text });

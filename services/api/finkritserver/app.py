@@ -34,6 +34,7 @@ from finkritserver.portfolio import build_portfolio
 from finkritserver.schemas import (
     AskRequest,
     AskResponse,
+    SpecialistAnswer,
     PortfolioRegistered,
     PortfolioSpec,
     PortfolioSummary,
@@ -144,10 +145,15 @@ def create_app(
         conversation_id, thread = conversations.get_or_create(req.conversation_id)
         try:
             answer = await thread.ask_async(req.question)
+            fan_out = getattr(thread, "last_specialists", [])
             return AskResponse(
                 answer=answer,
                 conversation_id=conversation_id,
-                specialists=getattr(thread, "last_specialists", []),
+                specialists=getattr(thread, "last_specialist_names", []),
+                specialist_answers=[
+                    SpecialistAnswer(name=s.name, question=s.question, answer=s.answer)
+                    for s in fan_out
+                ],
             )
         except (PortfolioNotFoundError, AssetNotFoundError) as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
