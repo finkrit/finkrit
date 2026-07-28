@@ -56,7 +56,19 @@ class PortfolioSummary(BaseModel):
 
 class AskRequest(BaseModel):
     question: str = Field(min_length=1)
+    # Omit on the first message and the server starts a thread and returns its
+    # id. Send that id back on later messages to keep the context, which is what
+    # makes a follow-up like "and how does that compare?" work.
+    conversation_id: str | None = None
 
 
 class AskResponse(BaseModel):
     answer: str
+    # Always populated, including for a request that omitted it. The client
+    # stores it and echoes it back on the next question.
+    conversation_id: str
+    # Which specialists answered, in call order (risk, performance, optimization,
+    # tax). The UI shows these so a user can see which domains were consulted
+    # rather than take a combined answer on faith. Empty when the orchestrator
+    # answered without delegating.
+    specialists: list[str] = []

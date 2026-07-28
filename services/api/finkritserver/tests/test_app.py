@@ -10,16 +10,27 @@ from finagent.store import PortfolioNotFoundError
 from finkritserver.app import create_app
 
 
+class _RaisingConversation:
+    """Stands in for a threaded conversation and always fails."""
+
+    def __init__(self, exc: Exception) -> None:
+        self._exc = exc
+
+    async def ask_async(self, question: str) -> str:
+        raise self._exc
+
+
 class _RaisingAssistant(Assistant):
     """An Assistant whose chat path always raises, to drive the /ask error
-    branches. Constructed keyless (no model), route_async never reaches an LLM."""
+    branches. Constructed keyless (no model), so nothing reaches an LLM. The
+    endpoint asks through a Conversation, so that is what is stubbed."""
 
     def __init__(self, exc: Exception) -> None:
         super().__init__()
         self._exc = exc
 
-    async def route_async(self, question: str) -> str:
-        raise self._exc
+    def conversation(self, agent=None, max_turns=None):  # noqa: ARG002 - signature match
+        return _RaisingConversation(self._exc)
 
 
 class TestHealth:
@@ -134,6 +145,38 @@ class TestAsk:
         app = create_app(_RaisingAssistant(PortfolioNotFoundError("portfolio 'x' not found")), static_dir=None)
         r = TestClient(app).post("/api/ask", json={"question": "What's my volatility?"})
         assert r.status_code == 404
+
+    def test_ask_issues_a_conversation_id(self, client: TestClient, portfolio_payload: dict):
+        client.post("/api/portfolio", json=portfolio_payload)
+        body = client.post("/api/ask", json={"question": "What's my volatility?"}).json()
+        assert body["conversation_id"]
+
+    def test_same_conversation_id_keeps_the_thread(self, client: TestClient, portfolio_payload: dict):
+        # The point of the feature: a follow-up must arrive with the prior turns.
+        client.post("/api/portfolio", json=portfolio_payload)
+        first = client.post("/api/ask", json={"question": "What's my volatility?"}).json()
+        cid = first["conversation_id"]
+        second = client.post(
+            "/api/ask", json={"question": "and my drawdown?", "conversation_id": cid}
+        ).json()
+        assert second["conversation_id"] == cid
+
+    def test_omitting_the_id_starts_a_separate_thread(self, client: TestClient, portfolio_payload: dict):
+        client.post("/api/portfolio", json=portfolio_payload)
+        first = client.post("/api/ask", json={"question": "What's my volatility?"}).json()
+        second = client.post("/api/ask", json={"question": "What's my volatility?"}).json()
+        assert first["conversation_id"] != second["conversation_id"]
+
+    def test_reset_forgets_the_thread(self, client: TestClient, portfolio_payload: dict):
+        client.post("/api/portfolio", json=portfolio_payload)
+        cid = client.post("/api/ask", json={"question": "What's my volatility?"}).json()[
+            "conversation_id"
+        ]
+        assert client.post(f"/api/ask/{cid}/reset").status_code == 204
+
+    def test_reset_of_an_unknown_id_is_a_no_op(self, client: TestClient):
+        # The desired end state (no history under that id) already holds.
+        assert client.post("/api/ask/does-not-exist/reset").status_code == 204
 
     def test_ask_agent_failure_is_502(self):
         # An agent run failure (LLM/provider error, usage limit, exhausted retry)

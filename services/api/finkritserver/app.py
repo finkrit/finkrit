@@ -29,6 +29,7 @@ from finagent.ingest import ParsedPortfolio
 from finagent.report import PortfolioRiskReport
 from finagent.store import AssetNotFoundError, PortfolioNotFoundError
 
+from finkritserver.conversations import ConversationRegistry
 from finkritserver.portfolio import build_portfolio
 from finkritserver.schemas import (
     AskRequest,
@@ -62,6 +63,10 @@ def create_app(
     static_dir: Path | None = DEFAULT_STATIC_DIR,
 ) -> FastAPI:
     app = FastAPI(title="finkrit", version="0.1.0")
+
+    # One registry per app, holding the live chat threads keyed by conversation
+    # id. Bounded and in memory, see finkritserver.conversations.
+    conversations = ConversationRegistry(assistant)
 
     app.add_middleware(
         CORSMiddleware,
@@ -131,16 +136,19 @@ def create_app(
 
     @app.post("/api/ask", response_model=AskResponse)
     async def ask(req: AskRequest) -> AskResponse:
-        # Route through the orchestrator, not a single specialist. The dashboard
-        # chat takes free-form questions spanning risk, performance, and
-        # allocation, so it must reach every specialist. ask_async defaults to the
-        # risk agent alone, which has no return tools, so a performance question
-        # there dead-ends with a truthful but useless refusal. The orchestrator
-        # fans out to risk, performance, and optimization and combines them, at
-        # the cost of one extra routing loop per question.
+        # Threaded through a Conversation so follow-up questions keep their
+        # context. The thread runs the orchestrator rather than a single
+        # specialist: the dashboard takes free-form questions spanning risk,
+        # performance, allocation, and tax, so it must reach every specialist.
+        # A bare specialist would dead-end on anything outside its own domain.
+        conversation_id, thread = conversations.get_or_create(req.conversation_id)
         try:
-            answer = await assistant.route_async(req.question)
-            return AskResponse(answer=answer)
+            answer = await thread.ask_async(req.question)
+            return AskResponse(
+                answer=answer,
+                conversation_id=conversation_id,
+                specialists=getattr(thread, "last_specialists", []),
+            )
         except (PortfolioNotFoundError, AssetNotFoundError) as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         except AgentRunError as exc:
@@ -151,6 +159,12 @@ def create_app(
                 status_code=502,
                 detail=f"The assistant could not complete the request: {exc}",
             ) from exc
+
+    @app.post("/api/ask/{conversation_id}/reset", status_code=204)
+    def reset_conversation(conversation_id: str) -> None:
+        # Start over without reloading the page. Unknown ids are a no-op, since
+        # the desired end state (no history under that id) already holds.
+        conversations.reset(conversation_id)
 
     # Registered last: FastAPI/Starlette match routes in registration order,
     # so the literal /api/* routes above always match before this catch-all
