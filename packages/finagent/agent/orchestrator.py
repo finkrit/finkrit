@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from pydantic_ai import Agent, RunContext, models
+from pydantic_ai.agent import AgentRunResult
+from pydantic_ai.messages import ModelMessage
 
 from finagent.agent.base import DEFAULT_USAGE_LIMITS
 from finagent.agent.optimization import OptimizationAgent
@@ -118,15 +120,38 @@ class Orchestrator:
             self._agent = agent
         return self._agent
 
-    def ask(self, question: str, deps: AgentDeps) -> str:
+    # run/run_async return the full result, which carries the updated message
+    # history. Only the orchestrator's own messages are threaded, a specialist's
+    # internal loop happens inside a tool call and stays ephemeral, so history
+    # tracks the conversation the user actually had.
+
+    def run(
+        self,
+        question: str,
+        deps: AgentDeps,
+        message_history: list[ModelMessage] | None = None,
+    ) -> AgentRunResult:
         return self.agent.run_sync(
             question, deps=deps, usage_limits=self._usage_limits,
             event_stream_handler=deps.event_handler,
-        ).output
+            message_history=message_history,
+        )
 
-    async def ask_async(self, question: str, deps: AgentDeps) -> str:
-        result = await self.agent.run(
+    async def run_async(
+        self,
+        question: str,
+        deps: AgentDeps,
+        message_history: list[ModelMessage] | None = None,
+    ) -> AgentRunResult:
+        return await self.agent.run(
             question, deps=deps, usage_limits=self._usage_limits,
             event_stream_handler=deps.event_handler,
+            message_history=message_history,
         )
+
+    def ask(self, question: str, deps: AgentDeps) -> str:
+        return self.run(question, deps).output
+
+    async def ask_async(self, question: str, deps: AgentDeps) -> str:
+        result = await self.run_async(question, deps)
         return result.output

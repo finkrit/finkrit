@@ -17,6 +17,7 @@ from finagent.agent.orchestrator import Orchestrator
 from finagent.agent.performance import PerformanceAgent
 from finagent.agent.risk import RiskAgent
 from finagent.agent.tax import TaxAgent
+from finagent.conversation import DEFAULT_MAX_TURNS, Conversation
 from finagent.deps import AgentDeps
 from finagent.ingest import ParsedPortfolio, parse_portfolio_csv, parse_portfolio_csv_async
 from finagent.logging_model import wrap_model_for_logging
@@ -97,6 +98,24 @@ class Assistant:
 
     async def ask_async(self, question: str, agent: str = "risk") -> str:
         return await self._specialists[agent].ask_async(question, self.deps)
+
+    def conversation(self, agent: str | None = None, max_turns: int = DEFAULT_MAX_TURNS) -> Conversation:
+        """
+        A threaded, multi-turn exchange that remembers what came before, so
+        follow-up questions work.
+
+            chat = assistant.conversation()          # orchestrator, all domains
+            chat.ask("what is my volatility?")
+            chat.ask("and how does that compare to my drawdown?")
+
+        With no `agent` this threads the orchestrator, which is the right default
+        for open-ended chat. Naming a specialist (risk, performance,
+        optimization, tax) threads that one directly, cheaper when the domain is
+        known. `deps` is passed as a callable so the conversation always sees the
+        current store and registry.
+        """
+        runner = self.orchestrator if agent is None else self._specialists[agent]
+        return Conversation(runner, lambda: self.deps, max_turns=max_turns)
 
     def route(self, question: str) -> str:
         # The all-encompassing path: the orchestrator picks specialist(s) and

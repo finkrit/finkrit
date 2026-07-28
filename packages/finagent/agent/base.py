@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from pydantic_ai import Agent, models
+from pydantic_ai.agent import AgentRunResult
+from pydantic_ai.messages import ModelMessage
 from pydantic_ai.usage import UsageLimits
 
 from finkritintel.capability.base import Capability as FinkritCapability
@@ -64,16 +66,44 @@ class CapabilityAgent:
             )
         return self._agent
 
+    # run/run_async return the full pydantic-ai result, which carries the
+    # updated message history. Conversation uses these to thread a multi-turn
+    # exchange. ask/ask_async stay the simple surface and return just the answer.
+
+    def run(
+        self,
+        question: str,
+        deps: AgentDeps,
+        message_history: list[ModelMessage] | None = None,
+    ) -> AgentRunResult:
+        return self.agent.run_sync(
+            question, deps=deps, usage_limits=self._usage_limits,
+            event_stream_handler=deps.event_handler,
+            message_history=message_history,
+        )
+
+    async def run_async(
+        self,
+        question: str,
+        deps: AgentDeps,
+        message_history: list[ModelMessage] | None = None,
+    ) -> AgentRunResult:
+        return await self.agent.run(
+            question, deps=deps, usage_limits=self._usage_limits,
+            event_stream_handler=deps.event_handler,
+            message_history=message_history,
+        )
+
     def ask(self, question: str, deps: AgentDeps) -> str:
         """
         Synchronous conversational turn for usage in scripts, notebooks, the REPL.
         Spins up its own event loop under the hood (pydantic-ai run_sync).
         ``deps.event_handler``, if set, streams tool-call events live.
+
+        Single turn with no memory of previous ones. For a threaded exchange use
+        Conversation, which carries the message history across turns.
         """
-        return self.agent.run_sync(
-            question, deps=deps, usage_limits=self._usage_limits,
-            event_stream_handler=deps.event_handler,
-        ).output
+        return self.run(question, deps).output
 
     async def ask_async(self, question: str, deps: AgentDeps) -> str:
         """
@@ -83,8 +113,5 @@ class CapabilityAgent:
         here, the risk tools it calls remain sync and are threadpooled by
         pydantic-ai.)
         """
-        result = await self.agent.run(
-            question, deps=deps, usage_limits=self._usage_limits,
-            event_stream_handler=deps.event_handler,
-        )
+        result = await self.run_async(question, deps)
         return result.output
