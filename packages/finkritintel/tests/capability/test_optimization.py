@@ -23,12 +23,17 @@ class TestOptimizationCapability:
         assert OPTIMIZATION_CAPABILITY.description
 
     def test_holds_tool_bindings(self):
-        assert len(OPTIMIZATION_CAPABILITY.tools) == 2
+        assert len(OPTIMIZATION_CAPABILITY.tools) == 4
         assert all(isinstance(tool, ToolBinding) for tool in OPTIMIZATION_CAPABILITY.tools)
 
     def test_expected_tool_names(self):
         names = {tool.contract.name for tool in OPTIMIZATION_CAPABILITY.tools}
-        assert names == {"optimize_minimum_variance", "optimize_maximum_sharpe"}
+        assert names == {
+            "optimize_minimum_variance",
+            "optimize_maximum_sharpe",
+            "portfolio_tax_aware_rebalance",
+            "portfolio_rebalance_compare",
+        }
 
     def test_no_duplicate_contract_names(self):
         names = [tool.contract.name for tool in OPTIMIZATION_CAPABILITY.tools]

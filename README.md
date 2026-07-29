@@ -186,7 +186,7 @@ owns one domain and only that domain's tools.
 | - | - | - |
 | Risk | how risky, what could be lost | volatility, variance, semivariance, downside deviation, drawdown and maximum drawdown, value at risk and conditional VaR, beta, and each holding's marginal and component contribution to risk |
 | Performance | how it has done | total return, annualized return, and the risk-adjusted Sharpe, Sortino, and Calmar ratios |
-| Optimization | what to hold | the minimum-variance and maximum-Sharpe target weights, long only. Proposed allocations, never trades |
+| Optimization | what to hold | the minimum-variance and maximum-Sharpe target weights, long only, and a tax-aware rebalance plan toward them: sells chosen drift first, lots picked to minimize the gain, capped by a capital gains budget. Can compare strategies side by side, selling fully to target, only to the band edge, or partially filling to exactly spend the budget, each with its tax cost and remaining drift. Proposed allocations and plans, never trades |
 | Tax | what the IRS sees | unrealized gains and losses per lot, tax-loss harvesting candidates net of the wash sale window, and the long versus short term split. Read only, describes the tax position and never trades |
 | Orchestrator | anything, mixed | reads the question, calls whichever specialists can answer, and combines their replies into one |
 

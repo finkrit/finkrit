@@ -9,6 +9,50 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 
 ## [Unreleased]
 
+### finkritq
+
+#### Added
+- Two ways to spend less tax on the same rebalance, both composable with the
+  gain budget. `RebalanceSizing.TO_BAND_EDGE` sells only the excess beyond the
+  tolerance band instead of the full drift (and refuses to run without a band,
+  since the edge would be the target). Partial fill scales a budget-breaching
+  sell down to a prefix of its lot order that exactly exhausts the remaining
+  gain room, instead of deferring it whole, built on a new
+  `select_lots_to_sell_within_gain` that never realizes lots out of the
+  elected order.
+- Every tax rebalance plan now reports `residual_drift`, the overweight still
+  held after its sells. It is the tracking cost a plan paid for its tax bill,
+  which is what makes plans with different strategies comparable.
+- `compare_rebalance_strategies` runs the same rebalance under the named
+  strategy menu (full, band_edge, partial_fill) with everything else held
+  constant, returning the plans side by side.
+
+### finkritintel
+
+#### Added
+- A tax-aware rebalance tool on the optimization capability, the composition
+  the tax contracts pointed at. It computes target weights from the chosen
+  objective (minimum variance or maximum Sharpe), then realizes the overweight
+  sells drift first under a capital gains budget: losses always, gains until
+  the budget, the rest deferred and named. Lots are picked by sale method,
+  HIFO by default, sized to target or to the band edge, with optional partial
+  fills that spend the budget to the dollar. The whole chain runs in code, the
+  model supplies only the knobs and narrates the plan. Proposes, never trades.
+- A strategy comparison tool that runs the same rebalance under the fixed
+  three-strategy menu and returns the plans side by side, each with its
+  realized gain, harvested loss, and residual drift, so the tradeoff between
+  tax cost and remaining drift is visible in one table.
+
+### finkrit
+
+#### Added
+- The optimization specialist can propose tax-aware rebalancing. Ask what
+  rebalancing would cost in tax, or what a given gain budget buys, and it
+  reports the plan with the realized gain split long versus short term and
+  the sells a bigger budget would unlock. Ask to weigh options and it lays the
+  three strategies side by side with what each costs in tax and leaves in
+  drift.
+
 ## finkritq 0.2.0 — 2026-07-28
 
 ### Changed
