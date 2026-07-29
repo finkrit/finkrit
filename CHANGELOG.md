@@ -9,9 +9,9 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 
 ## [Unreleased]
 
-### finkritq
+## finkritq 0.3.0 — 2026-07-29
 
-#### Added
+### Added
 - Two ways to spend less tax on the same rebalance, both composable with the
   gain budget. `RebalanceSizing.TO_BAND_EDGE` sells only the excess beyond the
   tolerance band instead of the full drift (and refuses to run without a band,
@@ -27,9 +27,9 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   strategy menu (full, band_edge, partial_fill) with everything else held
   constant, returning the plans side by side.
 
-### finkritintel
+## finkritintel 0.2.0 — 2026-07-29
 
-#### Added
+### Added
 - A tax-aware rebalance tool on the optimization capability, the composition
   the tax contracts pointed at. It computes target weights from the chosen
   objective (minimum variance or maximum Sharpe), then realizes the overweight
@@ -43,9 +43,14 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   realized gain, harvested loss, and residual drift, so the tradeoff between
   tax cost and remaining drift is visible in one table.
 
-### finkrit
+## finkrit 0.1.4 — 2026-07-29
 
-#### Added
+### Added
+- An example portfolio ships with the package. `finkrit cli --file example`
+  loads a twelve position, sixteen lot sample shaped like a real custodian
+  export, so a fresh install has something to run against without authoring a
+  CSV first. The README walks through it, leading with the case a blended cost
+  basis hides.
 - The optimization specialist can propose tax-aware rebalancing. Ask what
   rebalancing would cost in tax, or what a given gain budget buys, and it
   reports the plan with the realized gain split long versus short term and
