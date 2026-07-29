@@ -46,6 +46,7 @@ from finkritq.optimize.lotselection import (
     RealizedLot,
     SaleResult,
     select_lots_to_sell,
+    select_lots_to_sell_within_gain,
 )
 from finkritq.optimize.harvest import (
     HarvestCandidate,
@@ -59,6 +60,8 @@ from finkritq.optimize.cashflow import (
 from finkritq.optimize.taxrebalance import (
     TaxRebalancePlan,
     TaxRebalanceSell,
+    REBALANCE_STRATEGIES,
+    compare_rebalance_strategies,
     tax_aware_rebalance,
     tax_aware_rebalance_to_policy,
 )
@@ -98,6 +101,7 @@ __all__ = [
     "RealizedLot",
     "SaleResult",
     "select_lots_to_sell",
+    "select_lots_to_sell_within_gain",
     # tax-loss harvesting
     "HarvestCandidate",
     "HarvestReport",
@@ -110,4 +114,6 @@ __all__ = [
     "TaxRebalanceSell",
     "tax_aware_rebalance",
     "tax_aware_rebalance_to_policy",
+    "compare_rebalance_strategies",
+    "REBALANCE_STRATEGIES",
 ]

@@ -8,6 +8,7 @@ from .market import Exchange, MarketIndex
 # import ReturnCalculationMethod` keeps working. The dependency points one way
 # (datatype -> transform), so there is no cycle.
 from finkritq.transform.returns import ReturnCalculationMethod
+from .rebalance import RebalanceSizing
 from .risk import VaREstimationMethod, WeightingBasis
 from .tax import LotSaleMethod
 from .pricehistory import PriceHistory
@@ -21,6 +22,7 @@ __all__ = [
     "MarketIndex",
     "ReturnCalculationMethod",
     "PriceHistory",
+    "RebalanceSizing",
     "VaREstimationMethod",
     "WeightingBasis",
 ]

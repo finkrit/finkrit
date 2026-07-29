@@ -148,3 +148,46 @@ class TestRebalanceToPolicy:
         trades = {t.asset.ticker: t for t in rebalance_to_policy(data, policy)}
         assert "AAA" not in trades              # buy suppressed
         assert trades["BBB"].is_buy is False    # overweight, sold
+
+
+class TestSizing:
+    """TO_TARGET vs TO_BAND_EDGE. 70/30 book against a 50/50 model at $10,000
+    total, so the AAA drift is 20 points = $2,000 of full trade."""
+
+    def _trades(self, tolerance, sizing):
+        from finkritq.datatype import RebalanceSizing  # noqa: F401 (import check)
+        data, s = _data({"AAA": "70", "BBB": "30"})
+        target = {s["AAA"]: 0.5, s["BBB"]: 0.5}
+        return {
+            t.asset.ticker: t
+            for t in rebalance_to_model(data, target, tolerance=tolerance, sizing=sizing)
+        }
+
+    def test_to_target_trades_the_full_drift_despite_a_band(self):
+        # The band is only a trigger: drift 20 > 5 trades, and trades all
+        # $2,000, landing on 50%, not at the band edge.
+        from finkritq.datatype import RebalanceSizing
+        trades = self._trades(0.05, RebalanceSizing.TO_TARGET)
+        assert np.isclose(trades["AAA"].trade_value, -2000.0)
+
+    def test_band_edge_trades_only_the_excess(self):
+        # Drift 20, band 5: sell 15 points = $1,500, landing at 55%, just
+        # inside the band. The buy side scales identically.
+        from finkritq.datatype import RebalanceSizing
+        trades = self._trades(0.05, RebalanceSizing.TO_BAND_EDGE)
+        assert np.isclose(trades["AAA"].trade_value, -1500.0)
+        assert np.isclose(trades["BBB"].trade_value, +1500.0)
+
+    def test_band_edge_without_a_band_is_rejected(self):
+        # tolerance 0 makes the edge the target, silently equal to TO_TARGET
+        # while claiming otherwise, so it raises instead.
+        import pytest
+        from finkritq.datatype import RebalanceSizing
+        with pytest.raises(ValueError, match="positive tolerance"):
+            self._trades(0.0, RebalanceSizing.TO_BAND_EDGE)
+
+    def test_default_sizing_is_to_target(self):
+        data, s = _data({"AAA": "70", "BBB": "30"})
+        target = {s["AAA"]: 0.5, s["BBB"]: 0.5}
+        by_default = {t.asset.ticker: t.trade_value for t in rebalance_to_model(data, target, tolerance=0.05)}
+        assert np.isclose(by_default["AAA"], -2000.0)

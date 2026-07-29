@@ -125,3 +125,118 @@ class TestTaxAwareRebalanceToPolicy:
         sold = {sell.asset for sell in plan.sells}
         assert s["AAA"] in sold
         assert s["CCC"] in plan.deferred
+
+
+class TestPartialFill:
+    """The two-gain book: AAA drift .2 (sell $1,800 = 20 sh, gain $800) and CCC
+    drift .1 (sell $900 = 10 sh, gain $400), total value $9,000, all gains at
+    $40/share. Budgets are chosen to land inside those figures."""
+
+    def _book(self):
+        data, ctx = _data({"AAA": ("50", "50"), "CCC": ("40", "50"), "BBB": ("10", "90")})
+        s = ctx["stocks"]
+        target = {s["AAA"]: 0.3, s["BBB"]: 0.4, s["CCC"]: 0.3}
+        return data, ctx, target, s
+
+    def test_partial_fill_exhausts_the_budget_exactly(self):
+        # Budget 1,000: AAA takes 800, CCC's 400 does not fit whole, so it
+        # fills 200/40 = 5 of its 10 requested shares and the budget lands on
+        # exactly zero remaining.
+        data, ctx, target, s = self._book()
+        plan = tax_aware_rebalance(data, target, ctx["prices"], _AS_OF,
+                                   gain_budget=1000.0, partial_fill=True)
+        assert plan.realized_gain == Decimal("1000")
+        assert plan.deferred == []
+        by_ticker = {sell.asset.ticker: sell for sell in plan.sells}
+        assert by_ticker["AAA"].is_partial is False
+        assert by_ticker["CCC"].is_partial is True
+        assert by_ticker["CCC"].sale.quantity_sold == Decimal("5")
+
+    def test_partial_fill_still_defers_when_not_one_share_fits(self):
+        # Budget 800: AAA consumes it to the dollar, CCC faces zero room
+        # against a pure gain lot, so it defers whole rather than partially.
+        data, ctx, target, s = self._book()
+        plan = tax_aware_rebalance(data, target, ctx["prices"], _AS_OF,
+                                   gain_budget=800.0, partial_fill=True)
+        assert plan.realized_gain == Decimal("800")
+        assert plan.deferred == [s["CCC"]]
+        assert all(not sell.is_partial for sell in plan.sells)
+
+    def test_partial_fill_off_is_the_old_behavior(self):
+        data, ctx, target, s = self._book()
+        plan = tax_aware_rebalance(data, target, ctx["prices"], _AS_OF, gain_budget=1000.0)
+        assert plan.realized_gain == Decimal("800")
+        assert plan.deferred == [s["CCC"]]
+
+
+class TestResidualDrift:
+
+    def _book(self):
+        data, ctx = _data({"AAA": ("50", "50"), "CCC": ("40", "50"), "BBB": ("10", "90")})
+        s = ctx["stocks"]
+        target = {s["AAA"]: 0.3, s["BBB"]: 0.4, s["CCC"]: 0.3}
+        return data, ctx, target, s
+
+    def test_full_rebalance_leaves_no_residual(self):
+        data, ctx, target, _ = self._book()
+        plan = tax_aware_rebalance(data, target, ctx["prices"], _AS_OF)
+        assert abs(plan.residual_drift) < 1e-9
+
+    def test_a_deferral_leaves_its_whole_drift(self):
+        # CCC deferred means its .1 of overweight is still held.
+        data, ctx, target, _ = self._book()
+        plan = tax_aware_rebalance(data, target, ctx["prices"], _AS_OF, gain_budget=800.0)
+        assert abs(plan.residual_drift - 0.1) < 1e-9
+
+    def test_band_edge_leaves_the_tolerance_on_every_traded_name(self):
+        # Both names trade to the edge of a .05 band, leaving .05 each.
+        from finkritq.datatype import RebalanceSizing
+        data, ctx, target, _ = self._book()
+        plan = tax_aware_rebalance(data, target, ctx["prices"], _AS_OF,
+                                   tolerance=0.05, sizing=RebalanceSizing.TO_BAND_EDGE)
+        assert abs(plan.residual_drift - 0.1) < 1e-9
+
+    def test_a_partial_fill_leaves_the_unexecuted_remainder(self):
+        # CCC fills 5 of 10 shares, so half its .1 drift remains.
+        data, ctx, target, _ = self._book()
+        plan = tax_aware_rebalance(data, target, ctx["prices"], _AS_OF,
+                                   gain_budget=1000.0, partial_fill=True)
+        assert abs(plan.residual_drift - 0.05) < 1e-9
+
+
+class TestCompareStrategies:
+
+    def _run(self, gain_budget=1000.0, tolerance=0.05):
+        from finkritq.optimize import compare_rebalance_strategies
+        data, ctx = _data({"AAA": ("50", "50"), "CCC": ("40", "50"), "BBB": ("10", "90")})
+        s = ctx["stocks"]
+        target = {s["AAA"]: 0.3, s["BBB"]: 0.4, s["CCC"]: 0.3}
+        return compare_rebalance_strategies(
+            data, target, ctx["prices"], _AS_OF,
+            gain_budget=gain_budget, tolerance=tolerance,
+        )
+
+    def test_returns_every_named_strategy(self):
+        from finkritq.optimize import REBALANCE_STRATEGIES
+        plans = self._run()
+        assert set(plans) == set(REBALANCE_STRATEGIES)
+
+    def test_the_rows_tell_the_tradeoff_story(self):
+        # Same target, prices, and $1,000 budget across all three rows:
+        #   full:         AAA's 800 fits, CCC's 400 does not -> deferred.
+        #   band_edge:    smaller sells (600 + 200) all fit, tolerance remains.
+        #   partial_fill: AAA whole, CCC half, budget exhausted to the dollar.
+        plans = self._run()
+        assert plans["full"].realized_gain == Decimal("800")
+        assert abs(plans["full"].residual_drift - 0.1) < 1e-9
+        # Band edge dollar sizing runs through float scale factors, so the
+        # realized figure carries float noise where full/partial are exact.
+        assert abs(float(plans["band_edge"].realized_gain) - 800.0) < 1e-6
+        assert abs(plans["band_edge"].residual_drift - 0.1) < 1e-9
+        assert plans["partial_fill"].realized_gain == Decimal("1000")
+        assert abs(plans["partial_fill"].residual_drift - 0.05) < 1e-9
+
+    def test_rejects_a_zero_tolerance(self):
+        import pytest
+        with pytest.raises(ValueError, match="positive tolerance"):
+            self._run(tolerance=0.0)

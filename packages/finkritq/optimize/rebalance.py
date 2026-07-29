@@ -1,6 +1,6 @@
 # finkrit/packages/finkritq/optimize/rebalance.py
 """
-Rebalance a portfolio toward a target model, the way trading platforms do it:
+Rebalance a portfolio toward a target model:
 compare current weights to the model, and only trade assets whose *drift* exceeds
 a tolerance band, ranked by drift severity so the biggest offenders surface first.
 
@@ -14,6 +14,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from finkritq.asset import Asset
+from finkritq.datatype import RebalanceSizing
 from finkritq.policy import Policy, RestrictionKind
 from finkritq.portfolio import PortfolioData
 
@@ -39,22 +40,44 @@ class RebalanceTrade:
 def rebalance_to_model(
     portfolio_data: PortfolioData,
     target_weights: dict[Asset, float],
-    tolerance: float = 0.0,
+    tolerance: float = 0.0, # full rebalance as default (can be expensive, should have bands to minimize selling/buying)
+    sizing: RebalanceSizing = RebalanceSizing.TO_TARGET,
 ) -> list[RebalanceTrade]:
     """
     Trades to move the portfolio from its current weights toward ``target_weights``.
 
-    ``tolerance`` is the drift band (as a weight fraction, e.g. 0.05 = 5%): an
-    asset is traded only if ``abs(current - target) > tolerance``. With
-    ``tolerance = 0`` this is a full rebalance to the exact model. An asset in the
-    model but not held is a buy (current 0), an asset held but not in the model is
-    a full sell (target 0).
+    Two independent decisions per asset, each with its own parameter.
+    ``tolerance`` decides WHETHER an asset trades: it is the drift band (a
+    weight fraction, 0.05 = 5%), and an asset trades only when
+    ``abs(current - target) > tolerance``. ``sizing`` decides WHERE a triggered
+    trade lands, on the model weight or just inside the band. An asset in the
+    model but not held is a buy (current 0), an asset held but not in the model
+    is a sell toward 0, both subject to the same two decisions.
 
-    Trades bring the asset all the way to its target (not just to the band edge),
-    which is the common "rebalance to target" convention. Dollar sizing uses the
-    portfolio's current total market value. Returned sorted by drift severity, so
-    the most out-of-line positions come first (drift-based trade scoring).
+    TO_TARGET, the default, covers the full drift. Target 20%, current 27%,
+    tolerance 5%: drift is 7 points, outside the band, so the asset sells all
+    7 points and lands on 20%. The band gates the trade, it never shrinks it.
+
+    TO_BAND_EDGE trades only the excess beyond the band: the same example sells
+    2 points and lands at 25%, just inside. Less selling per event, at the cost
+    of parking at the boundary where any wiggle re-triggers. Band edge without
+    a band is meaningless (the edge IS the target at tolerance 0), so that
+    combination raises rather than silently behaving like TO_TARGET while
+    claiming otherwise. The other parked sizing idea, partially filling sells
+    to exactly exhaust a tax budget, is not a geometry and lives in the tax
+    layer's budget loop instead.
+
+    Only ``tolerance = 0`` with TO_TARGET is a full rebalance to the exact
+    model. Dollar sizing uses the portfolio's current total market value.
+    Returned sorted by drift severity, so the most out-of-line positions come
+    first (drift-based trade scoring).
     """
+    if sizing is RebalanceSizing.TO_BAND_EDGE and tolerance <= 0.0:
+        raise ValueError(
+            "TO_BAND_EDGE sizing needs a positive tolerance: with no band there "
+            "is no edge to trade to. Set a tolerance (e.g. 0.02) or use TO_TARGET."
+        )
+
     total_value = float(portfolio_data.value[-1])
     current = portfolio_data.weights  # dict[Asset, float], sums to 1
 
@@ -68,13 +91,21 @@ def rebalance_to_model(
         if abs(drift) <= tolerance:
             continue
 
+        # TO_TARGET covers the full drift. TO_BAND_EDGE covers only the excess
+        # beyond the band, scaling the dollar amount by the fraction of the
+        # drift that sits outside it. Applies to buys and sells alike, an
+        # underweight is topped up only to the band edge too.
+        scale = 1.0
+        if sizing is RebalanceSizing.TO_BAND_EDGE:
+            scale = (abs(drift) - tolerance) / abs(drift)
+
         trades.append(
             RebalanceTrade(
                 asset=asset,
                 current_weight=current_weight,
                 target_weight=target_weight,
                 drift=drift,
-                trade_value=(target_weight - current_weight) * total_value,
+                trade_value=(target_weight - current_weight) * total_value * scale,
             )
         )
 

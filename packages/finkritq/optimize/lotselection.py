@@ -27,7 +27,13 @@ from finkritq.portfolio import Position, TaxLot
 # ReturnCalculationMethod is: that trick relies on transform/returns.py
 # importing nothing from finkritq, while this module needs portfolio, which
 # needs datatype.
-__all__ = ["LotSaleMethod", "RealizedLot", "SaleResult", "select_lots_to_sell"]
+__all__ = [
+    "LotSaleMethod",
+    "RealizedLot",
+    "SaleResult",
+    "select_lots_to_sell",
+    "select_lots_to_sell_within_gain",
+]
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,15 +116,7 @@ def select_lots_to_sell(
         cost = take * lot.cost_per_share
         is_long_term = lot.is_long_term(as_of)
 
-        realized.append(
-            RealizedLot(
-                lot=lot,
-                quantity_sold=take,
-                proceeds=proceeds,
-                cost_basis=cost,
-                is_long_term=is_long_term,
-            )
-        )
+        realized.append(RealizedLot(lot=lot, quantity_sold=take,proceeds=proceeds, cost_basis=cost, is_long_term=is_long_term))
         gain = proceeds - cost
         if is_long_term:
             long_term += gain
@@ -131,6 +129,88 @@ def select_lots_to_sell(
     return SaleResult(
         realized_lots=realized,
         quantity_sold=quantity,
+        proceeds=total_proceeds,
+        cost_basis=total_cost,
+        short_term_gain=short_term,
+        long_term_gain=long_term,
+    )
+
+
+def select_lots_to_sell_within_gain(
+    position: Position,
+    quantity: Decimal,
+    price: Decimal,
+    as_of: date,
+    max_gain: Decimal,
+    method: LotSaleMethod = LotSaleMethod.HIFO,
+) -> SaleResult:
+    """
+    Sell up to ``quantity`` shares without realizing more than ``max_gain`` of
+    net gain: the partial-fill primitive under a tax budget.
+
+    Lots are consumed strictly in the method's order, and the result is a
+    PREFIX of that order. A loss (or break-even) lot is taken in full, a gain
+    lot is taken only as far as the remaining gain room affords, and the walk
+    stops at the first truncation. It never skips ahead to a later loss lot to
+    stretch the quantity, that would realize lots out of the elected order,
+    which is the thing a sale method exists to pin down.
+
+    Under HIFO the prefix is also the cheapest possible fill, since marginal
+    gain per share only rises as the walk descends the cost ladder. Under FIFO
+    or LIFO the order is the election, not an optimization, and the same prefix
+    rule applies.
+
+    ``quantity_sold`` reports what was actually sold, which is the difference
+    from ``select_lots_to_sell``. It can be 0 when the very first lot is a gain
+    lot and there is no room, the caller decides whether that means defer.
+    """
+    if quantity <= 0:
+        raise ValueError("quantity to sell must be positive.")
+    if quantity > position.quantity:
+        raise ValueError(f"cannot sell {quantity} shares, position holds {position.quantity}.")
+
+    remaining = quantity
+    room = max_gain
+    realized: list[RealizedLot] = []
+    short_term = Decimal("0")
+    long_term = Decimal("0")
+    total_proceeds = Decimal("0")
+    total_cost = Decimal("0")
+    sold = Decimal("0")
+
+    for lot in _ordered_lots(position.lots, method):
+        if remaining <= 0:
+            break
+
+        gain_per_share = price - lot.cost_per_share
+        take = min(lot.quantity, remaining)
+        truncated = False
+        if gain_per_share > 0:
+            affordable = room / gain_per_share
+            if affordable < take:
+                take = affordable
+                truncated = True
+        if take > 0:
+            proceeds = take * price
+            cost = take * lot.cost_per_share
+            is_long_term = lot.is_long_term(as_of)
+            realized.append(RealizedLot(lot=lot, quantity_sold=take, proceeds=proceeds, cost_basis=cost, is_long_term=is_long_term))
+            gain = proceeds - cost
+            if is_long_term:
+                long_term += gain
+            else:
+                short_term += gain
+            total_proceeds += proceeds
+            total_cost += cost
+            room -= gain     # a loss ADDS room, exactly as it nets on the return
+            remaining -= take
+            sold += take
+        if truncated:
+            break
+
+    return SaleResult(
+        realized_lots=realized,
+        quantity_sold=sold,
         proceeds=total_proceeds,
         cost_basis=total_cost,
         short_term_gain=short_term,
