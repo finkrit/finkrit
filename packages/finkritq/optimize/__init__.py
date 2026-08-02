@@ -51,7 +51,9 @@ from finkritq.optimize.lotselection import (
 from finkritq.optimize.harvest import (
     HarvestCandidate,
     HarvestReport,
+    LongTermTransition,
     harvest_candidates,
+    long_term_transitions,
 )
 from finkritq.optimize.cashflow import (
     CashFlowPlan,
@@ -106,6 +108,9 @@ __all__ = [
     "HarvestCandidate",
     "HarvestReport",
     "harvest_candidates",
+    # long/short-term boundary countdown
+    "LongTermTransition",
+    "long_term_transitions",
     # cash-flow rebalancing
     "CashFlowPlan",
     "invest_cashflow",
