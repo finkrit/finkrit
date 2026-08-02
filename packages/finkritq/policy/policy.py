@@ -15,18 +15,25 @@ compliance.py, the risk-vs-tolerance comparison in suitability.py.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum, auto
+from enum import Enum
 
 from finkritq.asset import Asset
 
 
 class RestrictionKind(Enum):
-    """The kinds of holding restriction a policy can impose on an asset."""
+    """
+    The kinds of holding restriction a policy can impose on an asset.
 
-    DO_NOT_HOLD = auto()   # the asset must not be held at all (weight must be 0)
-    DO_NOT_BUY = auto()    # existing holding may stay, but no new buying
-    MAX_WEIGHT = auto()    # the asset may not exceed a weight cap
-    MIN_WEIGHT = auto()    # the asset must be held at least at a weight floor
+    Explicit string values, never auto(): auto() assigns by definition order,
+    so a reordered or inserted member silently renumbers everything that was
+    ever persisted or serialized leading to backward uncompatibility. 
+    A string value survives reordering.
+    """
+
+    DO_NOT_HOLD = "do_not_hold"   # the asset must not be held at all (weight must be 0)
+    DO_NOT_BUY = "do_not_buy"     # existing holding may stay, but no new buying
+    MAX_WEIGHT = "max_weight"     # the asset may not exceed a weight cap
+    MIN_WEIGHT = "min_weight"     # the asset must be held at least at a weight floor
 
 
 @dataclass(frozen=True, slots=True)
