@@ -39,7 +39,7 @@ from finkritintel.integration.finkritq.rebalance_schema_live import (
 )
 # Same spot-price source and rounding as the read-only tax tools, so a plan's
 # numbers agree with the gains report the model may have just shown.
-from finkritintel.integration.finkritq.tax_live import _money, _ratio, _spot_prices
+from finkritintel.integration.finkritq.tax_live import _money, _ratio, spot_prices
 
 _OBJECTIVES = ("min_variance", "max_sharpe")
 
@@ -123,7 +123,7 @@ def _portfolio_tax_aware_rebalance_live(
     plan = tax_aware_rebalance(
         data,
         weights,
-        prices=_spot_prices(portfolio, registry),
+        prices=spot_prices(portfolio, registry),
         as_of=as_of,
         gain_budget=float("inf") if gain_budget is None else gain_budget,
         tolerance=tolerance,
@@ -168,7 +168,7 @@ def _portfolio_rebalance_compare_live(
     plans = compare_rebalance_strategies(
         data,
         weights,
-        prices=_spot_prices(portfolio, registry),
+        prices=spot_prices(portfolio, registry),
         as_of=as_of,
         gain_budget=float("inf") if gain_budget is None else gain_budget,
         tolerance=tolerance,

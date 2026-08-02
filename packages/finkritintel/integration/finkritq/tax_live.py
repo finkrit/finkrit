@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date
 from decimal import Decimal
 
@@ -27,20 +28,27 @@ from finkritintel.integration.finkritq.tax_schema_live import (
 # the model, and needs no output adapter.
 
 
-def _spot_prices(portfolio: Portfolio, registry: DataRegistry) -> dict[Asset, Decimal]:
+def spot_prices(portfolio: Portfolio, registry: DataRegistry) -> dict[Asset, Decimal]:
     # Current price per holding, as a Decimal for the tax-lot math. Prefer the
     # snapshot provider, and fall back to the most recent history close when no
     # snapshot provider is registered (the offline demo registry has history but
-    # no snapshot), so the tax tools run against any registry.
-    prices: dict[Asset, Decimal] = {}
-    for position in portfolio.positions:
+    # no snapshot), so the tax tools run against any registry. Public: the
+    # rebalance bindings and the finagent signal composer read prices through
+    # this too, so every tax-flavored number is computed off the same quote.
+    #
+    # Fetched in parallel, one worker per holding, matching
+    # PortfolioData.from_registry: each quote is an independent network call,
+    # and a sequential loop made the tax views wait holdings-times-latency.
+    def fetch(position) -> tuple[Asset, Decimal]:
         asset = position.asset
         try:
             last = registry.snapshot(asset).last_price
         except RuntimeError:
             last = float(registry.history(asset).close[-1])
-        prices[asset] = Decimal(str(last))
-    return prices
+        return asset, Decimal(str(last))
+
+    with ThreadPoolExecutor() as executor:
+        return dict(executor.map(fetch, portfolio.positions))
 
 
 def _money(value) -> float:
@@ -55,7 +63,7 @@ def _portfolio_unrealized_gains_live(
     portfolio: Portfolio, registry: DataRegistry, as_of: date | None = None,
 ) -> dict:
     as_of = as_of or date.today()
-    prices = _spot_prices(portfolio, registry)
+    prices = spot_prices(portfolio, registry)
 
     holdings: dict[str, dict] = {}
     total_mv = Decimal("0")
@@ -102,7 +110,7 @@ def _portfolio_harvestable_losses_live(
     min_loss: float = 0.0, wash_sale_window_days: int = 30,
 ) -> dict:
     as_of = as_of or date.today()
-    prices = _spot_prices(portfolio, registry)
+    prices = spot_prices(portfolio, registry)
 
     report = harvest_candidates(
         portfolio, prices, as_of,
@@ -135,7 +143,7 @@ def _portfolio_holding_period_breakdown_live(
     portfolio: Portfolio, registry: DataRegistry, as_of: date | None = None,
 ) -> dict:
     as_of = as_of or date.today()
-    prices = _spot_prices(portfolio, registry)
+    prices = spot_prices(portfolio, registry)
 
     long_mv = Decimal("0")
     long_cb = Decimal("0")
