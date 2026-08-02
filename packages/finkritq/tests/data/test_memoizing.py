@@ -5,9 +5,9 @@ from datetime import date
 
 import numpy as np
 
-from finkritq.asset import Stock
-from finkritq.data.interfaces import HistoryProvider
-from finkritq.data.providers import MemoizingHistoryProvider
+from finkritq.asset import AssetSnapshot, Stock
+from finkritq.data.interfaces import HistoryProvider, SnapshotProvider
+from finkritq.data.providers import MemoizingHistoryProvider, MemoizingSnapshotProvider
 from finkritq.datatype import Currency, Exchange, PriceHistory
 
 
@@ -75,3 +75,55 @@ class TestMemoizingHistoryProvider:
         memo.history(_stock(), end=None)
         memo.history(_stock(), end=date.today())
         assert inner.calls == 1
+
+
+class _CountingSnapshotProvider(SnapshotProvider):
+    def __init__(self):
+        self.calls = 0
+
+    def snapshot(self, asset):
+        self.calls += 1
+        return AssetSnapshot(asset=asset, last_price=101.0, previous_close=100.0)
+
+
+class TestMemoizingSnapshotProvider:
+    """TTL cache over spot quotes. The clock is injected so the tests advance
+    time explicitly instead of sleeping."""
+
+    def _memo(self, ttl=60.0):
+        inner = _CountingSnapshotProvider()
+        now = [0.0]
+        memo = MemoizingSnapshotProvider(inner, ttl_seconds=ttl, clock=lambda: now[0])
+        return inner, memo, now
+
+    def test_second_call_within_ttl_is_cached(self):
+        inner, memo, _ = self._memo()
+        memo.snapshot(_stock())
+        memo.snapshot(_stock())
+        assert inner.calls == 1
+
+    def test_expired_entry_refetches(self):
+        inner, memo, now = self._memo(ttl=60.0)
+        memo.snapshot(_stock())
+        now[0] = 61.0
+        memo.snapshot(_stock())
+        assert inner.calls == 2
+
+    def test_different_ticker_is_not_cached(self):
+        inner, memo, _ = self._memo()
+        memo.snapshot(_stock("AAA"))
+        memo.snapshot(_stock("BBB"))
+        assert inner.calls == 2
+
+    def test_clear_forces_refetch(self):
+        inner, memo, _ = self._memo()
+        memo.snapshot(_stock())
+        memo.clear()
+        memo.snapshot(_stock())
+        assert inner.calls == 2
+
+    def test_non_positive_ttl_refused(self):
+        import pytest
+
+        with pytest.raises(ValueError):
+            MemoizingSnapshotProvider(_CountingSnapshotProvider(), ttl_seconds=0)
