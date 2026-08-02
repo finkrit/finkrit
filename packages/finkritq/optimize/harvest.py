@@ -14,7 +14,7 @@ Pure lots + prices, no org graph.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from finkritq.asset import Asset
@@ -42,6 +42,68 @@ class HarvestReport:
     short_term_loss: Decimal
     long_term_loss: Decimal
     wash_sale_blocked: tuple[Asset, ...]   # assets skipped due to a recent buy
+
+
+@dataclass(frozen=True, slots=True)
+class LongTermTransition:
+    """
+    One short term lot approaching the long-term boundary.
+
+    ``unrealized_gain`` is signed: the boundary cuts both ways. A
+    gain lot is worth holding until the transition (the gain gets the long term
+    rate), a loss lot is worth harvesting before it (a short term loss offsets
+    the higher-taxed short term gains first).This module reports the facts, the 
+    caller decides the action.
+    """
+
+    asset: Asset
+    lot: TaxLot
+    current_price: Decimal
+    market_value: Decimal
+    unrealized_gain: Decimal   # signed: positive is a gain, negative a loss
+    transition_date: date      # first day the lot counts as long term
+    days_until: int            # from as_of, always >= 1
+
+
+def long_term_transitions(
+        portfolio: Portfolio,
+        prices: dict[Asset, Decimal],
+        as_of: date,
+        within_days: int = 45,
+    ) -> list[LongTermTransition]:
+    """
+    Short term lots that become long term within ``within_days`` of ``as_of``.
+
+    The transition date mirrors TaxLot.is_long_term (holding_days >= 365), so
+    a lot transitions on ``acquired + 365 days`` and the countdown agrees with
+    every other long/short split in the package. Sorted soonest first, ties
+    broken by market value so the money at stake surfaces before dust.
+    """
+    transitions: list[LongTermTransition] = []
+    for position in portfolio.positions:
+        asset = position.asset
+        price = prices[asset]
+        for lot in position.lots:
+            if lot.is_long_term(as_of):
+                continue
+            days_until = 365 - lot.holding_days(as_of)
+            if days_until > within_days:
+                continue
+            market_value = lot.market_value(price)
+            transitions.append(
+                LongTermTransition(
+                    asset=asset,
+                    lot=lot,
+                    current_price=price,
+                    market_value=market_value,
+                    unrealized_gain=market_value - lot.cost_basis,
+                    transition_date=lot.acquired + timedelta(days=365),
+                    days_until=days_until,
+                )
+            )
+
+    transitions.sort(key=lambda t: (t.days_until, -t.market_value))
+    return transitions
 
 
 def _recently_purchased(lots: tuple[TaxLot, ...], as_of: date, window_days: int) -> bool:
