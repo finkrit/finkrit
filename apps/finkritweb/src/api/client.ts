@@ -78,6 +78,90 @@ export interface PortfolioRiskReport {
 	component_contributions: Record<string, number> | null;
 }
 
+/** One lot worth harvesting today. Lot level on purpose: this comes off the
+ *  deterministic endpoint (code, not the model), and "which lot" is what makes
+ *  the signal actionable. */
+export interface HarvestSignal {
+	ticker: string;
+	lot_id: string;
+	quantity: number;
+	acquired: string; // ISO date
+	cost_basis: number;
+	market_value: number;
+	unrealized_loss: number; // positive magnitude
+	is_long_term: boolean;
+	estimated_saving: number;
+}
+
+/** One short-term lot near the 365-day boundary. `action` is decided server
+ *  side ("hold" for a gain lot, "harvest_now" for a loss lot) so every surface
+ *  words the advice identically. */
+export interface CountdownSignal {
+	ticker: string;
+	lot_id: string;
+	quantity: number;
+	acquired: string; // ISO date
+	market_value: number;
+	unrealized_gain: number; // signed
+	transition_date: string; // ISO date
+	days_until: number;
+	action: 'hold' | 'harvest_now';
+	estimated_saving: number;
+}
+
+export interface TaxSignalsReport {
+	as_of: string;
+	short_term_rate: number;
+	long_term_rate: number;
+	total_harvestable_loss: number;
+	estimated_harvest_saving: number;
+	harvest: HarvestSignal[];
+	wash_sale_blocked: string[];
+	countdowns: CountdownSignal[];
+}
+
+export interface RebalanceSell {
+	ticker: string;
+	sell_value: number;
+	executed_value: number;
+	realized_gain: number;
+	short_term_gain: number;
+	long_term_gain: number;
+	is_harvest: boolean;
+	is_partial: boolean;
+	lots_touched: number;
+}
+
+export interface RebalancePlan {
+	sells: RebalanceSell[];
+	deferred: string[];
+	realized_gain: number;
+	short_term_gain: number;
+	long_term_gain: number;
+	harvested_loss: number;
+	residual_drift: number; // fraction of portfolio value
+}
+
+/** The fixed three-strategy menu, every row computed off the same target
+ *  weights and budget so the rows are actually comparable. */
+export interface RebalanceCompare {
+	as_of: string;
+	objective: string;
+	method: string;
+	tolerance: number;
+	gain_budget: number | null;
+	target_weights: Record<string, number>;
+	strategies: Record<'full' | 'band_edge' | 'partial_fill', RebalancePlan>;
+	note: string;
+}
+
+/** One frame of the prefetch stream: the opening ticker list, then a line per
+ *  ticker as its download completes, then the end marker. */
+export type PrefetchEvent =
+	| { event: 'start'; tickers: string[] }
+	| { ticker: string; status: 'ready' | 'error'; detail?: string }
+	| { event: 'end' };
+
 export class ApiError extends Error {
 	constructor(
 		public status: number,
@@ -119,6 +203,60 @@ export const api = {
 		fetch(`/api/portfolio/${portfolioId}/report?metrics=${metrics}`).then((r) =>
 			asJson<PortfolioRiskReport>(r)
 		),
+
+	// Warm the server's data caches, reporting each ticker as its download
+	// lands. Plain fetch-and-parse rather than EventSource: the stream ends
+	// when the prefetch is done, and EventSource treats a closed stream as a
+	// dropped connection and reconnects forever.
+	prefetch: async (portfolioId: string, onEvent: (e: PrefetchEvent) => void): Promise<void> => {
+		const res = await fetch(`/api/portfolio/${portfolioId}/prefetch`);
+		if (!res.ok) {
+			const body = await res.json().catch(() => ({ detail: res.statusText }));
+			throw new ApiError(res.status, body.detail ?? res.statusText);
+		}
+		if (!res.body) return;
+		const reader = res.body.getReader();
+		const decoder = new TextDecoder();
+		let buffer = '';
+		for (;;) {
+			const { done, value } = await reader.read();
+			if (done) break;
+			buffer += decoder.decode(value, { stream: true });
+			// SSE frames are separated by a blank line; anything after the last
+			// separator is a partial frame kept for the next chunk.
+			const frames = buffer.split('\n\n');
+			buffer = frames.pop() ?? '';
+			for (const frame of frames) {
+				const data = frame
+					.split('\n')
+					.filter((l) => l.startsWith('data: '))
+					.map((l) => l.slice(6))
+					.join('');
+				if (data) onEvent(JSON.parse(data) as PrefetchEvent);
+			}
+		}
+	},
+
+	// Deterministic tax view: harvest candidates, wash sale warnings, long term
+	// countdowns. No LLM behind this, so it is safe to refetch on every visit.
+	taxSignals: (portfolioId: string) =>
+		fetch(`/api/portfolio/${portfolioId}/tax/signals`).then((r) => asJson<TaxSignalsReport>(r)),
+
+	// The fixed strategy menu (full / band_edge / partial_fill) over one shared
+	// target. gain_budget undefined means unlimited (no budget row constraint).
+	rebalanceCompare: (
+		portfolioId: string,
+		opts: { objective?: string; gainBudget?: number; tolerance?: number } = {}
+	) => {
+		const params = new URLSearchParams();
+		if (opts.objective) params.set('objective', opts.objective);
+		if (opts.gainBudget !== undefined) params.set('gain_budget', String(opts.gainBudget));
+		if (opts.tolerance !== undefined) params.set('tolerance', String(opts.tolerance));
+		const qs = params.toString();
+		return fetch(`/api/portfolio/${portfolioId}/rebalance/compare${qs ? `?${qs}` : ''}`).then(
+			(r) => asJson<RebalanceCompare>(r)
+		);
+	},
 
 	// Pass the conversationId returned by the previous turn to keep the thread,
 	// which is what makes a follow-up like "and how does that compare?" work.

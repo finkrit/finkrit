@@ -9,7 +9,7 @@
 		disabled = false
 	}: {
 		label: string;
-		icon: 'holdings' | 'risk' | 'lock';
+		icon: 'holdings' | 'risk' | 'lock' | 'leaf' | 'scale';
 		view?: ViewId;
 		disabled?: boolean;
 	} = $props();

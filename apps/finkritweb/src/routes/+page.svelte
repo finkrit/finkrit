@@ -4,6 +4,8 @@
 	// ui.svelte.ts, a case here, and a sidebar item.
 	import PortfolioView from '$components/portfolio/PortfolioView.svelte';
 	import RiskView from '$components/portfolio/RiskView.svelte';
+	import TaxView from '$components/tax/TaxView.svelte';
+	import RebalanceView from '$components/rebalance/RebalanceView.svelte';
 	import { ui } from '$stores/ui.svelte';
 </script>
 
@@ -11,4 +13,8 @@
 	<PortfolioView />
 {:else if ui.view === 'risk'}
 	<RiskView />
+{:else if ui.view === 'tax'}
+	<TaxView />
+{:else if ui.view === 'rebalance'}
+	<RebalanceView />
 {/if}

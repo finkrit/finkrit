@@ -1,5 +1,6 @@
 // The single portfolio's state, shared across the portfolio + risk views.
 import type { HoldingDraft } from '$api/client';
+import { dashData } from './dashdata.svelte';
 import { lotExpansion } from './lots.svelte';
 
 export type Stage = 'empty' | 'review' | 'saved';
@@ -23,6 +24,8 @@ class PortfolioState {
 	markSaved() {
 		this.warnings = [];
 		this.stage = 'saved';
+		// The risk/tax/rebalance payloads describe the previous portfolio now.
+		dashData.invalidate();
 	}
 
 	reset() {

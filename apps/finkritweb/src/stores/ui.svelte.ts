@@ -1,6 +1,6 @@
 // Which middle-panel view is active. Left-sidebar items switch this; adding a
 // view is: a new id here + a case in the middle panel + a sidebar item.
-export type ViewId = 'portfolio' | 'risk';
+export type ViewId = 'portfolio' | 'risk' | 'tax' | 'rebalance';
 export type Theme = 'light' | 'dark';
 
 const THEME_KEY = 'finkrit:theme';

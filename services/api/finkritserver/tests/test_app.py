@@ -130,6 +130,114 @@ class TestReport:
         assert isinstance(body["params"]["confidence"], float)
 
 
+class TestPrefetch:
+    def _register(self, client: TestClient, payload: dict):
+        assert client.post("/api/portfolio", json=payload).status_code == 200
+
+    def _events(self, body: str) -> list[dict]:
+        import json
+
+        return [
+            json.loads(line[len("data: "):])
+            for line in body.split("\n")
+            if line.startswith("data: ")
+        ]
+
+    def test_streams_start_per_ticker_and_end(self, client: TestClient, portfolio_payload: dict):
+        self._register(client, portfolio_payload)
+        r = client.get("/api/portfolio/port-1/prefetch")
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("text/event-stream")
+
+        events = self._events(r.text)
+        assert events[0]["event"] == "start"
+        assert set(events[0]["tickers"]) == {"AAA", "BBB", "^GSPC"}
+        assert events[-1] == {"event": "end"}
+        done = {e["ticker"]: e["status"] for e in events[1:-1]}
+        assert done == {"AAA": "ready", "BBB": "ready", "^GSPC": "ready"}
+
+    def test_unknown_portfolio_is_404_not_a_stream(self, client: TestClient):
+        assert client.get("/api/portfolio/nope/prefetch").status_code == 404
+
+
+class TestTaxSignals:
+    def _register(self, client: TestClient, payload: dict):
+        assert client.post("/api/portfolio", json=payload).status_code == 200
+
+    def test_signals_shape(self, client: TestClient, portfolio_payload: dict):
+        # Content depends on fixture prices, so assert the contract: every
+        # signal family present, rates echoed, JSON all the way out.
+        self._register(client, portfolio_payload)
+        r = client.get("/api/portfolio/port-1/tax/signals")
+        assert r.status_code == 200
+        body = r.json()
+        assert set(body) >= {
+            "as_of", "short_term_rate", "long_term_rate",
+            "total_harvestable_loss", "estimated_harvest_saving",
+            "harvest", "wash_sale_blocked", "countdowns",
+        }
+        assert body["short_term_rate"] == 0.3
+        assert body["long_term_rate"] == 0.15
+
+    def test_rates_are_query_params(self, client: TestClient, portfolio_payload: dict):
+        self._register(client, portfolio_payload)
+        body = client.get(
+            "/api/portfolio/port-1/tax/signals?short_term_rate=0.35&long_term_rate=0.2"
+        ).json()
+        assert body["short_term_rate"] == 0.35
+        assert body["long_term_rate"] == 0.2
+
+    def test_inverted_rates_are_400(self, client: TestClient, portfolio_payload: dict):
+        self._register(client, portfolio_payload)
+        r = client.get(
+            "/api/portfolio/port-1/tax/signals?short_term_rate=0.1&long_term_rate=0.2"
+        )
+        assert r.status_code == 400
+
+    def test_unknown_portfolio_is_404(self, client: TestClient):
+        assert client.get("/api/portfolio/nope/tax/signals").status_code == 404
+
+
+class TestRebalanceCompare:
+    def _register(self, client: TestClient, payload: dict):
+        assert client.post("/api/portfolio", json=payload).status_code == 200
+
+    def test_compare_returns_the_fixed_strategy_menu(self, client: TestClient, portfolio_payload: dict):
+        self._register(client, portfolio_payload)
+        r = client.get("/api/portfolio/port-1/rebalance/compare")
+        assert r.status_code == 200
+        body = r.json()
+        # The menu is fixed in code; the card renders exactly these rows.
+        assert set(body["strategies"]) == {"full", "band_edge", "partial_fill"}
+        for plan in body["strategies"].values():
+            assert set(plan) >= {
+                "sells", "deferred", "realized_gain", "harvested_loss", "residual_drift",
+            }
+        assert body["objective"] == "min_variance"
+        assert "target_weights" in body
+
+    def test_gain_budget_passes_through(self, client: TestClient, portfolio_payload: dict):
+        self._register(client, portfolio_payload)
+        body = client.get(
+            "/api/portfolio/port-1/rebalance/compare?gain_budget=500"
+        ).json()
+        assert body["gain_budget"] == 500.0
+
+    def test_unknown_objective_is_400(self, client: TestClient, portfolio_payload: dict):
+        self._register(client, portfolio_payload)
+        r = client.get("/api/portfolio/port-1/rebalance/compare?objective=moon")
+        assert r.status_code == 400
+
+    def test_unknown_lot_method_is_400(self, client: TestClient, portfolio_payload: dict):
+        self._register(client, portfolio_payload)
+        r = client.get("/api/portfolio/port-1/rebalance/compare?method=yolo")
+        assert r.status_code == 400
+        assert "hifo" in r.json()["detail"]
+
+    def test_unknown_portfolio_is_404(self, client: TestClient):
+        assert client.get("/api/portfolio/nope/rebalance/compare").status_code == 404
+
+
 class TestAsk:
     def test_ask_returns_an_answer(self, client: TestClient, portfolio_payload: dict):
         assert client.post("/api/portfolio", json=portfolio_payload).status_code == 200

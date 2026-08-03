@@ -23,9 +23,9 @@
 			<SidebarItem label="Risk" icon="risk" view="risk" />
 		</SidebarSection>
 
-		<SidebarSection title="Coming soon">
-			<SidebarItem label="Optimization" icon="lock" disabled />
-			<SidebarItem label="Tax-loss harvesting" icon="lock" disabled />
+		<SidebarSection title="Act" open>
+			<SidebarItem label="Tax signals" icon="leaf" view="tax" />
+			<SidebarItem label="Rebalance" icon="scale" view="rebalance" />
 		</SidebarSection>
 	</nav>
 

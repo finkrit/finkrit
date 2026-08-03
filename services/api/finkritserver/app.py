@@ -7,8 +7,10 @@ a fake model + fake registry (no network, no API key). The real entrypoint
 (the `finkrit chat` CLI, later) will build a live Assistant and pass it in.
 
 Endpoint topology mirrors finagent's two surfaces:
-  - /report is deterministic -> a plain `def` handler, which FastAPI runs in a
-    threadpool, so the blocking risk math never stalls the event loop.
+  - /report, /tax/signals, and /rebalance/compare are deterministic -> plain
+    `def` handlers, which FastAPI runs in a threadpool, so the blocking math
+    never stalls the event loop. No LLM anywhere in these paths: the dashboard
+    reads code, chat reads the model.
   - /ask is the LLM path -> an `async def` handler awaiting assistant.ask_async.
 
 Also serves the built Svelte SPA (see private/webapp_plan.md) and enables CORS
@@ -19,15 +21,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import json
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic_ai.exceptions import AgentRunError
 
 from finagent.assistant import Assistant
 from finagent.ingest import ParsedPortfolio
-from finagent.report import PortfolioRiskReport
+from finagent.report import PortfolioRiskReport, TaxSignalsReport
+from finagent.report.tax_signals import (
+    DEFAULT_COUNTDOWN_DAYS,
+    DEFAULT_LONG_TERM_RATE,
+    DEFAULT_SHORT_TERM_RATE,
+)
 from finagent.store import AssetNotFoundError, PortfolioNotFoundError
+from finkritq.datatype import LotSaleMethod
 
 from finkritserver.conversations import ConversationRegistry
 from finkritserver.portfolio import build_portfolio
@@ -133,6 +143,88 @@ def create_app(
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         except ValueError as exc:
             # bad metric selector, etc.
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/portfolio/{portfolio_id}/prefetch")
+    def prefetch(portfolio_id: str) -> StreamingResponse:
+        # Server-sent events: one line per ticker as its download completes,
+        # so the dashboard can show which stocks are in flight instead of a
+        # blank wait. Downloads run in parallel behind the stream. The 404
+        # check happens here, before streaming starts, because a status code
+        # cannot be changed once the response body has begun.
+        try:
+            events = assistant.prefetch_events(portfolio_id)
+        except (PortfolioNotFoundError, AssetNotFoundError) as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+        def stream():
+            for event in events:
+                yield f"data: {json.dumps(event)}\n\n"
+
+        return StreamingResponse(
+            stream(),
+            media_type="text/event-stream",
+            # SSE must not be buffered by intermediaries or the per-ticker
+            # progress arrives as one lump at the end.
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
+
+    @app.get("/api/portfolio/{portfolio_id}/tax/signals", response_model=TaxSignalsReport)
+    def tax_signals(
+        portfolio_id: str,
+        short_term_rate: float = DEFAULT_SHORT_TERM_RATE,
+        long_term_rate: float = DEFAULT_LONG_TERM_RATE,
+        countdown_days: int = DEFAULT_COUNTDOWN_DAYS,
+    ) -> TaxSignalsReport:
+        # Deterministic, no LLM, same shape rules as /report: a plain frozen
+        # dataclass FastAPI serializes directly. Rates are query params so the
+        # dashboard can re-price the signals to the owner's actual brackets
+        # without a redeploy.
+        try:
+            return assistant.tax_signals(
+                portfolio_id,
+                short_term_rate=short_term_rate,
+                long_term_rate=long_term_rate,
+                countdown_days=countdown_days,
+            )
+        except (PortfolioNotFoundError, AssetNotFoundError) as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            # inverted rate spread, bad thresholds
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/api/portfolio/{portfolio_id}/rebalance/compare")
+    def rebalance_compare(
+        portfolio_id: str,
+        objective: str = "min_variance",
+        gain_budget: float | None = None,
+        tolerance: float = 0.02,
+        method: str = LotSaleMethod.HIFO.value,
+    ) -> dict:
+        # Deterministic, no LLM. The same intel binding the chat compare tool
+        # runs, so the drift budget card and a chat answer about the same
+        # portfolio can never disagree. Returns the binding's dict as-is
+        # (strategy rows keyed full / band_edge / partial_fill).
+        try:
+            lot_method = LotSaleMethod(method)
+        except ValueError as exc:
+            valid = ", ".join(m.value for m in LotSaleMethod)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown lot method {method!r}. Use one of: {valid}.",
+            ) from exc
+        try:
+            return assistant.rebalance_compare(
+                portfolio_id,
+                objective=objective,
+                gain_budget=gain_budget,
+                tolerance=tolerance,
+                method=lot_method,
+            )
+        except (PortfolioNotFoundError, AssetNotFoundError) as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            # unknown objective, negative budget, degenerate price data
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.post("/api/ask", response_model=AskResponse)
