@@ -49,3 +49,16 @@ class TestFieldResolvers:
     def test_registry_is_injected_not_resolved(self):
         assert "registry" in INJECTED_FIELDS
         assert "registry" not in FIELD_RESOLVERS
+
+    def test_benchmark_resolvers_default_to_sp500(self):
+        # Must match the asset the Assistant auto-registers and the report
+        # composer's DEFAULT_BENCHMARK, or the default resolves to a store miss.
+        assert FIELD_RESOLVERS["benchmark"].default == "^GSPC"
+        assert FIELD_RESOLVERS["benchmark_history_or_asset"].default == "^GSPC"
+
+    def test_non_benchmark_resolvers_have_no_default(self):
+        # portfolio_id has an instruction-level default and ticker is genuinely
+        # the question, neither may grow a silent signature default. None is
+        # the no-default sentinel (see FieldResolver).
+        assert FIELD_RESOLVERS["portfolio"].default is None
+        assert FIELD_RESOLVERS["asset"].default is None

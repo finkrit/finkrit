@@ -9,7 +9,11 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCall
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from finkritq.data import DataRegistry
-from finkritq.data.providers import MemoizingHistoryProvider, YFinanceProvider
+from finkritq.data.providers import (
+    MemoizingHistoryProvider,
+    MemoizingSnapshotProvider,
+    YFinanceProvider,
+)
 
 from finagent.agent.risk import RiskAgent
 from finagent.assistant import Assistant, _default_registry
@@ -54,6 +58,47 @@ class TestAssistant:
 
     def test_auto_registers_sp500_benchmark(self, assistant: Assistant):
         assert assistant._store.get_asset("^GSPC").ticker == "^GSPC"
+
+    def test_prefetch_events_reports_every_ticker(self, assistant: Assistant):
+        assistant.register_portfolio(make_portfolio())
+        events = list(assistant.prefetch_events("port-1"))
+
+        # Opening frame names everything about to download, holdings plus the
+        # benchmark, so a progress bar knows its denominator up front.
+        assert events[0] == {"event": "start", "tickers": ["AAA", "BBB", "^GSPC"]}
+        assert events[-1] == {"event": "end"}
+
+        # One completion per ticker, order unspecified (parallel downloads).
+        done = {e["ticker"]: e["status"] for e in events[1:-1]}
+        assert done == {"AAA": "ready", "BBB": "ready", "^GSPC": "ready"}
+
+    def test_prefetch_events_unknown_portfolio_raises_eagerly(self, assistant: Assistant):
+        # The lookup must fail before any event streams, so the server can
+        # still answer 404 (a status line cannot follow a response body).
+        with pytest.raises(PortfolioNotFoundError):
+            assistant.prefetch_events("missing")
+
+    def test_prefetch_failure_is_an_event_not_an_exception(self):
+        # One bad ticker must not kill the whole prefetch, mirroring the
+        # partial-success rule reports follow.
+        from finkritq.data.interfaces import HistoryProvider
+
+        class _FailingProvider(HistoryProvider):
+            def history(self, asset, start=None, end=None, interval="1d"):
+                if asset.ticker == "BBB":
+                    raise ValueError("no data for BBB")
+                return make_registry().history(asset)
+
+        registry = DataRegistry()
+        registry.register_history(_FailingProvider())
+        assistant = Assistant(store=InMemoryStore(), registry=registry)
+        assistant.register_portfolio(make_portfolio())
+
+        events = list(assistant.prefetch_events("port-1"))
+        done = {e["ticker"]: e["status"] for e in events[1:-1]}
+        assert done["BBB"] == "error"
+        assert done["AAA"] == "ready"
+        assert events[-1] == {"event": "end"}
 
     def test_exposes_risk_specialist(self, assistant: Assistant):
         assert isinstance(assistant.risk, RiskAgent)
@@ -177,8 +222,11 @@ class TestDefaultRegistry:
         registry = _default_registry()
         assert isinstance(registry._history_provider._wrapped, YFinanceProvider)
 
-    def test_snapshot_provider_is_registered_and_unwrapped(self):
-        # Snapshots aren't memoized (a snapshot is a live quote, not history) --
-        # confirm it's wired to a real provider and NOT accidentally left unset.
+    def test_snapshot_provider_is_ttl_cached_over_yfinance(self):
+        # Snapshots carry a short TTL cache (not the day-keyed history memo):
+        # a prefetch pass and the view reads that follow it must share one
+        # quote per ticker instead of hitting the network twice, while a later
+        # interaction still gets a fresh price.
         registry = _default_registry()
-        assert isinstance(registry._snapshot_provider, YFinanceProvider)
+        assert isinstance(registry._snapshot_provider, MemoizingSnapshotProvider)
+        assert isinstance(registry._snapshot_provider._wrapped, YFinanceProvider)

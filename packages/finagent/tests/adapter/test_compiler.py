@@ -2,12 +2,16 @@
 from __future__ import annotations
 
 import inspect
+from dataclasses import dataclass
 from unittest.mock import MagicMock
 
 import pytest
 from pydantic_ai import ModelRetry, RunContext
 
 from finkritintel.capability.risk import RISK_CAPABILITY
+from finkritintel.tool.binding import ToolBinding
+from finkritq.asset import Asset
+from finkritq.data import DataRegistry
 
 from finagent.adapter.compiler import compile_capability, compile_tool
 from finagent.deps import AgentDeps
@@ -17,6 +21,18 @@ from finagent.tests.fixtures import make_portfolio, make_registry, make_stock
 
 def _binding(name: str):
     return next(b for b in RISK_CAPABILITY.tools if b.contract.name == name)
+
+
+@dataclass(frozen=True, slots=True)
+class _BenchmarkBeforeAsset:
+    """A deliberately ill-ordered input schema: the resolver-defaulted
+    benchmark comes before the required asset, so emitting in schema order
+    would put a required parameter after a defaulted one. Module level so its
+    annotations resolve. See test_defaulted_field_before_a_required_one."""
+
+    benchmark: Asset
+    asset: Asset
+    registry: DataRegistry
 
 
 class TestCompileTool:
@@ -81,6 +97,44 @@ class TestCompileTool:
         fn = compile_tool(binding)
         assert fn.__doc__ == binding.contract.description
 
+    @pytest.mark.parametrize("name", ["asset_beta", "portfolio_beta"])
+    def test_benchmark_ticker_defaults_to_sp500(self, name):
+        # A required benchmark turned "beta of each stock" into the model
+        # asking the user which benchmark to use. The resolver default makes
+        # the parameter omittable, so the question never reaches the user.
+        fn = compile_tool(_binding(name))
+        assert inspect.signature(fn).parameters["benchmark_ticker"].default == "^GSPC"
+
+    def test_defaulted_field_before_a_required_one_still_compiles(self):
+        # A resolver default can make an early field optional while a later one
+        # stays required, which Python forbids in a signature and which the
+        # dataclass itself cannot catch. Emitting required parameters first
+        # makes such a schema compile rather than dying inside exec() as a bare
+        # SyntaxError against generated source.
+        binding = ToolBinding(
+            contract=_binding("asset_beta").contract,
+            input_schema=_BenchmarkBeforeAsset,
+            output_schema=float,
+            implementation=lambda **kwargs: 0.0,
+        )
+        params = list(inspect.signature(compile_tool(binding)).parameters)
+        assert params == ["ctx", "ticker", "benchmark_ticker"]
+
+    def test_schema_order_is_kept_within_each_group(self):
+        # Reordering is required-before-defaulted only. Within a group the
+        # schema's own order survives, so signatures stay predictable.
+        params = list(inspect.signature(compile_tool(_binding("asset_beta"))).parameters)
+        assert params[:3] == ["ctx", "ticker", "benchmark_ticker"]
+        assert params.index("start") < params.index("end")
+
+    @pytest.mark.parametrize("name", ["asset_beta", "portfolio_beta"])
+    def test_benchmark_default_named_in_docstring(self, name):
+        # The contract description cannot know the adapter's default, so the
+        # compiler appends it. Without this the model sees "vs a benchmark"
+        # and still asks which one.
+        fn = compile_tool(_binding(name))
+        assert "^GSPC" in fn.__doc__
+
 
 class TestCompileToolExecution:
 
@@ -120,6 +174,16 @@ class TestCompileToolExecution:
         ctx = self._ctx(self._deps())
         with pytest.raises(ModelRetry):
             fn(ctx, "does-not-exist")
+
+    def test_omitted_benchmark_resolves_sp500_from_store(self):
+        # End to end through the default: the Assistant registers ^GSPC in
+        # every store (mirrored here), so the omitted parameter must resolve
+        # and compute rather than KeyError on an unregistered default.
+        fn = compile_tool(_binding("asset_beta"))
+        deps = self._deps()
+        deps.store.register_asset(make_stock("^GSPC"))
+        result = fn(self._ctx(deps), "AAA")
+        assert isinstance(result, float)
 
 
 class TestOutputAdapters:

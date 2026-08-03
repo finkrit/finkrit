@@ -2,15 +2,22 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 
 from pydantic_ai import models
 
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
-from finkritq.data.providers import MemoizingHistoryProvider, YFinanceProvider
+from finkritq.data.providers import (
+    MemoizingHistoryProvider,
+    MemoizingSnapshotProvider,
+    YFinanceProvider,
+)
 from finkritq.datatype import MarketIndex
 from finkritq.portfolio import Portfolio
+
+from finkritintel.integration.finkritq import PORTFOLIO_REBALANCE_COMPARE_LIVE_BINDING
 
 from finagent.agent.optimization import OptimizationAgent
 from finagent.agent.orchestrator import Orchestrator
@@ -23,6 +30,7 @@ from finagent.ingest import ParsedPortfolio, parse_portfolio_csv, parse_portfoli
 from finagent.logging_model import wrap_model_for_logging
 from finagent.report.metric import RiskMetric
 from finagent.report.report import PortfolioRiskReport
+from finagent.report.tax_signals import TaxSignalsReport, compose_tax_signals
 from finagent.store import InMemoryStore, Store
 
 
@@ -132,6 +140,72 @@ class Assistant:
     ) -> PortfolioRiskReport:
         return self.risk.report(portfolio_id, self.deps, metrics)
 
+    def tax_signals(self, portfolio_id: str, **kwargs) -> TaxSignalsReport:
+        # Deterministic, no LLM: the dashboard's actionable tax view (harvest
+        # candidates, wash sale warnings, long term countdowns). kwargs pass
+        # through to compose_tax_signals (rates, thresholds, as_of).
+        portfolio = self._store.get_portfolio(portfolio_id)
+        return compose_tax_signals(portfolio, self._registry, **kwargs)
+
+    def prefetch_events(self, portfolio_id: str):
+        """
+        Warm the data caches for one portfolio, yielding a progress event per
+        ticker as its download lands. Deterministic, no LLM.
+
+        Downloads run in parallel (one worker per ticker) and each event is
+        emitted on completion, so a consumer can render a live progress bar.
+        Warms exactly what the dashboard endpoints read: the default-window
+        price history (same memoizer key) and the spot snapshot (TTL cache),
+        plus the S&P 500 benchmark the risk report betas against. A ticker
+        that fails reports status "error" with the reason and does not stop
+        the rest, mirroring the partial-success rule reports follow.
+
+        The portfolio lookup happens eagerly (a miss raises before any event),
+        the download fan-out lazily on iteration.
+        """
+        portfolio = self._store.get_portfolio(portfolio_id)
+        assets = [position.asset for position in portfolio.positions]
+        assets.append(MarketIndex.SP500.as_asset())
+
+        registry = self._registry
+
+        def events():
+            yield {"event": "start", "tickers": [asset.ticker for asset in assets]}
+
+            def warm(asset: Asset) -> None:
+                registry.history(asset)
+                try:
+                    registry.snapshot(asset)
+                except RuntimeError:
+                    # No snapshot provider registered (offline registry): the
+                    # tax tools fall back to history, already warmed above.
+                    pass
+
+            with ThreadPoolExecutor() as executor:
+                futures = {executor.submit(warm, asset): asset for asset in assets}
+                for future in as_completed(futures):
+                    asset = futures[future]
+                    try:
+                        future.result()
+                        yield {"ticker": asset.ticker, "status": "ready"}
+                    except Exception as exc:  # noqa: BLE001 - reported, not raised
+                        yield {"ticker": asset.ticker, "status": "error", "detail": str(exc)}
+
+            yield {"event": "end"}
+
+        return events()
+
+    def rebalance_compare(self, portfolio_id: str, **kwargs) -> dict:
+        # Deterministic, no LLM: the same fixed strategy menu the chat compare
+        # tool runs (full, band_edge, partial_fill), served straight to the
+        # dashboard through the identical intel binding so the two surfaces can
+        # never disagree on a number. kwargs pass through to the binding
+        # (objective, gain_budget, tolerance, method, as_of).
+        portfolio = self._store.get_portfolio(portfolio_id)
+        return PORTFOLIO_REBALANCE_COMPARE_LIVE_BINDING.execute(
+            portfolio=portfolio, registry=self._registry, **kwargs
+        )
+
     def _require_model(self) -> models.Model | models.KnownModelName | str:
         if self._model is None:
             raise RuntimeError(
@@ -153,9 +227,11 @@ class Assistant:
 def _default_registry() -> DataRegistry:
     registry = DataRegistry()
     # Session-scoped memoization so repeated questions about the same holdings
-    # don't re-download. Persistent caching is a later (v2) layer.
+    # don't re-download. Persistent caching is a later (v2) layer. Snapshots
+    # get a short TTL cache so a prefetch pass and the view reads that follow
+    # it share one quote per ticker instead of hitting the network twice.
     provider = MemoizingHistoryProvider(YFinanceProvider())
     registry.register_history(provider)
-    registry.register_snapshot(YFinanceProvider())
+    registry.register_snapshot(MemoizingSnapshotProvider(YFinanceProvider()))
     return registry
 

@@ -49,7 +49,7 @@ SPECIALIST_TOOLS = {
 
 # Enough turns for a real working session, bounded so a long-lived tab does not
 # grow the prompt without limit. Not tuned against real usage yet.
-DEFAULT_MAX_TURNS = 20
+DEFAULT_MAX_TURNS = 40
 
 
 class _Runner(Protocol):

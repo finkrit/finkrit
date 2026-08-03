@@ -29,6 +29,11 @@ Contents:
     metric that cannot be computed is recorded in ``report.errors`` and left
     ``None`` rather than failing the whole report — a dashboard needs partial
     success.
+
+  - ``tax_signals`` — ``compose_tax_signals``: the actionable tax view
+    (harvestable lots, wash sale warnings, long term countdowns), each signal
+    priced at assumed marginal rates. Lot level on purpose: it goes from code
+    straight to the owner's dashboard, never through the model.
 """
 
 from .composer import DEFAULT_BENCHMARK, compose_portfolio_risk_report
@@ -39,6 +44,12 @@ from .report import (
     DrawdownSummary,
     PortfolioRiskReport,
     RiskParameters,
+)
+from .tax_signals import (
+    CountdownSignal,
+    HarvestSignal,
+    TaxSignalsReport,
+    compose_tax_signals,
 )
 
 __all__ = [
@@ -52,4 +63,8 @@ __all__ = [
     "AssetRiskReport",
     "compose_portfolio_risk_report",
     "DEFAULT_BENCHMARK",
+    "HarvestSignal",
+    "CountdownSignal",
+    "TaxSignalsReport",
+    "compose_tax_signals",
 ]
