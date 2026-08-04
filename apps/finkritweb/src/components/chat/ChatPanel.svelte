@@ -2,13 +2,16 @@
 	import Icon from '$components/ui/Icon.svelte';
 	import ChatInput from './ChatInput.svelte';
 	import ChatMessage from './ChatMessage.svelte';
+	import ChatProgress from './ChatProgress.svelte';
 	import { chat, MAX_WIDTH, MIN_WIDTH } from '$stores/chat.svelte';
 
-	// Auto-scroll to the newest message.
+	// Auto-scroll to the newest message. Steps are read too, so the view follows
+	// the progress list as it grows rather than stranding it below the fold.
 	let list = $state<HTMLElement>();
 	$effect(() => {
 		chat.messages.length;
 		chat.sending;
+		chat.steps.length;
 		if (list) list.scrollTop = list.scrollHeight;
 	});
 
@@ -81,7 +84,7 @@
 			<ChatMessage {message} />
 		{/each}
 		{#if chat.sending}
-			<div class="thinking">Thinking…</div>
+			<ChatProgress steps={chat.steps} />
 		{/if}
 	</div>
 
@@ -156,10 +159,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-3);
-	}
-	.thinking {
-		color: var(--text-faint);
-		font-size: 0.8125rem;
 	}
 	.foot {
 		padding: var(--space-3) var(--space-4) var(--space-4);

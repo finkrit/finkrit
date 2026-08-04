@@ -1,7 +1,7 @@
 // Chat state — a single reactive instance shared across every component that
 // imports it. The right panel opens on the first message and stays until
 // closed; the dock at the bottom is what's visible while it's closed.
-import { api, ApiError, type SpecialistAnswer } from '$api/client';
+import { api, ApiError, type ChatStep, type SpecialistAnswer } from '$api/client';
 
 export type ChatMessage = {
 	role: 'user' | 'assistant';
@@ -41,6 +41,11 @@ class ChatState {
 	open = $state(false);
 	sending = $state(false);
 	messages = $state<ChatMessage[]>([]);
+	// What the agent is doing right now, appended as each step arrives and
+	// cleared when the next question starts. Only meaningful while `sending`:
+	// once the answer lands, the reply's own pills carry the fan out and this
+	// is the scaffolding coming down.
+	steps = $state<ChatStep[]>([]);
 	// Panel width, dragged by the resize handle and remembered across reloads.
 	width = $state(storedWidth());
 
@@ -71,6 +76,7 @@ class ChatState {
 		const previous = this.conversationId;
 		this.conversationId = undefined;
 		this.messages = [];
+		this.steps = [];
 		if (previous) void api.resetConversation(previous).catch(() => {});
 	}
 
@@ -80,11 +86,17 @@ class ChatState {
 
 		this.open = true; // asking a question expands the right panel
 		this.messages.push({ role: 'user', text: question });
+		this.steps = [];
 		this.sending = true;
 		try {
-			const { answer, conversation_id, specialists, specialist_answers } = await api.ask(
+			const { answer, conversation_id, specialists, specialist_answers } = await api.askStream(
 				question,
-				this.conversationId
+				this.conversationId,
+				// Reassign rather than push: $state tracks the array identity for
+				// a plain field, so mutating in place would not repaint the panel.
+				(step) => {
+					this.steps = [...this.steps, step];
+				}
 			);
 			this.conversationId = conversation_id;
 			this.messages.push({
@@ -98,6 +110,9 @@ class ChatState {
 			this.messages.push({ role: 'assistant', text });
 		} finally {
 			this.sending = false;
+			// The reply's own pills now carry the fan out, so the live scaffolding
+			// comes down rather than sitting above the answer it duplicates.
+			this.steps = [];
 		}
 	}
 }
