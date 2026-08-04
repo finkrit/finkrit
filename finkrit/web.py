@@ -52,17 +52,17 @@ def resolve_model(model_string: str, url: str | None = None):
     With url set, point at any OpenAI-compatible endpoint instead, a local
     Ollama, LM Studio, vLLM, llama.cpp server, or a self-hosted box. No cloud
     key is needed, local servers ignore it, so a placeholder is used when none
-    is set. The provider prefix on model_string is irrelevant here, only the
-    bare model name is sent to the endpoint."""
+    is set. A provider prefix is stripped, a local model's own colon (an Ollama
+    tag like qwen2.5:14b) is not. See finagent.cli.local_model_name."""
     llm_key = os.environ.get("LLM_API_KEY") or os.environ.get("LLM_KEY")
 
     if url:
+        from finagent.cli import local_model_name
         from pydantic_ai.models.openai import OpenAIChatModel
         from pydantic_ai.providers.openai import OpenAIProvider
 
-        model_name = model_string.split(":", 1)[1] if ":" in model_string else model_string
         provider = OpenAIProvider(base_url=url, api_key=llm_key or "local")
-        return OpenAIChatModel(model_name, provider=provider)
+        return OpenAIChatModel(local_model_name(model_string), provider=provider)
 
     from pydantic_ai.models import infer_model
     from pydantic_ai.providers import infer_provider, infer_provider_class

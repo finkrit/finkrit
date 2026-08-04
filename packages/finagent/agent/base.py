@@ -20,6 +20,35 @@ from finagent.deps import AgentDeps
 # TODO: this needs to be tuned as we get data from users
 DEFAULT_USAGE_LIMITS = UsageLimits(request_limit=15, tool_calls_limit=15)
 
+# The language every agent answers in. Nothing used to say, so a multilingual
+# model was free to pick, and one that leans non English will answer in its own
+# language intermittently, which is worse than doing it consistently.
+DEFAULT_LANGUAGE = "English"
+
+
+def with_language(instructions: str, language: str = DEFAULT_LANGUAGE) -> str:
+    """``instructions`` with the answer language pinned.
+
+    Applied to every agent, not only the orchestrator: the orchestrator
+    combines specialist replies as they came back, so a specialist answering in
+    another language produces a bilingual reply no matter what the orchestrator
+    was told.
+
+    The second sentence is the load bearing one. A model translating its prose
+    will cheerfully localize a ticker or reformat a percentage along with it,
+    and the whole premise of this stack is that computed values reach the
+    reader exactly as the engine produced them.
+
+    An instruction, not a guarantee. A small model will comply most of the time
+    and drift occasionally, usually on long answers.
+    """
+    return (
+        f"{instructions} "
+        f"Write your answer in {language}, whatever language the question was "
+        f"asked in. Tickers, numbers, dates, and metric names stay exactly as "
+        f"they are, never translated or reformatted."
+    )
+
 
 class CapabilityAgent:
     """

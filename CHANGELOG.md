@@ -9,6 +9,24 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 
 ## [Unreleased]
 
+### finkrit
+
+#### Added
+- A run reports what it is doing while it does it. Each step names the
+  specialist that was asked and the sub question it was handed, then the tools
+  it called, so a question that fans out across four specialists shows its work
+  instead of sitting silent. The chat panel fills a list that settles as each
+  specialist returns, and the terminal prints the same trace. Steps carry names
+  and sub questions by default. Tool arguments and each specialist's verbatim
+  answer are opt in, through `--steps` in the terminal, because those are the
+  parts worth deciding about before they are written anywhere.
+
+#### Fixed
+- A local model name is no longer split at its own colon. An Ollama tag is
+  family and size, so `qwen2.5:14b` reached the endpoint as `14b` and came back
+  404. Only a prefix pydantic-ai recognises as a provider is stripped now, so
+  `openai:gpt-5` still arrives as `gpt-5` and any local tag arrives whole.
+
 ## finkritq 0.4.0 — 2026-08-03
 
 ### Added

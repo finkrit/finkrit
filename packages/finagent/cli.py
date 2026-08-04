@@ -30,7 +30,6 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 import numpy as np
-from pydantic_ai.messages import FunctionToolCallEvent
 
 from finkritq.asset import Asset, Stock
 from finkritq.data import DataRegistry
@@ -39,6 +38,7 @@ from finkritq.datatype import Currency, Exchange, PriceHistory
 from finkritq.portfolio import Portfolio, Position, TaxLot
 
 from finagent.assistant import Assistant
+from finagent.progress import Step, StepDetail, StepKind, StepStatus, progress_handler
 from finagent.store import DEFAULT_PORTFOLIO_ID, InMemoryStore
 
 _DEFAULT_MODEL = "anthropic:claude-sonnet-5"
@@ -67,6 +67,31 @@ _PROVIDER_KEY_ENV = {
     "groq": "GROQ_API_KEY",
     "mistral": "MISTRAL_API_KEY",
 }
+
+
+def local_model_name(model_string: str) -> str:
+    """The model name to send to an OpenAI-compatible endpoint.
+
+    A cloud model is named ``provider:name`` and only ``name`` belongs on the
+    wire, so ``openai:gpt-5`` has to become ``gpt-5``. But a local model's own
+    name routinely contains a colon: Ollama tags are ``family:size``, so
+    ``qwen2.5:14b`` is the whole name and splitting it asks the server for a
+    model called ``14b``, which 404s.
+
+    The two cases are told apart by asking pydantic-ai whether the prefix is
+    actually a provider it knows. That stays correct as providers are added,
+    where a hardcoded list would rot. Anything else is passed through whole.
+    """
+    prefix, separator, rest = model_string.partition(":")
+    if not separator:
+        return model_string
+    from pydantic_ai.providers import infer_provider_class
+
+    try:
+        infer_provider_class(prefix)
+    except Exception:  # noqa: BLE001 - not a provider name, so not a prefix
+        return model_string
+    return rest
 
 
 def _resolve_api_key(model: str) -> None:
@@ -140,15 +165,52 @@ class _Spinner:
             sys.stdout.flush()
 
 
-def _make_step_handler(spinner: _Spinner):
-    # Live progress: each tool as it is called, for the orchestrator (ask_risk,
-    # ask_optimization) and the nested specialist tools alike, since the handler
-    # is threaded through deps. Printed through the spinner so they do not clash.
-    async def handler(ctx, stream) -> None:
-        async for event in stream:
-            if isinstance(event, FunctionToolCallEvent):
-                spinner.line(f"    ... {event.part.tool_name}")
-    return handler
+# How much of a step to show. Long values are cut so one tool call stays one
+# line: a wrapped trace is harder to read than a truncated one.
+_STEP_WIDTH = 88
+
+
+def _clip(text: str, width: int = _STEP_WIDTH) -> str:
+    flat = " ".join(str(text).split())
+    return flat if len(flat) <= width else flat[: width - 1] + "…"
+
+
+def _render(step: Step) -> str | None:
+    """One trace line for a step, or None for the ones not worth a line.
+
+    A specialist gets both its start and its finish, since the wait between
+    them is the thing the reader is sitting through. A tool gets only its
+    start: showing both doubles the trace to say nothing new, because the
+    answer that follows is the evidence it returned.
+    """
+    if step.kind is StepKind.SPECIALIST:
+        if step.status is StepStatus.STARTED:
+            asked = f": {_clip(step.detail, 60)}" if step.detail else ""
+            return f"  → asking {step.name}{asked}"
+        if step.status is StepStatus.RETRY:
+            return f"  ⟳ {step.name} retrying"
+        answer = f"  {_clip(step.content, 60)}" if step.content else ""
+        return f"  ✓ {step.name} answered{answer}"
+
+    if step.status is StepStatus.RETRY:
+        return f"      ⟳ {step.name} retrying"
+    if step.status is StepStatus.STARTED:
+        shown = {k: v for k, v in step.args.items() if k != "portfolio_id"}
+        detail = f"  {_clip(', '.join(f'{k}={v}' for k, v in shown.items()), 50)}" if shown else ""
+        return f"      · {step.name}{detail}"
+    return None
+
+
+def _make_step_handler(spinner: _Spinner, detail: StepDetail):
+    # Live progress for the orchestrator's delegations and the nested
+    # specialists' own tools alike, since the handler is threaded through deps.
+    # Printed through the spinner so a step and a spinner frame never collide.
+    def show(step: Step) -> None:
+        line = _render(step)
+        if line is not None:
+            spinner.line(line)
+
+    return progress_handler(show, detail)
 
 
 def _prompt_agent_menu() -> str:
@@ -376,7 +438,13 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--quiet", action="store_true",
-        help="do not print the live tool-call trace while the agent works.",
+        help="do not print the live step trace while the agent works.",
+    )
+    parser.add_argument(
+        "--steps", action="store_true",
+        help="show more of each step: the arguments a tool was called with and "
+             "the answer each specialist returned, as they happen. Off by "
+             "default, and ignored with --quiet.",
     )
     args = parser.parse_args(argv)
 
@@ -390,15 +458,16 @@ def main(argv: list[str] | None = None) -> None:
         model = os.environ.get("FINKRIT_MODEL", _DEFAULT_MODEL)
 
     if args.url:
-        # Any OpenAI-compatible local or self-hosted endpoint. The provider
-        # prefix is irrelevant, only the bare model name is sent. Local servers
+        # Any OpenAI-compatible local or self-hosted endpoint. Local servers
         # ignore the key, so a placeholder is fine.
         from pydantic_ai.models.openai import OpenAIChatModel
         from pydantic_ai.providers.openai import OpenAIProvider
 
-        name = model.split(":", 1)[1] if ":" in model else model
         key = os.environ.get("LLM_API_KEY") or os.environ.get("LLM_KEY") or "local"
-        model = OpenAIChatModel(name, provider=OpenAIProvider(base_url=args.url, api_key=key))
+        model = OpenAIChatModel(
+            local_model_name(model),
+            provider=OpenAIProvider(base_url=args.url, api_key=key),
+        )
     else:
         _resolve_api_key(model)
 
@@ -415,7 +484,11 @@ def main(argv: list[str] | None = None) -> None:
         source = "synthetic data"
 
     spinner = _Spinner()
-    handler = None if args.quiet else _make_step_handler(spinner)
+    # --quiet wins over --steps: asking for silence and for detail at once is a
+    # contradiction, and silence is the safer reading of it.
+    handler = None if args.quiet else _make_step_handler(
+        spinner, StepDetail.FULL if args.steps else StepDetail.SUMMARY
+    )
     assistant = Assistant(model=model, store=InMemoryStore(), registry=registry,
                           event_handler=handler)
     assistant.register_portfolio(portfolio)

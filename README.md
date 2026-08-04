@@ -174,7 +174,9 @@ review, so almost any layout works there.
 --ai openai        provider shortcut or a full provider:name string
 -ag 0|1|2|3|4      router, risk, optimization, performance, tax
 --key sk-...       the LLM key
---quiet            hide the live tool-call trace
+--url URL          an OpenAI compatible endpoint, a local Ollama or LM Studio
+--steps            also show tool arguments and each specialist's answer
+--quiet            hide the live step trace
 ```
 
 ### The agents
