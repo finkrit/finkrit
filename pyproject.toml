@@ -83,6 +83,7 @@ packages = ["finkrit"]
 "packages/finagent/deps.py" = "finagent/deps.py"
 "packages/finagent/ingest.py" = "finagent/ingest.py"
 "packages/finagent/logging_model.py" = "finagent/logging_model.py"
+"packages/finagent/progress.py" = "finagent/progress.py"
 "packages/finagent/adapter" = "finagent/adapter"
 # Data, not code, so the module guard in tests/test_packaging.py does not cover
 # it. `finkrit cli --file example` resolves through importlib.resources and

@@ -25,7 +25,7 @@ conversation the user actually had.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Callable, Protocol
 
 from pydantic_ai.messages import (
@@ -107,7 +107,7 @@ def _specialists_called(messages: list[ModelMessage]) -> list[SpecialistAnswer]:
                 name = SPECIALIST_TOOLS.get(part.tool_name)
                 if name is None:
                     continue
-                asked[part.tool_call_id] = (name, _sub_question(part))
+                asked[part.tool_call_id] = (name, sub_question(part))
                 order.append(part.tool_call_id)
             elif isinstance(part, ToolReturnPart) and part.tool_call_id in asked:
                 returned[part.tool_call_id] = str(part.content)
@@ -120,10 +120,12 @@ def _specialists_called(messages: list[ModelMessage]) -> list[SpecialistAnswer]:
     ]
 
 
-def _sub_question(part: ToolCallPart) -> str:
+def sub_question(part: ToolCallPart) -> str:
     # Every ask_* tool takes a single question argument. args_as_dict raises on
     # malformed JSON from the model, which must not take down a reply that
     # otherwise succeeded, so a bad payload just yields no sub-question.
+    # Public because finagent.progress reads the same sub-question live, off
+    # the event stream, and the two must agree on how it is extracted.
     try:
         args = part.args_as_dict()
     except Exception:
@@ -186,15 +188,32 @@ class Conversation:
         """Start over. The next question arrives with no prior context."""
         self._messages = []
 
-    def ask(self, question: str) -> str:
-        result = self._runner.run(question, self._current_deps, self._messages or None)
+    def ask(self, question: str, event_handler: Callable | None = None) -> str:
+        result = self._runner.run(
+            question, self._deps_for(event_handler), self._messages or None
+        )
         self._absorb(result)
         return result.output
 
-    async def ask_async(self, question: str) -> str:
-        result = await self._runner.run_async(question, self._current_deps, self._messages or None)
+    async def ask_async(self, question: str, event_handler: Callable | None = None) -> str:
+        result = await self._runner.run_async(
+            question, self._deps_for(event_handler), self._messages or None
+        )
         self._absorb(result)
         return result.output
+
+    def _deps_for(self, event_handler: Callable | None) -> AgentDeps:
+        """Deps for one turn, with a per-turn progress handler if given.
+
+        The handler cannot simply live on the Assistant: a server holds one
+        Assistant for every request, so a handler set there would deliver one
+        user's steps into another user's stream. Overriding per turn scopes it
+        to the caller that asked for it. None keeps whatever the deps already
+        carry, which is how a single user process sets one globally."""
+        deps = self._current_deps
+        if event_handler is None:
+            return deps
+        return replace(deps, event_handler=event_handler)
 
     @property
     def last_specialists(self) -> list[SpecialistAnswer]:
