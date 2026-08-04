@@ -6,7 +6,7 @@ from pydantic_ai import models
 
 from finkritintel.capability.optimization import OPTIMIZATION_CAPABILITY
 
-from finagent.agent.base import CapabilityAgent
+from finagent.agent.base import DEFAULT_LANGUAGE, CapabilityAgent
 from finagent.store import DEFAULT_PORTFOLIO_ID
 
 # Module level, so the text starts at column 0 and the newlines it carries are
@@ -55,5 +55,8 @@ class OptimizationAgent(CapabilityAgent):
         self,
         model: models.Model | models.KnownModelName | str | None = None,
         instructions: str = OPTIMIZATION_INSTRUCTIONS,
+        language: str = DEFAULT_LANGUAGE,
     ) -> None:
-        super().__init__(OPTIMIZATION_CAPABILITY, model=model, instructions=instructions)
+        super().__init__(
+            OPTIMIZATION_CAPABILITY, model=model, instructions=instructions, language=language,
+        )

@@ -19,6 +19,7 @@ from finkritq.portfolio import Portfolio
 
 from finkritintel.integration.finkritq import PORTFOLIO_REBALANCE_COMPARE_LIVE_BINDING
 
+from finagent.agent.base import DEFAULT_LANGUAGE
 from finagent.agent.optimization import OptimizationAgent
 from finagent.agent.orchestrator import Orchestrator
 from finagent.agent.performance import PerformanceAgent
@@ -58,6 +59,7 @@ class Assistant:
         store: Store | None = None,
         registry: DataRegistry | None = None,
         event_handler=None,
+        language: str = DEFAULT_LANGUAGE,
     ) -> None:
         # model is optional, a dashboard-only user can construct an Assistant
         # and call .report()/.risk.report() with no LLM and no API key. .ask()
@@ -73,10 +75,13 @@ class Assistant:
         # when FINKRIT_LOG_LLM is set (a no-op otherwise, and None stays None).
         model = wrap_model_for_logging(model)
         self._model = model
-        self.risk = RiskAgent(model=model)
-        self.performance = PerformanceAgent(model=model)
-        self.optimization = OptimizationAgent(model=model)
-        self.tax = TaxAgent(model=model)
+        # Every agent, not just the orchestrator: it combines specialist
+        # replies as they came back, so one specialist answering in another
+        # language is enough to produce a bilingual reply.
+        self.risk = RiskAgent(model=model, language=language)
+        self.performance = PerformanceAgent(model=model, language=language)
+        self.optimization = OptimizationAgent(model=model, language=language)
+        self.tax = TaxAgent(model=model, language=language)
         self._specialists = {
             "risk": self.risk,
             "performance": self.performance,
@@ -85,6 +90,7 @@ class Assistant:
         }
         self.orchestrator = Orchestrator(
             model, self.risk, self.performance, self.optimization, self.tax,
+            language=language,
         )
 
     @property

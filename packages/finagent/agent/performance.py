@@ -9,7 +9,7 @@ from pydantic_ai import models
 from finkritintel.capability.performance import PERFORMANCE_CAPABILITY
 from finkritq.datatype import WeightingBasis
 
-from finagent.agent.base import CapabilityAgent
+from finagent.agent.base import DEFAULT_LANGUAGE, CapabilityAgent
 from finagent.deps import AgentDeps
 from finagent.report.performance import (
     PerformanceMetric,
@@ -46,10 +46,13 @@ class PerformanceAgent(CapabilityAgent):
         self,
         model: models.Model | models.KnownModelName | str | None = None,
         instructions: str = PERFORMANCE_INSTRUCTIONS,
+        language: str = DEFAULT_LANGUAGE,
     ) -> None:
         # model is optional: .report() is deterministic and needs no LLM; only
         # .ask() requires a model (enforced lazily by CapabilityAgent).
-        super().__init__(PERFORMANCE_CAPABILITY, model=model, instructions=instructions)
+        super().__init__(
+            PERFORMANCE_CAPABILITY, model=model, instructions=instructions, language=language,
+        )
 
     def report(
         self,

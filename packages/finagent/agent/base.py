@@ -13,12 +13,62 @@ from finagent.adapter.compiler import compile_capability
 from finagent.deps import AgentDeps
 
 # A spiraling tool loop (the model repeatedly re-calling tools without
-# converging) burns tokens unbounded if nothing stops it. These are starting
-# defaults, not tuned against real usage. Assumption is the starting default is
-# generous enough for a multi-metric risk question, bounded enough to fail fast
-#  on a runaway loop. Pass usage_limits=None to CapabilityAgent to opt out entirely.
-# TODO: this needs to be tuned as we get data from users
-DEFAULT_USAGE_LIMITS = UsageLimits(request_limit=15, tool_calls_limit=15)
+# converging) burns tokens unbounded if nothing stops it. Pass
+# usage_limits=None to CapabilityAgent to opt out entirely.
+#
+# Both budgets below are per run, and a specialist invoked by the orchestrator
+# is its own run with its own fresh allowance (usage is not threaded through
+# the delegation). So a four way fan out can spend the orchestrator's budget
+# plus four specialist budgets. That is deliberate: one ceiling covering the
+# whole tree would make a broad review compete against itself, where the last
+# specialist asked fails for no reason but running last.
+
+
+def _limits(tool_calls: int) -> UsageLimits:
+    """A budget of ``tool_calls``, with the request ceiling derived from it.
+
+    A model that batches its calls spends far fewer requests than tool calls.
+    One that issues them singly, which is what a local model does, spends
+    exactly one request per call plus one more to write the answer. Sizing for
+    the serial case leaves the tool count as the only ceiling that ever bites,
+    so a run that dies says how much work it tried to do rather than how many
+    times it happened to speak to the model.
+    """
+    return UsageLimits(request_limit=tool_calls + 1, tool_calls_limit=tool_calls)
+
+
+# The orchestrator's tools are the four specialists, so its budget counts
+# delegations, not metrics. Four covers asking every one of them, the remaining
+# four are room to go back to one after reading another's answer. An
+# orchestrator reaching for a ninth delegation has asked someone three times
+# and is looping rather than working.
+ORCHESTRATOR_USAGE_LIMITS = _limits(8)
+
+# A specialist's budget counts metrics. The widest honest question is a full
+# risk review (volatility, VaR, conditional VaR, maximum drawdown, beta, and
+# the marginal and component contribution breakdowns), which is seven or eight
+# distinct tools out of the twenty risk exposes. Each rejected call spends one
+# more, up to DEFAULT_TOOL_RETRIES below. Twelve is the widest real question
+# plus a correction on roughly half of it.
+#
+# Not sized for "that metric for every holding", which is one call per holding
+# and grows with the portfolio. Twelve holdings already overflow this and two
+# hundred would overflow any number worth setting. That shape needs the
+# question decomposed, not the ceiling raised.
+SPECIALIST_USAGE_LIMITS = _limits(12)
+
+# The name CapabilityAgent has always defaulted to. A CapabilityAgent is a
+# specialist, the orchestrator is the one exception and asks for its own.
+DEFAULT_USAGE_LIMITS = SPECIALIST_USAGE_LIMITS
+
+# How many times a tool may hand the model an error and ask it to try again.
+# pydantic-ai defaults to 1, which is one chance to read a message like
+# "unknown ticker ZZZZ" and correct the call. A strong model rarely needs even
+# that. A local one often gets an enum or a ticker wrong twice before it
+# reads the error properly, and the run dies with "exceeded max retries"
+# rather than answering. Two chances, still bounded, and the tool call limit
+# above remains the real backstop against a loop.
+DEFAULT_TOOL_RETRIES = 2
 
 # The language every agent answers in. Nothing used to say, so a multilingual
 # model was free to pick, and one that leans non English will answer in its own
@@ -39,14 +89,21 @@ def with_language(instructions: str, language: str = DEFAULT_LANGUAGE) -> str:
     and the whole premise of this stack is that computed values reach the
     reader exactly as the engine produced them.
 
+    Stated twice, opening and closing, rather than appended once. Observed on
+    a local qwen2.5 14b: with the directive only at the end, every specialist
+    complied and the orchestrator answered in Thai. The orchestrator writes the
+    longest reply and writes it last, which is where drift shows, so the
+    directive needs to frame the instructions as well as close them.
+
     An instruction, not a guarantee. A small model will comply most of the time
-    and drift occasionally, usually on long answers.
+    and drift occasionally, usually on the longest answer in the run.
     """
     return (
+        f"Answer in {language}. "
         f"{instructions} "
-        f"Write your answer in {language}, whatever language the question was "
-        f"asked in. Tickers, numbers, dates, and metric names stay exactly as "
-        f"they are, never translated or reformatted."
+        f"Your entire reply must be written in {language}, whatever language "
+        f"the question was asked in. Tickers, numbers, dates, and metric names "
+        f"stay exactly as they are, never translated or reformatted."
     )
 
 
@@ -64,6 +121,11 @@ class CapabilityAgent:
 
     ``usage_limits`` defaults to a bounded ``UsageLimits`` (F-5) so a
     spiraling tool loop can't burn tokens unbounded, pass ``None`` to disable.
+
+    ``language`` pins the answer language onto whatever instructions are given
+    (see ``with_language``). It is applied here rather than baked into each
+    agent's instruction constant, so a caller supplying its own instructions
+    still gets the language it asked for.
     """
 
     def __init__(
@@ -72,10 +134,11 @@ class CapabilityAgent:
         model: models.Model | models.KnownModelName | str | None = None,
         instructions: str = "",
         usage_limits: UsageLimits | None = DEFAULT_USAGE_LIMITS,
+        language: str = DEFAULT_LANGUAGE,
     ) -> None:
         self._capability = capability
         self._model = model
-        self._instructions = instructions
+        self._instructions = with_language(instructions, language)
         self._usage_limits = usage_limits
         self._agent: Agent | None = None
 
@@ -91,6 +154,7 @@ class CapabilityAgent:
                 self._model,
                 deps_type=AgentDeps,
                 instructions=self._instructions,
+                retries=DEFAULT_TOOL_RETRIES,
                 capabilities=[compile_capability(self._capability)],
             )
         return self._agent

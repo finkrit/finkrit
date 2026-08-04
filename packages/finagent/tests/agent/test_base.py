@@ -62,7 +62,10 @@ class TestCapabilityAgent:
         # `.instructions` on the pydantic-ai Agent is a decorator method, not
         # the stored value -- `_instructions` (a list) holds what was passed
         # to the constructor. Verified via direct introspection, not guessed.
-        assert "Custom prompt text." in agent.agent._instructions
+        # Substring rather than equality: the answer language is appended to
+        # whatever instructions were given (see with_language).
+        assert "Custom prompt text." in "".join(agent.agent._instructions)
+
 
     # --- F-1: model is optional; the pydantic-ai Agent builds lazily ---
 
@@ -92,3 +95,40 @@ class TestCapabilityAgent:
         custom = UsageLimits(request_limit=3)
         agent = CapabilityAgent(RISK_CAPABILITY, model="test", instructions="Be terse.", usage_limits=custom)
         assert agent._usage_limits is custom
+
+
+class TestAnswerLanguage:
+    """Nothing used to say what language to answer in, so a multilingual model
+    picked, and picked differently from one question to the next."""
+
+    def _instructions(self, **kwargs) -> str:
+        agent = CapabilityAgent(RISK_CAPABILITY, model="test", instructions="Base.", **kwargs)
+        return "".join(agent.agent._instructions)
+
+    def test_english_is_the_default(self):
+        assert "Answer in English." in self._instructions()
+
+    def test_a_language_can_be_chosen(self):
+        assert "Answer in Thai." in self._instructions(language="Thai")
+
+    def test_stated_at_both_ends(self):
+        # Observed on a local qwen2.5 14b: with the directive only at the end,
+        # every specialist complied and the orchestrator answered in Thai. It
+        # has to frame the instructions as well as close them.
+        text = self._instructions()
+        assert text.startswith("Answer in English.")
+        assert text.rstrip().endswith("never translated or reformatted.")
+
+    def test_the_question_language_does_not_decide(self):
+        # The point of the setting: predictable output, not output that tracks
+        # whatever language the user happened to type in.
+        assert "whatever language the question was asked in" in self._instructions()
+
+    def test_values_are_protected_from_translation(self):
+        # A model translating its prose will localize a ticker or reformat a
+        # percentage along with it, which breaks the one promise of the stack.
+        text = self._instructions(language="Thai")
+        assert "Tickers, numbers, dates, and metric names stay exactly as they are" in text
+
+    def test_the_caller_instructions_survive(self):
+        assert "Base." in self._instructions()

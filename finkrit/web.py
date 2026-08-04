@@ -161,6 +161,8 @@ def open_browser_when_ready(url: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
+    from finagent.agent.base import DEFAULT_LANGUAGE
+
     parser = argparse.ArgumentParser(
         prog="finkrit web", description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -176,7 +178,20 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--skip-build", action="store_true", help="reuse the existing build (ignored with --dev)")
     parser.add_argument("--key", dest="key", default=None,
                         help="LLM API key, an alternative to the LLM_API_KEY env var")
+    parser.add_argument("--lang", dest="lang", default=DEFAULT_LANGUAGE,
+                        help=f"language the agents answer in, as a plain name "
+                             f"({DEFAULT_LANGUAGE} by default). Multilingual local "
+                             f"models otherwise pick for themselves.")
+    parser.add_argument("--logs", action="store_true",
+                        help="print finkritq's data fetch logs, every download and "
+                             "cache hit. Off by default, warnings and errors print "
+                             "either way.")
     args = parser.parse_args(argv)
+
+    # Before the server starts, so the first request is already quiet.
+    from finagent.cli import configure_logging
+
+    configure_logging(args.logs)
 
     if args.key:
         os.environ["LLM_API_KEY"] = args.key
@@ -208,7 +223,8 @@ def main(argv: list[str] | None = None) -> None:
     from finagent.assistant import Assistant
     from finkritserver.app import create_app
 
-    assistant = Assistant(model=model)  # real registry (YFinance) + real store
+    # real registry (YFinance) + real store
+    assistant = Assistant(model=model, language=args.lang)
     # In --dev Vite serves the UI, so the API does not need to (and should not,
     # the build may be stale). static_dir=None runs the API bare.
     app = create_app(assistant, static_dir=None) if args.dev else create_app(assistant)

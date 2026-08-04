@@ -175,6 +175,7 @@ review, so almost any layout works there.
 -ag 0|1|2|3|4      router, risk, optimization, performance, tax
 --key sk-...       the LLM key
 --url URL          an OpenAI compatible endpoint, a local Ollama or LM Studio
+--lang Thai        language to answer in, English by default
 --steps            also show tool arguments and each specialist's answer
 --quiet            hide the live step trace
 ```
@@ -233,6 +234,30 @@ export LLM_API_KEY=sk-...
 
 Prerequisites: Python 3.11 or newer and Node 18 or newer. Later runs skip the
 setup.
+
+`./run` starts the web app. For the terminal chat against your working tree,
+install the checkout into its own environment so the `finkrit` command exists
+and points at your source rather than at the published wheel:
+
+```bash
+source .finkritvenv/bin/activate
+pip install -e .
+finkrit cli --file example       # now runs the code you are editing
+```
+
+Without that install there is no `finkrit` on the path, since the bootstrap
+only installs dependencies. Activating the environment does not help on its
+own, and the error is a bare `command not found`. To skip the install
+entirely, call the module and let the checkout put its siblings on the path:
+
+```bash
+python -c "import finkrit; from finagent.cli import main; main()" --file example
+```
+
+One thing the editable install does not cover: `finkritintel` and `finkritq`
+still come from PyPI, so only `finagent` and `finkrit` track your edits. Change
+either of the lower two packages and you are testing the published version of
+it, not yours.
 
 ## Using the quant core on its own
 

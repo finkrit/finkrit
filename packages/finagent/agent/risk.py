@@ -9,7 +9,7 @@ from pydantic_ai import models
 from finkritintel.capability.risk import RISK_CAPABILITY
 from finkritq.asset import Asset
 
-from finagent.agent.base import CapabilityAgent
+from finagent.agent.base import DEFAULT_LANGUAGE, CapabilityAgent
 from finagent.deps import AgentDeps
 from finagent.report.composer import compose_portfolio_risk_report
 from finagent.report.metric import RiskMetric
@@ -50,10 +50,13 @@ class RiskAgent(CapabilityAgent):
         self,
         model: models.Model | models.KnownModelName | str | None = None,
         instructions: str = RISK_INSTRUCTIONS,
+        language: str = DEFAULT_LANGUAGE,
     ) -> None:
         # model is optional: .report() is deterministic and needs no LLM; only
         # .ask() requires a model (enforced lazily by CapabilityAgent).
-        super().__init__(RISK_CAPABILITY, model=model, instructions=instructions)
+        super().__init__(
+            RISK_CAPABILITY, model=model, instructions=instructions, language=language,
+        )
 
     def report(
         self,

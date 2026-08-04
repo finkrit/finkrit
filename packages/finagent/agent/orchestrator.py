@@ -6,7 +6,12 @@ from pydantic_ai import Agent, RunContext, models
 from pydantic_ai.agent import AgentRunResult
 from pydantic_ai.messages import ModelMessage
 
-from finagent.agent.base import DEFAULT_USAGE_LIMITS
+from finagent.agent.base import (
+    DEFAULT_LANGUAGE,
+    DEFAULT_TOOL_RETRIES,
+    ORCHESTRATOR_USAGE_LIMITS,
+    with_language,
+)
 from finagent.agent.optimization import OptimizationAgent
 from finagent.agent.performance import PerformanceAgent
 from finagent.agent.risk import RiskAgent
@@ -47,14 +52,18 @@ class Orchestrator:
         optimization: OptimizationAgent,
         tax: TaxAgent,
         instructions: str = ORCHESTRATOR_INSTRUCTIONS,
-        usage_limits=DEFAULT_USAGE_LIMITS,
+        usage_limits=ORCHESTRATOR_USAGE_LIMITS,
+        language: str = DEFAULT_LANGUAGE,
     ) -> None:
         self._model = model
         self._risk = risk
         self._performance = performance
         self._optimization = optimization
         self._tax = tax
-        self._instructions = instructions
+        # Pinned here as well as on each specialist. This one governs the
+        # combined reply, the specialists govern the parts it is combining, and
+        # a mismatch between the two reads as a bilingual answer.
+        self._instructions = with_language(instructions, language)
         self._usage_limits = usage_limits
         self._agent: Agent | None = None
 
@@ -65,7 +74,12 @@ class Orchestrator:
                 raise RuntimeError(
                     "The orchestrator has no model configured, routing requires one."
                 )
-            agent = Agent(self._model, deps_type=AgentDeps, instructions=self._instructions)
+            agent = Agent(
+                self._model,
+                deps_type=AgentDeps,
+                instructions=self._instructions,
+                retries=DEFAULT_TOOL_RETRIES,
+            )
             risk, performance, optimization, tax = (
                 self._risk, self._performance, self._optimization, self._tax,
             )

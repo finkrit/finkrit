@@ -6,7 +6,7 @@ from pydantic_ai import models
 
 from finkritintel.capability.tax import TAX_CAPABILITY
 
-from finagent.agent.base import CapabilityAgent
+from finagent.agent.base import DEFAULT_LANGUAGE, CapabilityAgent
 from finagent.store import DEFAULT_PORTFOLIO_ID
 
 TAX_INSTRUCTIONS = (
@@ -40,5 +40,8 @@ class TaxAgent(CapabilityAgent):
         self,
         model: models.Model | models.KnownModelName | str | None = None,
         instructions: str = TAX_INSTRUCTIONS,
+        language: str = DEFAULT_LANGUAGE,
     ) -> None:
-        super().__init__(TAX_CAPABILITY, model=model, instructions=instructions)
+        super().__init__(
+            TAX_CAPABILITY, model=model, instructions=instructions, language=language,
+        )

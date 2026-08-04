@@ -37,6 +37,7 @@ from finkritq.data.interfaces import HistoryProvider
 from finkritq.datatype import Currency, Exchange, PriceHistory
 from finkritq.portfolio import Portfolio, Position, TaxLot
 
+from finagent.agent.base import DEFAULT_LANGUAGE
 from finagent.assistant import Assistant
 from finagent.progress import Step, StepDetail, StepKind, StepStatus, progress_handler
 from finagent.store import DEFAULT_PORTFOLIO_ID, InMemoryStore
@@ -67,6 +68,28 @@ _PROVIDER_KEY_ENV = {
     "groq": "GROQ_API_KEY",
     "mistral": "MISTRAL_API_KEY",
 }
+
+
+def configure_logging(verbose: bool) -> None:
+    """Quiet finkritq's data logs unless they were asked for.
+
+    finkritq logs every fetch, cache hit, and cache miss through loguru, which
+    ships a stderr sink at DEBUG, so a single question emits dozens of lines.
+    They also interleave with the spinner and the step trace, both of which
+    redraw one line, so the output is not merely noisy, it is corrupted.
+
+    WARNING and above still print, because an empty fetch or a rate limit is
+    the thing you most need to see and the least likely to guess at.
+
+    loguru arrives with finkritq's data extra. Without it there are no data
+    logs to configure, so a missing import is nothing to report.
+    """
+    try:
+        from loguru import logger
+    except ImportError:
+        return
+    logger.remove()
+    logger.add(sys.stderr, level="DEBUG" if verbose else "WARNING")
 
 
 def local_model_name(model_string: str) -> str:
@@ -165,48 +188,77 @@ class _Spinner:
             sys.stdout.flush()
 
 
-# How much of a step to show. Long values are cut so one tool call stays one
-# line: a wrapped trace is harder to read than a truncated one.
-_STEP_WIDTH = 88
+# How much of a step to show when the trace is truncated. A sub question, a
+# specialist's answer, and a retry reason are all prose and run long. Tool
+# arguments sit at the deepest indent and share their line with the tool name,
+# so they get less room than the prose does.
+_PROSE_WIDTH = 60
+_ARGS_WIDTH = 50
 
 
-def _clip(text: str, width: int = _STEP_WIDTH) -> str:
+def _clip(text: str, width: int | None) -> str:
+    """``text`` on one line, cut to ``width``. ``None`` means do not cut.
+
+    The flattening happens either way. Widths are a readability choice, but a
+    newline is not: the spinner redraws a single line, so a step carrying a
+    second one would strand the first on screen.
+    """
     flat = " ".join(str(text).split())
-    return flat if len(flat) <= width else flat[: width - 1] + "…"
+    if width is None or len(flat) <= width:
+        return flat
+    return flat[: width - 1] + "…"
 
 
-def _render(step: Step) -> str | None:
+def _because(step: Step, width: int | None) -> str:
+    # Only carried at StepDetail.FULL, so without --steps a retry still shows
+    # that it happened, just not why.
+    return f": {_clip(step.content, width)}" if step.content else ""
+
+
+def _render(step: Step, truncate: bool = False) -> str | None:
     """One trace line for a step, or None for the ones not worth a line.
 
     A specialist gets both its start and its finish, since the wait between
     them is the thing the reader is sitting through. A tool gets only its
     start: showing both doubles the trace to say nothing new, because the
     answer that follows is the evidence it returned.
+
+    ``truncate`` cuts the long values so every step stays within one terminal
+    row. Off by default, because the reason to ask for detail at all is to read
+    what a specialist was asked and what it said back, and the cut falls on
+    exactly that. Turn it on when the trace matters less than its shape, on a
+    narrow terminal or a run that fans out wide, where wrapped lines bury the
+    structure the trace exists to show.
     """
+    prose = _PROSE_WIDTH if truncate else None
+    # A retry carries the reason the tool refused, which is the whole value of
+    # showing it: "retrying" alone says something went wrong and nothing about
+    # what, and a run that dies on exhausted retries leaves no other trace.
     if step.kind is StepKind.SPECIALIST:
         if step.status is StepStatus.STARTED:
-            asked = f": {_clip(step.detail, 60)}" if step.detail else ""
+            asked = f": {_clip(step.detail, prose)}" if step.detail else ""
             return f"  → asking {step.name}{asked}"
         if step.status is StepStatus.RETRY:
-            return f"  ⟳ {step.name} retrying"
-        answer = f"  {_clip(step.content, 60)}" if step.content else ""
+            return f"  ⟳ {step.name} retrying{_because(step, prose)}"
+        answer = f"  {_clip(step.content, prose)}" if step.content else ""
         return f"  ✓ {step.name} answered{answer}"
 
     if step.status is StepStatus.RETRY:
-        return f"      ⟳ {step.name} retrying"
+        return f"      ⟳ {step.name} retrying{_because(step, prose)}"
     if step.status is StepStatus.STARTED:
         shown = {k: v for k, v in step.args.items() if k != "portfolio_id"}
-        detail = f"  {_clip(', '.join(f'{k}={v}' for k, v in shown.items()), 50)}" if shown else ""
+        joined = ", ".join(f"{k}={v}" for k, v in shown.items())
+        detail = f"  {_clip(joined, _ARGS_WIDTH if truncate else None)}" if shown else ""
         return f"      · {step.name}{detail}"
     return None
 
 
-def _make_step_handler(spinner: _Spinner, detail: StepDetail):
+def _make_step_handler(spinner: _Spinner, detail: StepDetail, truncate: bool = False):
     # Live progress for the orchestrator's delegations and the nested
     # specialists' own tools alike, since the handler is threaded through deps.
     # Printed through the spinner so a step and a spinner frame never collide.
     def show(step: Step) -> None:
-        line = _render(step)
+        line = _render(step, truncate)
         if line is not None:
             spinner.line(line)
 
@@ -437,6 +489,18 @@ def main(argv: list[str] | None = None) -> None:
              "vLLM, or self-hosted server). No key needed. Set --ai to the model name.",
     )
     parser.add_argument(
+        "--lang", dest="lang", default=DEFAULT_LANGUAGE,
+        help=f"language to answer in, as a plain name ({DEFAULT_LANGUAGE} by "
+             f"default). Multilingual local models otherwise pick for "
+             f"themselves, often inconsistently.",
+    )
+    parser.add_argument(
+        "--logs", action="store_true",
+        help="print finkritq's data fetch logs, every download and cache hit. "
+             "Off by default because they interleave with the step trace and "
+             "corrupt it. Warnings and errors print either way.",
+    )
+    parser.add_argument(
         "--quiet", action="store_true",
         help="do not print the live step trace while the agent works.",
     )
@@ -446,7 +510,17 @@ def main(argv: list[str] | None = None) -> None:
              "the answer each specialist returned, as they happen. Off by "
              "default, and ignored with --quiet.",
     )
+    parser.add_argument(
+        "--truncate-steps", dest="truncate_steps", action="store_true",
+        help="cut each step to one terminal row instead of printing it whole. "
+             "Only affects what --steps adds, since that is the only part long "
+             "enough to wrap. Useful on a narrow terminal or a wide fan out, "
+             "where wrapping buries the shape of the trace.",
+    )
     args = parser.parse_args(argv)
+
+    # Before anything can fetch, so the first download is already quiet.
+    configure_logging(args.logs)
 
     if args.key:
         os.environ["LLM_API_KEY"] = args.key
@@ -487,10 +561,12 @@ def main(argv: list[str] | None = None) -> None:
     # --quiet wins over --steps: asking for silence and for detail at once is a
     # contradiction, and silence is the safer reading of it.
     handler = None if args.quiet else _make_step_handler(
-        spinner, StepDetail.FULL if args.steps else StepDetail.SUMMARY
+        spinner,
+        StepDetail.FULL if args.steps else StepDetail.SUMMARY,
+        args.truncate_steps,
     )
     assistant = Assistant(model=model, store=InMemoryStore(), registry=registry,
-                          event_handler=handler)
+                          event_handler=handler, language=args.lang)
     assistant.register_portfolio(portfolio)
 
     mode, label = _resolve_agent(args.agent)

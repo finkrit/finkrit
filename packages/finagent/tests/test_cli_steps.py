@@ -64,18 +64,45 @@ class TestToolLines:
         assert _render(step) == "      · portfolio_volatility  interval=1d"
 
 
-class TestClipping:
+class TestTruncation:
+    """Cutting is opt in. The reason to ask for detail is to read what a
+    specialist was asked and what it said, and the cut falls on exactly that."""
 
-    def test_a_long_answer_is_cut_to_one_line(self):
+    def test_a_long_answer_is_kept_whole_by_default(self):
         step = _specialist(StepStatus.FINISHED, content="x" * 400)
         line = _render(step)
+        assert line.endswith("x")
+        assert "x" * 400 in line
+
+    def test_a_long_answer_is_cut_to_one_line_when_asked(self):
+        step = _specialist(StepStatus.FINISHED, content="x" * 400)
+        line = _render(step, truncate=True)
         assert line.endswith("…")
         assert len(line) < 100
 
-    def test_newlines_are_flattened(self):
-        # A multi-line answer must not break the spinner's single line redraw.
+    def test_a_long_sub_question_is_cut_too(self):
+        # The start line is the one a reader sees first, so it wraps first.
+        step = _specialist(StepStatus.STARTED, detail="y" * 400)
+        assert _render(step, truncate=True).endswith("…")
+        assert _render(step).endswith("y")
+
+    def test_arguments_are_cut_only_when_asked(self):
+        step = _tool(StepStatus.STARTED, name="asset_beta",
+                     args={"ticker": "AAPL", "note": "z" * 200})
+        assert _render(step, truncate=True).endswith("…")
+        assert _render(step).endswith("z")
+
+    def test_a_short_step_reads_the_same_either_way(self):
+        # Truncation is a ceiling, not a reformat.
+        step = _specialist(StepStatus.FINISHED, content="Losses total $4,180.")
+        assert _render(step) == _render(step, truncate=True)
+
+    def test_newlines_are_flattened_whatever_the_width(self):
+        # A multi-line answer must not break the spinner's single line redraw,
+        # so flattening is not part of what the flag controls.
         step = _specialist(StepStatus.FINISHED, content="first line\n\nsecond line")
         assert _render(step) == "  ✓ tax answered  first line second line"
+        assert _render(step, truncate=True) == "  ✓ tax answered  first line second line"
 
 
 class TestDetailGating:
@@ -88,3 +115,23 @@ class TestDetailGating:
 
     def test_the_two_levels_are_distinct(self):
         assert StepDetail.SUMMARY is not StepDetail.FULL
+
+
+class TestRetryLines:
+    """A retry is the only trace a run leaves before it dies on exhausted
+    retries, so the reason has to be on it."""
+
+    def test_a_tool_retry_carries_its_reason(self):
+        step = Step(kind=StepKind.TOOL, status=StepStatus.RETRY,
+                    name="asset_semivariance", call_id="c2",
+                    content="Unknown ticker 'ZZZZ'.")
+        assert _render(step) == "      ⟳ asset_semivariance retrying: Unknown ticker 'ZZZZ'."
+
+    def test_a_specialist_retry_carries_its_reason(self):
+        step = _specialist(StepStatus.RETRY, content="Too few overlapping days.")
+        assert _render(step) == "  ⟳ tax retrying: Too few overlapping days."
+
+    def test_without_full_detail_a_retry_still_shows(self):
+        # SUMMARY carries no content, so the reason is absent, but the fact
+        # that a retry happened must not be.
+        assert _render(_tool(StepStatus.RETRY)) == "      ⟳ portfolio_volatility retrying"

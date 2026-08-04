@@ -21,11 +21,63 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   answer are opt in, through `--steps` in the terminal, because those are the
   parts worth deciding about before they are written anywhere.
 
+- The agents answer in one language, English unless told otherwise, set with
+  `--lang` on either entry point. Nothing used to say, so a multilingual model
+  was free to choose and would answer in another language from one question to
+  the next. The setting reaches every specialist as well as the orchestrator,
+  since the orchestrator combines their replies as they came back and one
+  specialist is enough to make a reply bilingual. Tickers, numbers, and dates
+  are explicitly held back from translation.
+
+- `--logs` turns on the library log stream, off by default. The spinner and the
+  step trace both redraw a single line, and a debug log arriving mid redraw
+  tears it, so the terminal stays quiet unless the flag asks otherwise. Every
+  flag on both entry points now carries its own line in `--help`.
+
+- `--truncate-steps` cuts each step to one terminal row. Steps print whole by
+  default, since the reason to ask for detail is to read what a specialist was
+  asked and what it said back, and a cut falls on exactly that. The flag is
+  there for a narrow terminal or a wide fan out, where wrapped lines bury the
+  shape of the trace.
+
+#### Changed
+- A lookup that misses now names what is registered, not only what is missing.
+  "No asset registered with ticker X" is true of the argument but reads as a
+  claim about the portfolio, and a model with no way to list its holdings will
+  believe it. One told the user their portfolio was empty directly underneath
+  a beta it had just computed from twelve holdings. The message now lists the
+  real tickers, so a retry can land on one, and only a genuinely empty store
+  reads as empty. An invented argument is trimmed before it is echoed back,
+  because a model that guesses a ticker can guess something arbitrarily long.
+
+- The tool budget is now two budgets rather than one shared number. The
+  orchestrator's tools are the four specialists, so its ceiling counts
+  delegations and sits at eight: enough to ask all four and go back to one,
+  low enough that a ninth is a loop rather than thoroughness. A specialist's
+  ceiling counts metrics and sits at twelve, which covers the widest honest
+  risk question with room left to correct a rejected call. The request ceiling
+  is derived from the tool ceiling instead of being guessed, so a run that
+  dies reports how much work it attempted rather than how many times it spoke
+  to the model. One number governing both meant the orchestrator was
+  effectively unbounded while a wide risk question could clip.
+
+- A rejected tool call gets two chances to be corrected instead of one, and
+  the trace now prints the reason it was rejected. A strong model rarely needs
+  the second chance. A local one will get an enum or a ticker wrong twice
+  before it reads the error, and the run used to die with nothing on screen
+  but the retry count. The tool budget above stays the real backstop.
+
 #### Fixed
 - A local model name is no longer split at its own colon. An Ollama tag is
   family and size, so `qwen2.5:14b` reached the endpoint as `14b` and came back
   404. Only a prefix pydantic-ai recognises as a provider is stripped now, so
   `openai:gpt-5` still arrives as `gpt-5` and any local tag arrives whole.
+
+- `./run cli` reaches the terminal chat. The bootstrap jumped straight to the
+  web launcher and skipped the subcommand dispatcher, so `cli` arrived at the
+  web app's argument parser as a stray flag and a source checkout could open
+  the dashboard but never the terminal. `./run` and `./run --dev` are
+  unchanged, since no subcommand still means web.
 
 ## finkritq 0.4.0 — 2026-08-03
 
