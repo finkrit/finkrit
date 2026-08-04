@@ -39,6 +39,7 @@ from finkritq.portfolio import Portfolio, Position, TaxLot
 
 from finagent.agent.base import DEFAULT_LANGUAGE
 from finagent.assistant import Assistant
+from finagent.ingest import csv_date, csv_number, csv_value
 from finagent.progress import Step, StepDetail, StepKind, StepStatus, progress_handler
 from finagent.store import DEFAULT_PORTFOLIO_ID, InMemoryStore
 
@@ -344,61 +345,22 @@ def example_portfolio_path() -> str:
     return str(path)
 
 
-# Column names a brokerage export might use, matched case-insensitively. Module
-# level rather than inline so the README's table can be checked against them:
-# these grow every time a real export turns up a new spelling, and the docs are
-# what a user reads before deciding whether their file will load.
-#
-# The cost list is per share only. A total cost column is deliberately absent,
-# since dividing it needs the quantity and the header names sit too close
-# together ("Cost Per Share" next to "Cost Basis Total") to risk guessing wrong.
-CSV_ALIASES: dict[str, tuple[str, ...]] = {
-    "ticker": ("ticker", "symbol"),
-    "quantity": ("quantity", "shares", "qty", "units"),
-    "cost_per_share": (
-        "cost_per_share", "cost per share", "cost/share", "cost basis / share",
-        "cost basis per share", "price per share", "cost basis", "avg cost",
-        "average cost basis", "cost", "price", "price paid",
-    ),
-    "acquired": ("acquired", "date acquired", "purchase date", "date"),
-}
-
-# Accepted date layouts, in the order they are tried. "iso" is YYYY-MM-DD.
-CSV_DATE_FORMATS: tuple[str, ...] = ("iso", "%m/%d/%Y", "%m/%d/%y", "%d-%m-%Y")
+# A date for a lot whose file gave none. The CLI substitutes and carries on,
+# where the upload path records it for the user to correct, because a chat
+# session is throwaway and a saved portfolio is not.
+CSV_FALLBACK_ACQUIRED = date(2022, 1, 3)
 
 
 def _load_portfolio_from_csv(path: str, portfolio_id: str = DEFAULT_PORTFOLIO_ID) -> Portfolio:
     """Build a portfolio from a CSV. Recognizes common column names for ticker,
     quantity, cost per share, and acquired date, so a typical brokerage export
-    loads without editing. A missing cost or date falls back to a default."""
+    loads without editing. A missing cost or date falls back to a default.
 
-    def pick(row: dict, names: tuple[str, ...], default: str | None = None) -> str | None:
-        lowered = {(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}
-        for name in names:
-            if lowered.get(name):
-                return lowered[name]
-        return default
-
-    def parse_date(value: str | None) -> date:
-        if value:
-            for fmt in CSV_DATE_FORMATS:
-                try:
-                    return date.fromisoformat(value) if fmt == "iso" else datetime.strptime(value, fmt).date()
-                except ValueError:
-                    continue
-        return date(2022, 1, 3)
-
-    def number(value: str | None, default: str = "0") -> str:
-        # Real exports format money, not bare numbers: "$1,234.56", a trailing
-        # space, sometimes parentheses for a negative. Strip the presentation so
-        # Decimal sees a plain figure.
-        if not value:
-            return default
-        cleaned = value.strip().replace(",", "").replace("$", "").replace("%", "")
-        if cleaned.startswith("(") and cleaned.endswith(")"):
-            cleaned = "-" + cleaned[1:-1]
-        return cleaned or default
-
+    Column aliases, date layouts, and the number cleaning live in finagent.ingest
+    and are shared with the upload path, so a new spelling taught to one is
+    understood by both. What differs is the response to a gap: here a default is
+    substituted silently, there it becomes a note the user is asked to check.
+    """
     # One row is one tax lot. A ticker bought several times appears on several
     # rows, and those become several lots under one position, which is what the
     # tax analytics need in order to have lots to choose between. Insertion
@@ -406,13 +368,13 @@ def _load_portfolio_from_csv(path: str, portfolio_id: str = DEFAULT_PORTFOLIO_ID
     lots_by_ticker: dict[str, list[TaxLot]] = {}
     with open(path, newline="") as handle:
         for i, row in enumerate(csv.DictReader(handle)):
-            ticker = pick(row, CSV_ALIASES["ticker"])
+            ticker = csv_value(row, "ticker")
             if not ticker:
                 continue
             ticker = ticker.upper()
-            quantity = number(pick(row, CSV_ALIASES["quantity"]))
-            cost = number(pick(row, CSV_ALIASES["cost_per_share"]))
-            acquired = parse_date(pick(row, CSV_ALIASES["acquired"]))
+            quantity = csv_number(csv_value(row, "quantity"))
+            cost = csv_number(csv_value(row, "cost_per_share"))
+            acquired = csv_date(csv_value(row, "acquired")) or CSV_FALLBACK_ACQUIRED
             lot = TaxLot(id=f"lot-{i}", quantity=Decimal(quantity),
                          cost_per_share=Decimal(cost), acquired=acquired)
             lots_by_ticker.setdefault(ticker, []).append(lot)

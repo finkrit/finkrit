@@ -25,7 +25,12 @@ from pathlib import Path
 
 import pytest
 
-from finagent.cli import CSV_ALIASES, CSV_DATE_FORMATS, _AGENT_CHOICES, _AGENT_NAMES
+from finagent.cli import _AGENT_CHOICES, _AGENT_NAMES
+
+# Moved out of finagent.cli: the terminal loader and the upload path share one
+# alias table now, so the README documents a single contract rather than the
+# CLI's half of one.
+from finagent.ingest import CSV_ALIASES, CSV_DATE_FORMATS
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 README = (REPO_ROOT / "README.md").read_text()

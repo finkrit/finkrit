@@ -30,7 +30,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from pydantic_ai.exceptions import AgentRunError
 
 from finagent.assistant import Assistant
-from finagent.ingest import ParsedPortfolio
+from finagent.ingest import DEFAULT_PORTFOLIO_NAME, ParsedPortfolio
 from finagent.report import PortfolioRiskReport, TaxSignalsReport
 from finagent.progress import Step, StepDetail, progress_handler
 from finagent.report.tax_signals import (
@@ -149,7 +149,11 @@ def create_app(
         except UnicodeDecodeError as exc:
             raise HTTPException(status_code=400, detail="File is not valid UTF-8 text.") from exc
 
-        return await assistant.parse_portfolio_csv_async(text)
+        # The file's own name, so a parse that never reaches a model still
+        # comes back named something the user recognizes rather than a
+        # constant. The model path names it from the contents and ignores this.
+        name = Path(file.filename).stem if file.filename else DEFAULT_PORTFOLIO_NAME
+        return await assistant.parse_portfolio_csv_async(text, name)
 
     @app.get("/api/portfolios", response_model=list[PortfolioSummary])
     def list_portfolios() -> list[PortfolioSummary]:

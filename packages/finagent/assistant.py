@@ -27,7 +27,13 @@ from finagent.agent.risk import RiskAgent
 from finagent.agent.tax import TaxAgent
 from finagent.conversation import DEFAULT_MAX_TURNS, Conversation
 from finagent.deps import AgentDeps
-from finagent.ingest import ParsedPortfolio, parse_portfolio_csv, parse_portfolio_csv_async
+from finagent.ingest import (
+    DEFAULT_PORTFOLIO_NAME,
+    ParsedPortfolio,
+    parse_portfolio_csv,
+    parse_portfolio_csv_async,
+    parse_portfolio_csv_in_code,
+)
 from finagent.logging_model import wrap_model_for_logging
 from finagent.report.metric import RiskMetric
 from finagent.report.report import PortfolioRiskReport
@@ -213,20 +219,44 @@ class Assistant:
         )
 
     def _require_model(self) -> models.Model | models.KnownModelName | str:
+        # Only reached once the deterministic mapper has declined, so the
+        # message names the file rather than the feature: an upload as such
+        # does not need a model, this particular one does.
         if self._model is None:
             raise RuntimeError(
-                "This Assistant has no model configured, parsing a portfolio "
-                "upload requires one (it's an LLM extraction, not deterministic)."
+                "This Assistant has no model configured, and this CSV could not "
+                "be read without one. Its header needs to name the ticker, the "
+                "quantity, the cost per share, and the acquired date, under any "
+                "of the spellings finagent.ingest.CSV_ALIASES lists."
             )
         return self._model
 
-    def parse_portfolio_csv(self, csv_text: str) -> ParsedPortfolio:
+    # Both paths try the deterministic mapper before the model. A file whose
+    # header names ticker, quantity, cost per share, and acquired date is fully
+    # readable in code, and handing it to a model instead costs a round trip
+    # that returns what the header already said. On a local model that round
+    # trip is minutes, long enough that the upload reads as broken.
+    #
+    # The model requirement is therefore checked only on the fallback: a clean
+    # file uploads with no model configured and no key at all.
+
+    def parse_portfolio_csv(
+        self, csv_text: str, name: str = DEFAULT_PORTFOLIO_NAME
+    ) -> ParsedPortfolio:
         # Sync convenience for scripts/notebooks. Does NOT register anything,
         # the caller reviews/corrects the result, then register_portfolio()s it.
+        mapped = parse_portfolio_csv_in_code(csv_text, name)
+        if mapped is not None:
+            return mapped
         return parse_portfolio_csv(csv_text, self._require_model())
 
-    async def parse_portfolio_csv_async(self, csv_text: str) -> ParsedPortfolio:
+    async def parse_portfolio_csv_async(
+        self, csv_text: str, name: str = DEFAULT_PORTFOLIO_NAME
+    ) -> ParsedPortfolio:
         # Async path for the web server's upload endpoint.
+        mapped = parse_portfolio_csv_in_code(csv_text, name)
+        if mapped is not None:
+            return mapped
         return await parse_portfolio_csv_async(csv_text, self._require_model())
 
 

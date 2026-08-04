@@ -51,13 +51,23 @@ def upload_client(upload_assistant: Assistant) -> TestClient:
     return TestClient(create_app(upload_assistant, static_dir=None))
 
 
+# A header naming only two of the four fields, so there is genuine ambiguity
+# and the upload falls through to the model. A file naming all four is read in
+# code and never reaches one, which is what TestUploadWithoutAModel covers.
+_AMBIGUOUS_CSV = b"Symbol,Shares\nAAPL,10"
+
+# All four fields under names the alias table knows, so this is answered
+# without a model.
+_COMPLETE_CSV = b"Symbol,Shares,Cost,Date\nAAPL,10,150.0,2023-01-15"
+
+
 class TestUploadPortfolio:
+    """The model fallback, reached only by a file we cannot read in code."""
 
     def test_parses_csv_and_returns_parsed_portfolio(self, upload_client: TestClient):
-        csv_bytes = b"Symbol,Shares,Cost,Date\nAAPL,10,150.0,2023-01-15"
         r = upload_client.post(
             "/api/portfolio/upload",
-            files={"file": ("holdings.csv", io.BytesIO(csv_bytes), "text/csv")},
+            files={"file": ("holdings.csv", io.BytesIO(_AMBIGUOUS_CSV), "text/csv")},
         )
         assert r.status_code == 200
         body = r.json()
@@ -65,10 +75,9 @@ class TestUploadPortfolio:
         assert body["holdings"][0]["ticker"] == "AAPL"
 
     def test_surfaces_warnings_for_user_review(self, upload_client: TestClient):
-        csv_bytes = b"Symbol,Shares,Cost,Date\nAAPL,10,150.0,2023-01-15"
         r = upload_client.post(
             "/api/portfolio/upload",
-            files={"file": ("holdings.csv", io.BytesIO(csv_bytes), "text/csv")},
+            files={"file": ("holdings.csv", io.BytesIO(_AMBIGUOUS_CSV), "text/csv")},
         )
         assert "Assumed 'Cost' column was per-share." in r.json()["warnings"]
 
@@ -108,10 +117,9 @@ class TestUploadPortfolio:
     def test_upload_then_confirm_via_existing_register_endpoint(self, upload_client: TestClient):
         # The full flow: parse (no side effect) -> frontend review/correction
         # -> commit via the existing POST /api/portfolio.
-        csv_bytes = b"Symbol,Shares,Cost,Date\nAAPL,10,150.0,2023-01-15"
         parsed = upload_client.post(
             "/api/portfolio/upload",
-            files={"file": ("holdings.csv", io.BytesIO(csv_bytes), "text/csv")},
+            files={"file": ("holdings.csv", io.BytesIO(_COMPLETE_CSV), "text/csv")},
         ).json()
 
         commit_payload = {
@@ -130,3 +138,68 @@ class TestUploadPortfolio:
         r = upload_client.post("/api/portfolio", json=commit_payload)
         assert r.status_code == 200
         assert r.json() == {"portfolio_id": "primary"}
+
+
+class TestUploadWithoutAModel:
+    """A file whose header names all four fields is read in code.
+
+    Worth its own fixture with no model at all: if anything on this path still
+    reaches for one, these fail loudly rather than quietly costing a round trip
+    that a user on a local model waits minutes for.
+    """
+
+    @pytest.fixture
+    def keyless_client(self) -> TestClient:
+        assistant = Assistant(store=InMemoryStore(), registry=make_registry())
+        return TestClient(create_app(assistant, static_dir=None))
+
+    def _upload(self, client: TestClient, body: bytes, filename: str = "holdings.csv"):
+        return client.post(
+            "/api/portfolio/upload",
+            files={"file": (filename, io.BytesIO(body), "text/csv")},
+        )
+
+    def test_a_complete_header_needs_no_model(self, keyless_client: TestClient):
+        r = self._upload(keyless_client, _COMPLETE_CSV)
+        assert r.status_code == 200
+        holding = r.json()["holdings"][0]
+        assert holding["ticker"] == "AAPL"
+        assert holding["quantity"] == 10
+        assert holding["cost_per_share"] == 150.0
+        assert holding["acquired"] == "2023-01-15"
+
+    def test_it_is_named_after_the_file(self, keyless_client: TestClient):
+        # The model names a portfolio from its contents. Without one, the
+        # filename is the only thing the user will recognize.
+        r = self._upload(keyless_client, _COMPLETE_CSV, filename="schwab-export.csv")
+        assert r.json()["name"] == "schwab-export"
+
+    def test_an_ambiguous_header_still_needs_one(self, keyless_client: TestClient):
+        # Falls through to the model, and there is none, so this must fail
+        # rather than silently inventing the missing columns. The endpoint has
+        # no handler for it, so the error reaches the caller raw. Pinned as it
+        # is rather than as it should be: the upload path's error mapping is a
+        # gap of its own, and a test claiming a 500 here would hide it.
+        with pytest.raises(RuntimeError, match="could not be read without one"):
+            self._upload(keyless_client, _AMBIGUOUS_CSV)
+
+    def test_money_formatting_survives(self, keyless_client: TestClient):
+        # What a real export actually writes, and the reason this path exists
+        # rather than str() on the raw cell.
+        body = b'Symbol,Shares,Cost Per Share,Date Acquired\nAAPL,"1,000",$120.40,05/12/2021'
+        holding = self._upload(keyless_client, body).json()["holdings"][0]
+        assert holding["quantity"] == 1000
+        assert holding["cost_per_share"] == 120.40
+        assert holding["acquired"] == "2021-05-12"
+
+    def test_repeated_tickers_stay_separate_lots(self, keyless_client: TestClient):
+        # One row is one lot. Merging them would destroy what the tax
+        # analytics choose between.
+        body = (
+            b"Symbol,Shares,Cost,Date\n"
+            b"AAPL,10,150.0,2023-01-15\n"
+            b"AAPL,5,180.0,2024-03-09"
+        )
+        holdings = self._upload(keyless_client, body).json()["holdings"]
+        assert len(holdings) == 2
+        assert [h["acquired"] for h in holdings] == ["2023-01-15", "2024-03-09"]

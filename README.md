@@ -32,10 +32,10 @@ export LLM_API_KEY=sk-...      # any OpenAI, Anthropic, or Google key
 finkrit                        # start the dashboard, opens your browser
 ```
 
-finkrit needs an LLM key. Getting a portfolio in means uploading a CSV, which
-the model parses, so it does not start without one. Any provider pydantic-ai
-supports works, keyed by the single LLM_API_KEY variable, or pass it inline with
-`finkrit --key sk-...`.
+finkrit wants an LLM key for the chat. The dashboard, the risk report, and a CSV
+upload whose header names its columns all run without one. Any provider
+pydantic-ai supports works, keyed by the single LLM_API_KEY variable, or pass it
+inline with `finkrit --key sk-...`.
 
 Prefer the terminal? `finkrit cli` chats with the agent over a portfolio instead.
 
@@ -168,10 +168,16 @@ Dates accept `YYYY-MM-DD`, `MM/DD/YYYY`, `MM/DD/YY`, or `DD-MM-YYYY`. Commas in
 numbers are stripped, extra columns are ignored, and a missing or unreadable
 date falls back to a default.
 
-That strict parser is the `finkrit cli --file` path. The **web upload** is
-looser: the raw file goes to the model, which maps whatever columns and formats
-it finds onto the same four fields and flags anything it had to guess for you to
-review, so almost any layout works there.
+The **web upload** uses that same table. When your header names all four fields
+under any of the spellings above, the file is read in code: instantly, with no
+model involved and no key needed. Only a file that leaves one of the four
+unnamed goes to the model, which maps whatever columns and formats it finds onto
+the same four fields and flags anything it had to guess. So almost any layout
+works, and a tidy one costs nothing.
+
+What differs between the two is the response to a gap. The terminal substitutes
+a default and carries on, since a chat session is throwaway. The upload records
+it on the holding for you to correct before anything is saved.
 
 ```
 -f, --file PATH    load a portfolio CSV, uses live prices

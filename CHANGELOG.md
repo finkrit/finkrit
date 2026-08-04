@@ -41,6 +41,17 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   shape of the trace.
 
 #### Changed
+- A CSV upload whose header names its columns is read in code, not by a model.
+  Every upload used to be a one shot LLM extraction, which a hosted model
+  answers in a second or two and a local one answers in minutes, with a blank
+  screen throughout. The bundled sample now parses in under a millisecond with
+  no model and no key, and only a file that leaves the ticker, quantity, cost
+  per share, or acquired date unnamed still needs one. The alias table and date
+  formats moved to `finagent.ingest` and are shared with the terminal loader,
+  so a new spelling taught to one is understood by both. Where they differ is
+  the response to a gap: the terminal substitutes a default silently, the
+  upload records it on the holding for the user to correct.
+
 - The model flag is `--model` on both entry points. The terminal called it
   `--ai` and the web app called it `--model`, so the same idea had two names
   and the wrong one was a parse error rather than a hint. `--ai` still works
