@@ -6,11 +6,11 @@ No network, a deterministic fake price provider stands in for the live data
 feed, so the numbers are reproducible and nothing is downloaded. The agent
 itself is real and needs a model plus its API key in the environment.
 
-    LLM_API_KEY=... python -m finagent --ai openai
-    LLM_API_KEY=... python -m finagent --ai claude -ag 1
-    LLM_API_KEY=... python -m finagent --ai openai -ag 0
+    LLM_API_KEY=... python -m finagent --model openai
+    LLM_API_KEY=... python -m finagent --model claude -ag 1
+    LLM_API_KEY=... python -m finagent --model openai -ag 0
 
---ai picks the model, a provider shortcut (claude, openai, gemini, groq,
+--model picks the model, a provider shortcut (claude, openai, gemini, groq,
 mistral) or a full provider:name string, keyed by a generic LLM_API_KEY mapped
 onto whatever env var the provider expects. -ag picks the agent: 0 the
 all-encompassing router, 1 risk, 2 optimization, 3 performance, 4 tax. Left off,
@@ -45,9 +45,10 @@ from finagent.store import DEFAULT_PORTFOLIO_ID, InMemoryStore
 _DEFAULT_MODEL = "anthropic:claude-sonnet-5"
 _HOLDINGS = {"AAPL": "40", "MSFT": "30", "NVDA": "20", "JPM": "25", "XOM": "35"}
 
-# Provider shortcuts for `-a`. Each maps to a sensible default model, override
-# the exact model with -m/--model or FINKRIT_MODEL. pydantic-ai handles every
-# provider behind the same interface, so switching is just the model string.
+# Provider shortcuts for `--model`. Each maps to a sensible default model, and
+# a full provider:name string to --model or FINKRIT_MODEL picks an exact one.
+# pydantic-ai handles every provider behind the same interface, so switching is
+# just the model string.
 _PROVIDER_DEFAULTS = {
     "claude": "anthropic:claude-sonnet-5",
     "anthropic": "anthropic:claude-sonnet-5",
@@ -458,16 +459,27 @@ def _print_holdings(portfolio: Portfolio) -> None:
         print(f"  {pos.asset.ticker:<8}{qty:>10g}{float(lot.cost_per_share):>14.2f}{str(lot.acquired):>14}")
 
 
-def main(argv: list[str] | None = None) -> None:
+def build_parser() -> argparse.ArgumentParser:
+    """The CLI's flags, separate from main so they can be parsed in a test.
+
+    Worth the split for one flag in particular: --ai is a released name kept
+    alive by a second, suppressed argument sharing --model's destination, and
+    nothing about reading that line proves the value actually lands.
+    """
     parser = argparse.ArgumentParser(
         prog="python -m finagent",
         description="Chat with the portfolio agent over a seeded fake portfolio.",
     )
     parser.add_argument(
-        "--ai", dest="ai", default=None,
+        "--model", dest="model", default=None,
         help="model: provider shortcut (claude, openai, gemini, groq, mistral) or a "
-             "full provider:name string. Overrides FINKRIT_MODEL.",
+             "full provider:name string, or the served name behind --url. "
+             "Overrides FINKRIT_MODEL.",
     )
+    # The released name for the same flag, still accepted so existing scripts
+    # and shell history keep working. Suppressed from --help: one name to
+    # learn, and --model is the one the web entry point already used.
+    parser.add_argument("--ai", dest="model", default=None, help=argparse.SUPPRESS)
     parser.add_argument(
         "-ag", "--agent", dest="agent", default=None,
         help="agent: 0 router (all), 1 risk, 2 optimization, 3 performance, 4 tax "
@@ -486,7 +498,7 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--url", dest="url", default=None,
         help="base url of an OpenAI-compatible endpoint (a local Ollama, LM Studio, "
-             "vLLM, or self-hosted server). No key needed. Set --ai to the model name.",
+             "vLLM, or self-hosted server). No key needed. Set --model to the served name.",
     )
     parser.add_argument(
         "--lang", dest="lang", default=DEFAULT_LANGUAGE,
@@ -517,7 +529,11 @@ def main(argv: list[str] | None = None) -> None:
              "enough to wrap. Useful on a narrow terminal or a wide fan out, "
              "where wrapping buries the shape of the trace.",
     )
-    args = parser.parse_args(argv)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = build_parser().parse_args(argv)
 
     # Before anything can fetch, so the first download is already quiet.
     configure_logging(args.logs)
@@ -526,8 +542,8 @@ def main(argv: list[str] | None = None) -> None:
         os.environ["LLM_API_KEY"] = args.key
 
     model: object
-    if args.ai:
-        model = _PROVIDER_DEFAULTS.get(args.ai.lower(), args.ai)
+    if args.model:
+        model = _PROVIDER_DEFAULTS.get(args.model.lower(), args.model)
     else:
         model = os.environ.get("FINKRIT_MODEL", _DEFAULT_MODEL)
 
@@ -597,7 +613,7 @@ def main(argv: list[str] | None = None) -> None:
         except Exception as exc:  # noqa: BLE001 - a CLI should not crash on one bad turn
             spinner.stop()
             print(f"\nerror: {exc}")
-            print("(if this is a model/auth error, set LLM_API_KEY and --ai)")
+            print("(if this is a model/auth error, set LLM_API_KEY and --model)")
             continue
         spinner.stop()
         print(f"\nagent > {answer}")

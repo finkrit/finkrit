@@ -41,6 +41,11 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   shape of the trace.
 
 #### Changed
+- The model flag is `--model` on both entry points. The terminal called it
+  `--ai` and the web app called it `--model`, so the same idea had two names
+  and the wrong one was a parse error rather than a hint. `--ai` still works
+  and is no longer advertised, so nothing anyone already typed breaks.
+
 - A lookup that misses now names what is registered, not only what is missing.
   "No asset registered with ticker X" is true of the argument but reads as a
   claim about the portfolio, and a model with no way to list its holdings will

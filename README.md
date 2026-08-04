@@ -64,9 +64,13 @@ vLLM, llama.cpp server, or a self-hosted box) with `--url`. No cloud key is
 needed, and you set the model to whatever the endpoint serves:
 
 ```bash
-finkrit --model openai:llama3.1 --url http://localhost:11434/v1
-finkrit cli --ai qwen2.5 --url http://my-box.local:8000/v1
+finkrit --model llama3.1 --url http://localhost:11434/v1
+finkrit cli --model qwen2.5:14b-instruct --url http://my-box.local:8000/v1
 ```
+
+`--model` names the flag on both entry points. Behind `--url` it is the name
+the endpoint serves, verbatim, so an Ollama tag like `qwen2.5:14b-instruct`
+goes through whole rather than being read as a provider prefix.
 
 The agent leans on tool calling, so use a tool-capable model (llama 3.1 or 3.3
 70B, qwen2.5-instruct, and similar). Small models often fumble the tool calls.
@@ -171,12 +175,14 @@ review, so almost any layout works there.
 
 ```
 -f, --file PATH    load a portfolio CSV, uses live prices
---ai openai        provider shortcut or a full provider:name string
+--model openai     provider shortcut, a provider:name string, or a served name
 -ag 0|1|2|3|4      router, risk, optimization, performance, tax
 --key sk-...       the LLM key
 --url URL          an OpenAI compatible endpoint, a local Ollama or LM Studio
 --lang Thai        language to answer in, English by default
+--logs             show finkritq's data fetch logs, off by default
 --steps            also show tool arguments and each specialist's answer
+--truncate-steps   cut each step to one terminal row
 --quiet            hide the live step trace
 ```
 
