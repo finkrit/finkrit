@@ -6,12 +6,13 @@ Reuses finagent's fake HistoryProvider so data behavior matches finagent tests.
 """
 from __future__ import annotations
 
+import json
 import warnings
 
 import pytest
 from fastapi.testclient import TestClient
 from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCallPart, ToolReturnPart
-from pydantic_ai.models.function import AgentInfo, FunctionModel
+from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 
 from finagent.assistant import Assistant
 from finagent.store import InMemoryStore
@@ -48,10 +49,38 @@ def _script_volatility(messages: list[ModelMessage], info: AgentInfo) -> ModelRe
     return ModelResponse(parts=[TextPart("Your portfolio's volatility has been computed.")])
 
 
+async def _stream_volatility(messages: list[ModelMessage], info: AgentInfo):
+    """The same script over pydantic-ai's streaming path, which /api/ask/stream
+    takes because setting an event handler switches the request mode. Yields
+    deltas rather than returning a response."""
+    tool_names = {t.name for t in info.function_tools}
+    answered = any(
+        isinstance(p, ToolReturnPart) for m in messages for p in getattr(m, "parts", [])
+    )
+    if answered:
+        yield "Your portfolio's volatility has been computed."
+    elif "ask_risk" in tool_names:
+        yield {0: DeltaToolCall(
+            name="ask_risk",
+            json_args=json.dumps({"question": "What is the volatility?"}),
+            tool_call_id="call-ask-risk",
+        )}
+    elif "portfolio_volatility" in tool_names:
+        yield {0: DeltaToolCall(
+            name="portfolio_volatility",
+            json_args=json.dumps({"portfolio_id": "port-1"}),
+            tool_call_id="call-vol",
+        )}
+    else:
+        yield "Your portfolio's volatility has been computed."
+
+
 @pytest.fixture
 def assistant() -> Assistant:
+    # Both paths scripted: the plain endpoints issue a normal request, and
+    # /api/ask/stream issues a streamed one.
     return Assistant(
-        model=FunctionModel(_script_volatility),
+        model=FunctionModel(_script_volatility, stream_function=_stream_volatility),
         store=InMemoryStore(),
         registry=make_registry(),
     )

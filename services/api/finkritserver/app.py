@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import asyncio
 import json
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
@@ -31,6 +32,7 @@ from pydantic_ai.exceptions import AgentRunError
 from finagent.assistant import Assistant
 from finagent.ingest import ParsedPortfolio
 from finagent.report import PortfolioRiskReport, TaxSignalsReport
+from finagent.progress import Step, StepDetail, progress_handler
 from finagent.report.tax_signals import (
     DEFAULT_COUNTDOWN_DAYS,
     DEFAULT_LONG_TERM_RATE,
@@ -65,6 +67,33 @@ DEFAULT_CORS_ORIGINS: tuple[str, ...] = ("http://localhost:5173", "http://127.0.
 # time, per private/webapp_plan.md). Doesn't exist until Phase 3 -- the API
 # still runs standalone if this directory is absent.
 DEFAULT_STATIC_DIR: Path = Path(__file__).parent / "static"
+
+# How much each streamed progress step carries. FULL adds the arguments a tool
+# was called with and each specialist's answer, which is what makes a live step
+# readable rather than a bare name. This is the owner's own dashboard, so the
+# payload is data they already receive at the end of the run. Drop to
+# StepDetail.SUMMARY to stop sending either.
+STREAM_DETAIL = StepDetail.FULL
+
+
+def _frame(payload: dict) -> str:
+    """One server sent event. Separated by a blank line, which is what tells a
+    reader the frame is complete."""
+    return f"data: {json.dumps(payload)}\n\n"
+
+
+def _step_payload(step: Step) -> dict:
+    # Enums as their values, so the wire format survives a member being
+    # reordered (the reason those enums carry explicit strings at all).
+    return {
+        "kind": step.kind.value,
+        "status": step.status.value,
+        "name": step.name,
+        "detail": step.detail,
+        "call_id": step.call_id,
+        "args": dict(step.args),
+        "content": step.content,
+    }
 
 
 def create_app(
@@ -257,6 +286,67 @@ def create_app(
                 status_code=502,
                 detail=f"The assistant could not complete the request: {exc}",
             ) from exc
+
+    @app.post("/api/ask/stream")
+    async def ask_stream(req: AskRequest) -> StreamingResponse:
+        # Same question as /api/ask, answered over a stream so the fan out is
+        # visible while it happens rather than arriving all at once at the end.
+        # Frames are {"type": "step"|"answer"|"error"}.
+        #
+        # Errors are frames, not status codes: the 404 and 502 that /api/ask
+        # returns are raised from inside the run, by which point the response
+        # has already begun and the status line is spent. A client must read
+        # the stream to learn a question failed.
+        conversation_id, thread = conversations.get_or_create(req.conversation_id)
+
+        async def stream():
+            # The agent run and the reader are concurrent: steps are pushed
+            # from inside the run, which does not return until the answer is
+            # complete. put_nowait on an unbounded queue so reporting progress
+            # can never block the run that is producing it.
+            queue: asyncio.Queue = asyncio.Queue()
+            done = object()
+
+            async def run() -> AskResponse:
+                try:
+                    answer = await thread.ask_async(
+                        req.question,
+                        event_handler=progress_handler(queue.put_nowait, STREAM_DETAIL),
+                    )
+                    return AskResponse(
+                        answer=answer,
+                        conversation_id=conversation_id,
+                        specialists=getattr(thread, "last_specialist_names", []),
+                        specialist_answers=[
+                            SpecialistAnswer(name=s.name, question=s.question, answer=s.answer)
+                            for s in getattr(thread, "last_specialists", [])
+                        ],
+                    )
+                finally:
+                    queue.put_nowait(done)
+
+            task = asyncio.create_task(run())
+            while True:
+                item = await queue.get()
+                if item is done:
+                    break
+                yield _frame({"type": "step", **_step_payload(item)})
+
+            try:
+                yield _frame({"type": "answer", **(await task).model_dump()})
+            except (PortfolioNotFoundError, AssetNotFoundError) as exc:
+                yield _frame({"type": "error", "detail": str(exc)})
+            except AgentRunError as exc:
+                yield _frame({
+                    "type": "error",
+                    "detail": f"The assistant could not complete the request: {exc}",
+                })
+
+        return StreamingResponse(
+            stream(),
+            media_type="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        )
 
     @app.post("/api/ask/{conversation_id}/reset", status_code=204)
     def reset_conversation(conversation_id: str) -> None:

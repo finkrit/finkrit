@@ -130,6 +130,49 @@ class TestReport:
         assert isinstance(body["params"]["confidence"], float)
 
 
+class TestAskStream:
+    """The same answer as /api/ask, delivered as a stream so the fan out is
+    visible while it happens."""
+
+    def _frames(self, body: str) -> list[dict]:
+        import json
+
+        return [
+            json.loads(line[len("data: "):])
+            for line in body.split("\n")
+            if line.startswith("data: ")
+        ]
+
+    def _ask(self, client: TestClient, question: str = "What's my volatility?"):
+        return client.post("/api/ask/stream", json={"question": question})
+
+    def test_steps_arrive_before_the_answer(self, client: TestClient, portfolio_payload: dict):
+        # The whole point: something to show while the run is still going.
+        assert client.post("/api/portfolio", json=portfolio_payload).status_code == 200
+        r = self._ask(client)
+        assert r.status_code == 200
+        assert r.headers["content-type"].startswith("text/event-stream")
+
+        frames = self._frames(r.text)
+        assert frames[-1]["type"] == "answer"
+        assert all(f["type"] == "step" for f in frames[:-1])
+        assert any(f["kind"] == "specialist" and f["name"] == "risk" for f in frames[:-1])
+
+    def test_the_answer_frame_matches_the_plain_endpoint(self, client: TestClient, portfolio_payload: dict):
+        assert client.post("/api/portfolio", json=portfolio_payload).status_code == 200
+        answer = self._frames(self._ask(client).text)[-1]
+        assert "volatility" in answer["answer"].lower()
+        assert answer["specialists"] == ["risk"]
+        assert answer["conversation_id"]
+
+    def test_a_failure_is_a_frame_not_a_status(self, client: TestClient):
+        # The status line is spent by the time the run raises, so a client has
+        # to read the stream to learn the question failed.
+        r = self._ask(client)   # no portfolio registered
+        assert r.status_code == 200
+        assert self._frames(r.text)[-1]["type"] == "error"
+
+
 class TestPrefetch:
     def _register(self, client: TestClient, payload: dict):
         assert client.post("/api/portfolio", json=payload).status_code == 200
