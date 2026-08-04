@@ -9,6 +9,60 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 
 ## [Unreleased]
 
+## finkritq 0.4.0 — 2026-08-03
+
+### Added
+- `long_term_transitions`: the short term lots approaching the 365 day
+  boundary, each with its signed unrealized gain and the days remaining. The
+  boundary cuts both ways, a gain lot is worth holding across it and a loss
+  lot is worth harvesting before it, so the scan reports the facts and the
+  caller reads the sign.
+- `MemoizingSnapshotProvider`, a short TTL cache over spot quotes. History was
+  memoized but snapshots were not, so every tax question re-downloaded one
+  quote per holding. Sixty seconds covers one dashboard interaction reading a
+  consistent price without going stale across interactions.
+
+### Changed
+- `RestrictionKind` members carry explicit string values instead of `auto()`.
+  auto() numbers by definition order, so inserting or reordering a member
+  silently renumbers everything ever serialized. Comparisons are identity
+  based throughout the package and are unaffected, but the serialized form
+  changes from an integer to a string. **Breaking** for anyone who persisted
+  the old numeric values. The minor version carries it, since under semantic
+  versioning a 0.x break bumps there.
+
+## finkritintel 0.2.1 — 2026-08-03
+
+### Changed
+- Spot prices are fetched in parallel, one worker per holding, matching the
+  history fan out. The sequential loop made every tax tool wait holdings times
+  latency. The helper is public as `spot_prices` now, so the layers above can
+  price against the same quote source.
+
+## finkrit 0.1.5 — 2026-08-03
+
+### Added
+- Two dashboard views with no LLM anywhere in their path. Tax signals shows
+  what to act on today priced in dollars: lots worth harvesting with the
+  estimated saving at assumed (and adjustable) rates, wash sale warnings, and
+  long term countdowns that say hold or act per lot. Rebalance lays the three
+  strategies side by side over one shared target, each with its tax cost,
+  harvested loss, and residual drift, with the sells of the selected strategy
+  itemized per lot method.
+- Downloads are visible and parallel. A prefetch endpoint warms the price
+  caches with one worker per ticker and streams progress, and the dashboard
+  shows it as an overlay with a live bar and a chip per stock lighting up as
+  each download lands.
+- Beta questions no longer stall on "which benchmark?". The compiled tools
+  default to the S&P 500 (^GSPC) when no benchmark is named, the default is
+  stated in each tool's description, and the risk specialist is instructed to
+  use it and say so rather than asking.
+
+### Fixed
+- Switching dashboard views no longer refetches everything. Results are held
+  for the session and refresh on demand or when a new portfolio is saved,
+  instead of every visit re-downloading data that had not changed.
+
 ## finkritq 0.3.0 — 2026-07-29
 
 ### Added

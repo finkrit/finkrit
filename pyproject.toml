@@ -16,7 +16,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finkrit"
-version = "0.1.4"
+version = "0.1.5"
 description = "Portfolio risk, performance, optimization, and tax, with an agent and a web dashboard."
 readme = "README.md"
 license = "Apache-2.0"
@@ -36,11 +36,14 @@ dependencies = [
     # looser floor lets a resolver pick an older release and fail at import, or
     # worse, silently backtrack finkrit itself to a version whose floors are
     # satisfiable (which is how 0.1.2 shipped uninstallable-in-practice).
-    # 0.2.0 is where the optimization capability gained the rebalance tools the
-    # optimization agent's instructions now describe.
-    "finkritintel>=0.2.0",
-    # Pulled transitively by intel too, named here for the [data] extra.
-    "finkritq[data]>=0.3.0",
+    # 0.2.1 is where spot_prices became public, which the tax signals composer
+    # imports directly so its prices agree with the tax tools' prices.
+    "finkritintel>=0.2.1",
+    # Pulled transitively by intel too, named here for the [data] extra. 0.4.0
+    # carries long_term_transitions (the boundary countdown signals) and
+    # MemoizingSnapshotProvider (the default registry's snapshot cache), both
+    # imported unconditionally by finagent.
+    "finkritq[data]>=0.4.0",
     "pydantic-ai>=2.0",
     "pydantic>=2.0",
     "fastapi>=0.115",
