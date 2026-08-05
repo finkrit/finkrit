@@ -27,6 +27,7 @@ PYPROJECT = REPO_ROOT / "pyproject.toml"
 # Source directory to the package name it is published under. Only top level
 # modules are checked, subpackages are force-included whole as directories.
 BUNDLED = {
+    REPO_ROOT / "packages" / "finkritcore": "finkritcore",
     REPO_ROOT / "packages" / "finagent": "finagent",
     REPO_ROOT / "services" / "api" / "finkritserver": "finkritserver",
 }

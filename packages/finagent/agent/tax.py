@@ -6,8 +6,10 @@ from pydantic_ai import models
 
 from finkritintel.capability.tax import TAX_CAPABILITY
 
+from finkritcore.store import DEFAULT_PORTFOLIO_ID
+
 from finagent.agent.base import DEFAULT_LANGUAGE, CapabilityAgent
-from finagent.store import DEFAULT_PORTFOLIO_ID
+
 
 TAX_INSTRUCTIONS = (
     "You are a portfolio tax analyst. Use the available tools to describe the "

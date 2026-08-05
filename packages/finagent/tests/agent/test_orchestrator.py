@@ -12,8 +12,8 @@ from finagent.agent.performance import PerformanceAgent
 from finagent.agent.risk import RiskAgent
 from finagent.agent.tax import TaxAgent
 from finagent.deps import AgentDeps
-from finagent.store import DEFAULT_PORTFOLIO_ID, InMemoryStore
-from finagent.tests.fixtures import make_portfolio, make_registry
+from finkritcore.store import DEFAULT_PORTFOLIO_ID, InMemoryStore
+from finkritcore.tests.fixtures import make_portfolio, make_registry
 
 warnings.filterwarnings("ignore", message="Could not generate return schema")
 

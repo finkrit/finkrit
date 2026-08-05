@@ -15,8 +15,8 @@ from finkritq.data import DataRegistry
 
 from finagent.adapter.compiler import compile_capability, compile_tool
 from finagent.deps import AgentDeps
-from finagent.store import InMemoryStore
-from finagent.tests.fixtures import make_portfolio, make_registry, make_stock
+from finkritcore.store import InMemoryStore
+from finkritcore.tests.fixtures import make_portfolio, make_registry, make_stock
 
 
 def _binding(name: str):

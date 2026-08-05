@@ -1,8 +1,8 @@
-# finagent/report/performance.py
+# finkritcore/report/performance.py
 """
-Structured performance output and its deterministic composer -- the performance
+Structured performance output and its deterministic composer : the performance
 analogue of the risk report trio (metric.py + report.py + composer.py), kept in
-one domain-scoped module.
+one domain scoped module.
 
 Same shape and contract as the risk side:
   - every metric field is Optional and defaults to None, so a report is filled
@@ -57,8 +57,8 @@ ALL: frozenset[PerformanceMetric] = frozenset(PerformanceMetric)
 
 
 def resolve_metrics(
-    metrics: frozenset[PerformanceMetric] | set[PerformanceMetric] | str,
-) -> frozenset[PerformanceMetric]:
+        metrics: frozenset[PerformanceMetric] | set[PerformanceMetric] | str,
+    ) -> frozenset[PerformanceMetric]:
     """Accept the string aliases 'core'/'all' or an explicit metric set."""
     if isinstance(metrics, str):
         key = metrics.lower()
@@ -66,9 +66,7 @@ def resolve_metrics(
             return CORE
         if key == "all":
             return ALL
-        raise ValueError(
-            f"Unknown metric selector '{metrics}'. Use 'core', 'all', or a set of PerformanceMetric."
-        )
+        raise ValueError(f"Unknown metric selector '{metrics}'. Use 'core', 'all', or a set of PerformanceMetric.")
     return frozenset(metrics)
 
 
@@ -103,18 +101,18 @@ class PortfolioPerformanceReport:
 
 
 def compose_portfolio_performance_report(
-    portfolio: Portfolio,
-    registry: DataRegistry,
-    metrics: frozenset[PerformanceMetric] | set[PerformanceMetric] | str = "core",
-    *,
-    basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
-    risk_free_rate: float = 0.0,
-    target: float = 0.0,
-    periods_per_year: int = 252,
-    start: date | None = None,
-    end: date | None = None,
-    interval: str = "1d",
-) -> PortfolioPerformanceReport:
+        portfolio: Portfolio,
+        registry: DataRegistry,
+        metrics: frozenset[PerformanceMetric] | set[PerformanceMetric] | str = "core",
+        *,
+        basis: WeightingBasis = WeightingBasis.BUY_AND_HOLD,
+        risk_free_rate: float = 0.0,
+        target: float = 0.0,
+        periods_per_year: int = 252,
+        start: date | None = None,
+        end: date | None = None,
+        interval: str = "1d",
+    ) -> PortfolioPerformanceReport:
     selected = set(resolve_metrics(metrics))
     errors: dict[str, str] = {}
 

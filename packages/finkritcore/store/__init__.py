@@ -1,6 +1,6 @@
-# finagent/store/__init__.py
+# finkritcore/store/__init__.py
 """
-finagent.store — id/ticker -> domain-object resolution.
+finkritcore.store — id/ticker -> domain-object resolution.
 
 Because an LLM (and a programmatic caller) references things by id or ticker,
 something has to turn ``"port-1"`` back into a ``Portfolio`` and ``"AAPL"``
@@ -10,8 +10,9 @@ into an ``Asset``. That is the ``Store``.
     plus ``register_*``. This is the important seam: when the service
     needs real persistence (surviving process restarts, sharing state between
     a scheduled job and an interactive session), it implements ``Store``
-    against a real backend and passes it to ``Assistant(store=...)`` —
-    finagent never needs to know that implementation exists.
+    against a real backend and passes it to ``Desk(store=...)``
+    or ``Assistant(store=...)`` — neither core nor finagent ever needs to
+    know that implementation exists.
 
   - ``memory`` — ``InMemoryStore``, the default. Zero cross-process
     persistence by design (persistence is a service concern). It exists so

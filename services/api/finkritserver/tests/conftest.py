@@ -15,8 +15,8 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCall
 from pydantic_ai.models.function import AgentInfo, DeltaToolCall, FunctionModel
 
 from finagent.assistant import Assistant
-from finagent.store import InMemoryStore
-from finagent.tests.fixtures import make_registry
+from finkritcore.store import InMemoryStore
+from finkritcore.tests.fixtures import make_registry
 
 from finkritserver.app import create_app
 

@@ -9,8 +9,8 @@ separate design question, not something a test alone answers.
 from __future__ import annotations
 
 from finagent.deps import AgentDeps
-from finagent.store import InMemoryStore
-from finagent.tests.fixtures import make_registry
+from finkritcore.store import InMemoryStore
+from finkritcore.tests.fixtures import make_registry
 
 
 class TestAgentDeps:

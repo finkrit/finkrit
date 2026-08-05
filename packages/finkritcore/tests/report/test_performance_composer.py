@@ -1,16 +1,16 @@
-# finagent/tests/report/test_performance_composer.py
+# finkritcore/tests/report/test_performance_composer.py
 from __future__ import annotations
 
 from datetime import date
 
 from finkritq.datatype import WeightingBasis
 
-from finagent.report.performance import (
+from finkritcore.report.performance import (
     PerformanceMetric,
     PortfolioPerformanceReport,
     compose_portfolio_performance_report,
 )
-from finagent.tests.fixtures import make_portfolio, make_registry
+from finkritcore.tests.fixtures import make_portfolio, make_registry
 
 
 class TestComposeCore:

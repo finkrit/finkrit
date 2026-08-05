@@ -15,7 +15,7 @@ from datetime import date
 
 from pydantic import BaseModel, Field
 
-from finagent.store import DEFAULT_PORTFOLIO_ID
+from finkritcore.store import DEFAULT_PORTFOLIO_ID
 
 
 class HoldingSpec(BaseModel):

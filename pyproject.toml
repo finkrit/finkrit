@@ -90,10 +90,15 @@ exclude = [
 packages = ["finkrit"]
 
 [tool.hatch.build.targets.wheel.force-include]
-# finagent and finkritserver are leaves, bundled rather than published alone.
+# finkritcore, finagent, and finkritserver are leaves, bundled rather than
+# published alone. finkritcore is the deterministic layer and is the one most
+# likely to get its own wheel first, when an integrator wants the analytics
+# without an agent framework, but until then it ships here.
+#
 # Listed per top-level item so tests stay out (force-include ignores exclude).
 # finkritserver ships its built static UI, populated by npm run build. A new
-# top-level module in either package needs adding here.
+# top-level module in ANY of the three needs adding here, and
+# tests/test_packaging.py fails the suite when one is missed.
 "packages/finagent/__init__.py" = "finagent/__init__.py"
 "packages/finagent/__main__.py" = "finagent/__main__.py"
 "packages/finagent/assistant.py" = "finagent/assistant.py"
@@ -109,8 +114,11 @@ packages = ["finkrit"]
 # fails at runtime if this is dropped, which is why that test has its own case.
 "packages/finagent/examples" = "finagent/examples"
 "packages/finagent/agent" = "finagent/agent"
-"packages/finagent/report" = "finagent/report"
-"packages/finagent/store" = "finagent/store"
+"packages/finkritcore/__init__.py" = "finkritcore/__init__.py"
+"packages/finkritcore/ingest.py" = "finkritcore/ingest.py"
+"packages/finkritcore/desk.py" = "finkritcore/desk.py"
+"packages/finkritcore/report" = "finkritcore/report"
+"packages/finkritcore/store" = "finkritcore/store"
 "services/api/finkritserver/__init__.py" = "finkritserver/__init__.py"
 "services/api/finkritserver/app.py" = "finkritserver/app.py"
 "services/api/finkritserver/conversations.py" = "finkritserver/conversations.py"

@@ -1,9 +1,9 @@
-# finagent/tests/report/test_metric.py
+# finkritcore/tests/report/test_metric.py
 from __future__ import annotations
 
 import pytest
 
-from finagent.report.metric import ALL, CORE, RiskMetric, asset_metrics, resolve_metrics
+from finkritcore.report.metric import ALL, CORE, RiskMetric, asset_metrics, resolve_metrics
 
 
 class TestResolveMetrics:

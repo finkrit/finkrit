@@ -1,4 +1,4 @@
-# finagent/report/tax_signals.py
+# finkritcore/report/tax_signals.py
 """
 Tax signals: the deterministic, actionable tax view the dashboard renders.
 
@@ -102,16 +102,16 @@ class TaxSignalsReport:
 
 
 def compose_tax_signals(
-    portfolio: Portfolio,
-    registry: DataRegistry,
-    *,
-    as_of: date | None = None,
-    short_term_rate: float = DEFAULT_SHORT_TERM_RATE,
-    long_term_rate: float = DEFAULT_LONG_TERM_RATE,
-    min_loss: float = 0.0,
-    wash_sale_window_days: int = 30,
-    countdown_days: int = DEFAULT_COUNTDOWN_DAYS,
-) -> TaxSignalsReport:
+        portfolio: Portfolio,
+        registry: DataRegistry,
+        *,
+        as_of: date | None = None,
+        short_term_rate: float = DEFAULT_SHORT_TERM_RATE,
+        long_term_rate: float = DEFAULT_LONG_TERM_RATE,
+        min_loss: float = 0.0,
+        wash_sale_window_days: int = 30,
+        countdown_days: int = DEFAULT_COUNTDOWN_DAYS,
+    ) -> TaxSignalsReport:
     """
     Compute every tax signal off one price read, so the harvest rows and the
     countdown rows can never disagree about what a lot is worth.

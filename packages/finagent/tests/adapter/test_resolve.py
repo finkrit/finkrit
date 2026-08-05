@@ -6,8 +6,8 @@ from pydantic_ai import ModelRetry
 
 from finagent.adapter.resolve import FIELD_RESOLVERS, INJECTED_FIELDS, resolve_field
 from finagent.deps import AgentDeps
-from finagent.store import InMemoryStore
-from finagent.tests.fixtures import make_portfolio, make_registry, make_stock
+from finkritcore.store import InMemoryStore
+from finkritcore.tests.fixtures import make_portfolio, make_registry, make_stock
 
 
 class TestFieldResolvers:

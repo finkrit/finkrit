@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from pydantic_ai.exceptions import UsageLimitExceeded
 
 from finagent.assistant import Assistant
-from finagent.store import PortfolioNotFoundError
+from finkritcore.store import PortfolioNotFoundError
 
 from finkritserver.app import create_app
 

@@ -12,8 +12,8 @@ import warnings
 
 from finagent.agent.base import DEFAULT_LANGUAGE, with_language
 from finagent.assistant import Assistant
-from finagent.store import InMemoryStore
-from finagent.tests.fixtures import make_registry
+from finkritcore.store import InMemoryStore
+from finkritcore.tests.fixtures import make_registry
 
 warnings.filterwarnings("ignore", message="Could not generate return schema")
 

@@ -37,11 +37,13 @@ from finkritq.data.interfaces import HistoryProvider
 from finkritq.datatype import Currency, Exchange, PriceHistory
 from finkritq.portfolio import Portfolio, Position, TaxLot
 
+from finkritcore.ingest import csv_date, csv_number, csv_value
+from finkritcore.store import DEFAULT_PORTFOLIO_ID, InMemoryStore
+
 from finagent.agent.base import DEFAULT_LANGUAGE
 from finagent.assistant import Assistant
-from finagent.ingest import csv_date, csv_number, csv_value
 from finagent.progress import Step, StepDetail, StepKind, StepStatus, progress_handler
-from finagent.store import DEFAULT_PORTFOLIO_ID, InMemoryStore
+
 
 _DEFAULT_MODEL = "anthropic:claude-sonnet-5"
 _HOLDINGS = {"AAPL": "40", "MSFT": "30", "NVDA": "20", "JPM": "25", "XOM": "35"}

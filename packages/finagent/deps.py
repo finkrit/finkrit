@@ -6,7 +6,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from finkritq.data import DataRegistry
-from finagent.store import Store
+
+from finkritcore.store import Store
 
 
 @dataclass(slots=True)

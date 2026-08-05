@@ -12,10 +12,10 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from finagent.agent.risk import RISK_INSTRUCTIONS, RiskAgent
 from finagent.deps import AgentDeps
-from finagent.report.metric import RiskMetric
-from finagent.report.report import PortfolioRiskReport
-from finagent.store import DEFAULT_PORTFOLIO_ID, InMemoryStore, PortfolioNotFoundError
-from finagent.tests.fixtures import make_portfolio, make_registry, make_stock
+from finkritcore.report.metric import RiskMetric
+from finkritcore.report.report import PortfolioRiskReport
+from finkritcore.store import DEFAULT_PORTFOLIO_ID, InMemoryStore, PortfolioNotFoundError
+from finkritcore.tests.fixtures import make_portfolio, make_registry, make_stock
 
 warnings.filterwarnings("ignore", message="Could not generate return schema")
 

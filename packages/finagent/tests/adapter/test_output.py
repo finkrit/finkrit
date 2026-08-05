@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 
 from finagent.adapter.output import _summarize_contribution, _summarize_drawdown
-from finagent.tests.fixtures import make_portfolio
+from finkritcore.tests.fixtures import make_portfolio
 
 
 class TestSummarizeDrawdown:

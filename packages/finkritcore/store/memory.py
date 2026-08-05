@@ -1,4 +1,4 @@
-# finagent/store/memory.py
+# finkritcore/store/memory.py
 
 from __future__ import annotations
 

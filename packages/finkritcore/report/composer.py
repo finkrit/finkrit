@@ -1,4 +1,4 @@
-# finagent/report/composer.py
+# finkritcore/report/composer.py
 """
 Deterministic portfolio risk report, does not use LLMs or no API key.
 
@@ -9,7 +9,7 @@ the *pre-fetched* bindings take data in (fetch-once report composer).
 
 Resilient by design: a metric that can't be computed (no benchmark, bad
 data) records into report.errors and leaves its field None, rather than
-failing the whole report -- a dashboard needs partial success.
+failing the whole report: dashboard survives partial success.
 """
 from __future__ import annotations
 
@@ -36,8 +36,8 @@ from finkritq.data import DataRegistry
 from finkritq.datatype import MarketIndex, PriceHistory
 from finkritq.portfolio import Portfolio, PortfolioData
 
-from finagent.report.metric import RiskMetric, resolve_metrics
-from finagent.report.report import DrawdownSummary, PortfolioRiskReport, RiskParameters
+from finkritcore.report.metric import RiskMetric, resolve_metrics
+from finkritcore.report.report import DrawdownSummary, PortfolioRiskReport, RiskParameters
 
 DEFAULT_BENCHMARK: Asset = MarketIndex.SP500.as_asset()
 
@@ -68,21 +68,21 @@ def _contribution_map(result: Any, portfolio: Portfolio) -> dict[str, float]:
 
 
 def compose_portfolio_risk_report(
-    portfolio: Portfolio,
-    registry: DataRegistry,
-    metrics: frozenset[RiskMetric] | set[RiskMetric] | str = "core",
-    *,
-    benchmark: Asset | None = None,
-    start: date | None = None,
-    end: date | None = None,
-    interval: str = "1d",
-) -> PortfolioRiskReport:
+        portfolio: Portfolio,
+        registry: DataRegistry,
+        metrics: frozenset[RiskMetric] | set[RiskMetric] | str = "core",
+        *,
+        benchmark: Asset | None = None,
+        start: date | None = None,
+        end: date | None = None,
+        interval: str = "1d",
+    ) -> PortfolioRiskReport:
     selected = set(resolve_metrics(metrics))
     benchmark = benchmark or DEFAULT_BENCHMARK
     errors: dict[str, str] = {}
 
     # Fetch once. If the portfolio itself can't be priced, no metric is
-    # computable -- let that raise. The benchmark fetch only affects beta,
+    # computable we let that raise. The benchmark fetch only affects beta,
     # so it's isolated: a failure nulls beta, not the whole report.
     data = PortfolioData.from_registry(portfolio, registry, start=start, end=end, interval=interval)
 
@@ -102,7 +102,7 @@ def compose_portfolio_risk_report(
         benchmark_ticker=benchmark.ticker if benchmark_history is not None else None,
     )
 
-    # Each entry: RiskMetric -> (report_field_name, zero-arg compute).
+    # Each entry: RiskMetric -> (report_field_name, zero arg compute).
     computers: dict[RiskMetric, tuple[str, Callable[[], Any]]] = {
         RiskMetric.VOLATILITY: ("volatility", lambda: PORTFOLIO_VOLATILITY_BINDING.execute(data)),
         RiskMetric.VARIANCE: ("variance", lambda: PORTFOLIO_VARIANCE_BINDING.execute(data)),

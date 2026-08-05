@@ -6,11 +6,14 @@ from pydantic_ai import models
 
 from finkritintel.capability.optimization import OPTIMIZATION_CAPABILITY
 
+from finkritcore.store import DEFAULT_PORTFOLIO_ID
+
 from finagent.agent.base import DEFAULT_LANGUAGE, CapabilityAgent
-from finagent.store import DEFAULT_PORTFOLIO_ID
 
 # Module level, so the text starts at column 0 and the newlines it carries are
 # real line breaks rather than indentation. Both are harmless to the model.
+
+
 OPTIMIZATION_INSTRUCTIONS = f"""\
 You are a portfolio optimization analyst. Use the available tools to compute
 optimal allocations for the user's portfolio, then answer plainly. State the

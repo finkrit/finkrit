@@ -1,10 +1,10 @@
-# finagent/tests/store/test_memory.py
+# finkritcore/tests/store/test_memory.py
 from __future__ import annotations
 
 import pytest
 
-from finagent.store import AssetNotFoundError, InMemoryStore, PortfolioNotFoundError
-from finagent.tests.fixtures import make_portfolio, make_stock
+from finkritcore.store import AssetNotFoundError, InMemoryStore, PortfolioNotFoundError
+from finkritcore.tests.fixtures import make_portfolio, make_stock
 
 
 class TestInMemoryStore:

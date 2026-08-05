@@ -5,9 +5,45 @@ three independently versioned distributions, so each entry is headed by the
 package and version it belongs to. The project follows semantic versioning.
 
 Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
-`finkrit` (the bundle that ships finagent, finkritserver, and the web app).
+`finkrit` (the bundle that ships finkritcore, finagent, finkritserver, and the
+web app).
 
 ## [Unreleased]
+
+### finkritq
+
+#### Added
+- `RiskMetric` in `finkritq.datatype`: the names of the risk metrics the stack
+  computes, moved down from the report layer above, plus the portfolio-only
+  classification (`PORTFOLIO_ONLY_METRICS`, `asset_metrics`). Contribution
+  metrics decompose risk across holdings, so a single asset has nothing to
+  decompose, and that is a fact about the metrics rather than about any one
+  report. Moved for the same reason `LotSaleMethod` lives here: the layers
+  that need the shared names, report composition and the tool contracts, do
+  not import each other, so the vocabulary sits at the one layer everything
+  imports. The quant functions themselves are unchanged, one function per
+  metric, and take no `RiskMetric`. The curated selections (`CORE`, `ALL`,
+  the `"core"`/`"all"` aliases) deliberately stay in the report layer, which
+  re-exports `RiskMetric`, so which metrics a PM sees first remains a product
+  opinion rather than a math fact.
+
+### finkrit
+
+#### Changed
+- The deterministic layer is its own package, `finkritcore`. The `Store`, the
+  report composers, the deterministic CSV mapper, and a new `Desk`
+  facade moved out of finagent, which now composes them with the agents rather
+  than containing them. Behaviour is unchanged and the bundle still ships
+  everything, but the dashboard's entire path now exists without pydantic-ai,
+  which is the shape the analytics need in order to be embeddable on their own
+  and the shape the compliance boundary already assumed. A new layering test
+  fails the suite if a lower layer ever imports an upper one.
+
+  **Breaking** for imports: `finagent.store` and `finagent.report` are now
+  `finkritcore.store` and `finkritcore.report`, and `CSV_ALIASES` moved again,
+  from `finagent.ingest` to `finkritcore.ingest`. `finagent.ingest` still
+  re-exports `ParsedPortfolio` and `ParsedHolding`, because they are the return
+  types of the model fallback that stayed there.
 
 ## finkrit 0.2.0 — 2026-08-04
 

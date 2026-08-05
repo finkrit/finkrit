@@ -6,15 +6,18 @@ from datetime import date
 
 from pydantic_ai import models
 
-from finkritintel.capability.risk import RISK_CAPABILITY
 from finkritq.asset import Asset
+
+from finkritintel.capability.risk import RISK_CAPABILITY
+
+from finkritcore.report.composer import compose_portfolio_risk_report
+from finkritcore.report.metric import RiskMetric
+from finkritcore.report.report import PortfolioRiskReport
+from finkritcore.store import DEFAULT_PORTFOLIO_ID
 
 from finagent.agent.base import DEFAULT_LANGUAGE, CapabilityAgent
 from finagent.deps import AgentDeps
-from finagent.report.composer import compose_portfolio_risk_report
-from finagent.report.metric import RiskMetric
-from finagent.report.report import PortfolioRiskReport
-from finagent.store import DEFAULT_PORTFOLIO_ID
+
 
 RISK_INSTRUCTIONS = (
     "You are a portfolio risk analyst. Use the available tools to compute risk "

@@ -27,10 +27,10 @@ import pytest
 
 from finagent.cli import _AGENT_CHOICES, _AGENT_NAMES
 
-# Moved out of finagent.cli: the terminal loader and the upload path share one
-# alias table now, so the README documents a single contract rather than the
-# CLI's half of one.
-from finagent.ingest import CSV_ALIASES, CSV_DATE_FORMATS
+# One alias table, in the deterministic layer, shared by the terminal loader
+# and the web upload. So the README documents a single contract rather than one
+# surface's half of one.
+from finkritcore.ingest import CSV_ALIASES, CSV_DATE_FORMATS
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 README = (REPO_ROOT / "README.md").read_text()

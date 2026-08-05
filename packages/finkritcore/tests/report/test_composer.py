@@ -1,14 +1,14 @@
-# finagent/tests/report/test_composer.py
+# finkritcore/tests/report/test_composer.py
 from __future__ import annotations
 
 from datetime import date
 
 import pytest
 
-from finagent.report.composer import compose_portfolio_risk_report
-from finagent.report.metric import ALL, CORE, RiskMetric
-from finagent.report.report import DrawdownSummary, PortfolioRiskReport
-from finagent.tests.fixtures import make_portfolio, make_registry, make_stock
+from finkritcore.report.composer import compose_portfolio_risk_report
+from finkritcore.report.metric import ALL, CORE, RiskMetric
+from finkritcore.report.report import DrawdownSummary, PortfolioRiskReport
+from finkritcore.tests.fixtures import make_portfolio, make_registry, make_stock
 
 
 class TestComposeCore:

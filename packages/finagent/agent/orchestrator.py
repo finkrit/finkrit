@@ -6,6 +6,8 @@ from pydantic_ai import Agent, RunContext, models
 from pydantic_ai.agent import AgentRunResult
 from pydantic_ai.messages import ModelMessage
 
+from finkritcore.store import DEFAULT_PORTFOLIO_ID
+
 from finagent.agent.base import (
     DEFAULT_LANGUAGE,
     DEFAULT_TOOL_RETRIES,
@@ -17,7 +19,7 @@ from finagent.agent.performance import PerformanceAgent
 from finagent.agent.risk import RiskAgent
 from finagent.agent.tax import TaxAgent
 from finagent.deps import AgentDeps
-from finagent.store import DEFAULT_PORTFOLIO_ID
+
 
 ORCHESTRATOR_INSTRUCTIONS = (
     "You are a portfolio assistant that delegates to specialist tools. Read the "

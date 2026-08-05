@@ -2,22 +2,11 @@
 
 from __future__ import annotations
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date
-
 from pydantic_ai import models
 
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
-from finkritq.data.providers import (
-    MemoizingHistoryProvider,
-    MemoizingSnapshotProvider,
-    YFinanceProvider,
-)
-from finkritq.datatype import MarketIndex
 from finkritq.portfolio import Portfolio
-
-from finkritintel.integration.finkritq import PORTFOLIO_REBALANCE_COMPARE_LIVE_BINDING
 
 from finagent.agent.base import DEFAULT_LANGUAGE
 from finagent.agent.optimization import OptimizationAgent
@@ -32,13 +21,13 @@ from finagent.ingest import (
     ParsedPortfolio,
     parse_portfolio_csv,
     parse_portfolio_csv_async,
-    parse_portfolio_csv_in_code,
 )
 from finagent.logging_model import wrap_model_for_logging
-from finagent.report.metric import RiskMetric
-from finagent.report.report import PortfolioRiskReport
-from finagent.report.tax_signals import TaxSignalsReport, compose_tax_signals
-from finagent.store import InMemoryStore, Store
+from finkritcore.report.metric import RiskMetric
+from finkritcore.report.report import PortfolioRiskReport
+from finkritcore.report.tax_signals import TaxSignalsReport
+from finkritcore.desk import Desk
+from finkritcore.store import Store
 
 
 class Assistant:
@@ -57,6 +46,10 @@ class Assistant:
     orchestrator. `ask` targets one specialist directly (default risk, no routing
     overhead), `route` delegates through the orchestrator, which can call several
     specialists and combine them.
+
+    The deterministic surface is not implemented here. It lives on ``self.desk``,
+    a ``finkritcore.Desk``, and the methods below delegate to it. An
+    integrator who wants the analytics without an agent framework builds that     desk directly and reads identical numbers from the same store.
     """
 
     def __init__(
@@ -70,9 +63,11 @@ class Assistant:
         # model is optional, a dashboard-only user can construct an Assistant
         # and call .report()/.risk.report() with no LLM and no API key. .ask()
         # raises a clear error if no model was configured (F-1).
-        self._store = store or InMemoryStore()
-        self._registry = registry or _default_registry()
-        self._store.register_asset(MarketIndex.SP500.as_asset())
+        self.desk = Desk(store=store, registry=registry)
+        # The agents resolve against the desk's own store and registry, not
+        # copies, so the chat surface and the dashboard read one state.
+        self._store = self.desk.store
+        self._registry = self.desk.registry
         # Optional live step callback (pydantic-ai event_stream_handler), carried
         # into deps so it reaches the orchestrator and every nested specialist.
         self._event_handler = event_handler
@@ -104,13 +99,13 @@ class Assistant:
         return AgentDeps(store=self._store, registry=self._registry, event_handler=self._event_handler)
 
     def register_portfolio(self, portfolio: Portfolio) -> None:
-        self._store.register_portfolio(portfolio)
+        self.desk.register_portfolio(portfolio)
 
     def list_portfolios(self) -> list[Portfolio]:
-        return self._store.list_portfolios()
+        return self.desk.list_portfolios()
 
     def register_asset(self, asset: Asset) -> None:
-        self._store.register_asset(asset)
+        self.desk.register_asset(asset)
 
     def ask(self, question: str, agent: str = "risk") -> str:
         # Direct to one specialist (default risk), no orchestration overhead.
@@ -145,78 +140,34 @@ class Assistant:
     async def route_async(self, question: str) -> str:
         return await self.orchestrator.ask_async(question, self.deps)
 
+    # The deterministic surface, delegated to finkritcore. Kept on Assistant
+    # because it is what finkritserver and every notebook caller already reach
+    # for, and because holding an Assistant should not mean losing access to the
+    # half of the stack that needs no model.
+
     def report(
         self,
         portfolio_id: str,
         metrics: frozenset[RiskMetric] | set[RiskMetric] | str = "core",
     ) -> PortfolioRiskReport:
-        return self.risk.report(portfolio_id, self.deps, metrics)
+        return self.desk.report(portfolio_id, metrics)
 
     def tax_signals(self, portfolio_id: str, **kwargs) -> TaxSignalsReport:
-        # Deterministic, no LLM: the dashboard's actionable tax view (harvest
-        # candidates, wash sale warnings, long term countdowns). kwargs pass
-        # through to compose_tax_signals (rates, thresholds, as_of).
-        portfolio = self._store.get_portfolio(portfolio_id)
-        return compose_tax_signals(portfolio, self._registry, **kwargs)
+        # The dashboard's actionable tax view (harvest candidates, wash sale
+        # warnings, long term countdowns). kwargs pass through to
+        # compose_tax_signals (rates, thresholds, as_of).
+        return self.desk.tax_signals(portfolio_id, **kwargs)
 
     def prefetch_events(self, portfolio_id: str):
-        """
-        Warm the data caches for one portfolio, yielding a progress event per
-        ticker as its download lands. Deterministic, no LLM.
-
-        Downloads run in parallel (one worker per ticker) and each event is
-        emitted on completion, so a consumer can render a live progress bar.
-        Warms exactly what the dashboard endpoints read: the default-window
-        price history (same memoizer key) and the spot snapshot (TTL cache),
-        plus the S&P 500 benchmark the risk report betas against. A ticker
-        that fails reports status "error" with the reason and does not stop
-        the rest, mirroring the partial-success rule reports follow.
-
-        The portfolio lookup happens eagerly (a miss raises before any event),
-        the download fan-out lazily on iteration.
-        """
-        portfolio = self._store.get_portfolio(portfolio_id)
-        assets = [position.asset for position in portfolio.positions]
-        assets.append(MarketIndex.SP500.as_asset())
-
-        registry = self._registry
-
-        def events():
-            yield {"event": "start", "tickers": [asset.ticker for asset in assets]}
-
-            def warm(asset: Asset) -> None:
-                registry.history(asset)
-                try:
-                    registry.snapshot(asset)
-                except RuntimeError:
-                    # No snapshot provider registered (offline registry): the
-                    # tax tools fall back to history, already warmed above.
-                    pass
-
-            with ThreadPoolExecutor() as executor:
-                futures = {executor.submit(warm, asset): asset for asset in assets}
-                for future in as_completed(futures):
-                    asset = futures[future]
-                    try:
-                        future.result()
-                        yield {"ticker": asset.ticker, "status": "ready"}
-                    except Exception as exc:  # noqa: BLE001 - reported, not raised
-                        yield {"ticker": asset.ticker, "status": "error", "detail": str(exc)}
-
-            yield {"event": "end"}
-
-        return events()
+        # Warms the caches the dashboard endpoints read, yielding one event per
+        # ticker as its download lands, so a consumer can draw a progress bar.
+        return self.desk.prefetch_events(portfolio_id)
 
     def rebalance_compare(self, portfolio_id: str, **kwargs) -> dict:
-        # Deterministic, no LLM: the same fixed strategy menu the chat compare
-        # tool runs (full, band_edge, partial_fill), served straight to the
-        # dashboard through the identical intel binding so the two surfaces can
-        # never disagree on a number. kwargs pass through to the binding
-        # (objective, gain_budget, tolerance, method, as_of).
-        portfolio = self._store.get_portfolio(portfolio_id)
-        return PORTFOLIO_REBALANCE_COMPARE_LIVE_BINDING.execute(
-            portfolio=portfolio, registry=self._registry, **kwargs
-        )
+        # The same fixed strategy menu the chat compare tool runs, through the
+        # identical intel binding, so the two surfaces cannot disagree on a
+        # number. kwargs pass through to the binding.
+        return self.desk.rebalance_compare(portfolio_id, **kwargs)
 
     def _require_model(self) -> models.Model | models.KnownModelName | str:
         # Only reached once the deterministic mapper has declined, so the
@@ -227,7 +178,7 @@ class Assistant:
                 "This Assistant has no model configured, and this CSV could not "
                 "be read without one. Its header needs to name the ticker, the "
                 "quantity, the cost per share, and the acquired date, under any "
-                "of the spellings finagent.ingest.CSV_ALIASES lists."
+                "of the spellings finkritcore.ingest.CSV_ALIASES lists."
             )
         return self._model
 
@@ -245,7 +196,7 @@ class Assistant:
     ) -> ParsedPortfolio:
         # Sync convenience for scripts/notebooks. Does NOT register anything,
         # the caller reviews/corrects the result, then register_portfolio()s it.
-        mapped = parse_portfolio_csv_in_code(csv_text, name)
+        mapped = self.desk.parse_portfolio_csv(csv_text, name)
         if mapped is not None:
             return mapped
         return parse_portfolio_csv(csv_text, self._require_model())
@@ -254,20 +205,7 @@ class Assistant:
         self, csv_text: str, name: str = DEFAULT_PORTFOLIO_NAME
     ) -> ParsedPortfolio:
         # Async path for the web server's upload endpoint.
-        mapped = parse_portfolio_csv_in_code(csv_text, name)
+        mapped = self.desk.parse_portfolio_csv(csv_text, name)
         if mapped is not None:
             return mapped
         return await parse_portfolio_csv_async(csv_text, self._require_model())
-
-
-def _default_registry() -> DataRegistry:
-    registry = DataRegistry()
-    # Session-scoped memoization so repeated questions about the same holdings
-    # don't re-download. Persistent caching is a later (v2) layer. Snapshots
-    # get a short TTL cache so a prefetch pass and the view reads that follow
-    # it share one quote per ticker instead of hitting the network twice.
-    provider = MemoizingHistoryProvider(YFinanceProvider())
-    registry.register_history(provider)
-    registry.register_snapshot(MemoizingSnapshotProvider(YFinanceProvider()))
-    return registry
-

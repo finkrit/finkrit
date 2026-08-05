@@ -1,4 +1,4 @@
-# finagent/tests/report/test_tax_signals.py
+# finkritcore/tests/report/test_tax_signals.py
 """
 Tax signals composer.
 
@@ -23,8 +23,8 @@ from finkritq.data.interfaces import HistoryProvider
 from finkritq.datatype import PriceHistory
 from finkritq.portfolio import Portfolio, Position, TaxLot
 
-from finagent.report import compose_tax_signals
-from finagent.tests.fixtures import make_stock
+from finkritcore.report import compose_tax_signals
+from finkritcore.tests.fixtures import make_stock
 
 _AS_OF = date(2024, 6, 1)
 

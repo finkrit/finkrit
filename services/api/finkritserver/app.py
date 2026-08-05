@@ -29,17 +29,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic_ai.exceptions import AgentRunError
 
-from finagent.assistant import Assistant
-from finagent.ingest import DEFAULT_PORTFOLIO_NAME, ParsedPortfolio
-from finagent.report import PortfolioRiskReport, TaxSignalsReport
-from finagent.progress import Step, StepDetail, progress_handler
-from finagent.report.tax_signals import (
+from finkritq.datatype import LotSaleMethod
+
+from finkritcore.ingest import DEFAULT_PORTFOLIO_NAME, ParsedPortfolio
+from finkritcore.report import PortfolioRiskReport, TaxSignalsReport
+from finkritcore.report.tax_signals import (
     DEFAULT_COUNTDOWN_DAYS,
     DEFAULT_LONG_TERM_RATE,
     DEFAULT_SHORT_TERM_RATE,
 )
-from finagent.store import AssetNotFoundError, PortfolioNotFoundError
-from finkritq.datatype import LotSaleMethod
+from finkritcore.store import AssetNotFoundError, PortfolioNotFoundError
+
+from finagent.assistant import Assistant
+from finagent.progress import Step, StepDetail, progress_handler
 
 from finkritserver.conversations import ConversationRegistry
 from finkritserver.portfolio import build_portfolio
@@ -51,6 +53,7 @@ from finkritserver.schemas import (
     PortfolioSpec,
     PortfolioSummary,
 )
+
 
 # A CSV this large is almost certainly not "my brokerage holdings" -- fed
 # whole into the model prompt, so cap it rather than send something

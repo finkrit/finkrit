@@ -1,13 +1,15 @@
-# finagent/report/report.py
+# finkritcore/report/report.py
 """
 Structured risk output. One type family serving three consumers:
 deterministic .report(), LLM output_type (later), and a dashboard payload.
 
-All metric fields are Optional -- a report is filled selectively per the
+All metric fields are Optional. A report is filled selectively per the
 requested metric set, so "only drawdown" is a report with one field set
 and the rest None. finkritq/finkritintel stay pydantic-free; these live
-in finagent (plain frozen dataclasses).
+in finkritcore (plain frozen dataclasses).
 """
+# TODO: Decide whether we want to reference finkritq/intel language here
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

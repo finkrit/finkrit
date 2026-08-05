@@ -6,17 +6,20 @@ from datetime import date
 
 from pydantic_ai import models
 
-from finkritintel.capability.performance import PERFORMANCE_CAPABILITY
 from finkritq.datatype import WeightingBasis
 
-from finagent.agent.base import DEFAULT_LANGUAGE, CapabilityAgent
-from finagent.deps import AgentDeps
-from finagent.report.performance import (
+from finkritintel.capability.performance import PERFORMANCE_CAPABILITY
+
+from finkritcore.report.performance import (
     PerformanceMetric,
     PortfolioPerformanceReport,
     compose_portfolio_performance_report,
 )
-from finagent.store import DEFAULT_PORTFOLIO_ID
+from finkritcore.store import DEFAULT_PORTFOLIO_ID
+
+from finagent.agent.base import DEFAULT_LANGUAGE, CapabilityAgent
+from finagent.deps import AgentDeps
+
 
 PERFORMANCE_INSTRUCTIONS = (
     "You are a portfolio performance analyst. Use the available tools to compute "

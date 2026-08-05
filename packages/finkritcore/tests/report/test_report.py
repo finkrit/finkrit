@@ -1,4 +1,4 @@
-# finagent/tests/report/test_report.py
+# finkritcore/tests/report/test_report.py
 """
 Direct tests for the report dataclasses -- previously only exercised
 indirectly through the composer. These check the type contract itself:
@@ -12,7 +12,7 @@ from datetime import date
 
 import pytest
 
-from finagent.report.report import (
+from finkritcore.report.report import (
     AssetRiskReport,
     BaseRiskReport,
     DrawdownSummary,

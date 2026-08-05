@@ -9,19 +9,13 @@ from pydantic_ai.messages import ModelMessage, ModelResponse, TextPart, ToolCall
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from finkritq.data import DataRegistry
-from finkritq.data.providers import (
-    MemoizingHistoryProvider,
-    MemoizingSnapshotProvider,
-    YFinanceProvider,
-)
-
 from finagent.agent.risk import RiskAgent
-from finagent.assistant import Assistant, _default_registry
+from finagent.assistant import Assistant
 from finagent.deps import AgentDeps
 from finagent.ingest import ParsedPortfolio
-from finagent.report.report import PortfolioRiskReport
-from finagent.store import InMemoryStore, PortfolioNotFoundError
-from finagent.tests.fixtures import make_portfolio, make_registry
+from finkritcore.report.report import PortfolioRiskReport
+from finkritcore.store import InMemoryStore, PortfolioNotFoundError
+from finkritcore.tests.fixtures import make_portfolio, make_registry
 
 warnings.filterwarnings("ignore", message="Could not generate return schema")
 
@@ -147,8 +141,9 @@ class TestAssistant:
         assert isinstance(assistant._store, InMemoryStore)
 
     def test_defaults_to_default_registry_when_none_given(self):
-        # No `registry=` passed either -- exercises _default_registry() for
-        # real, not the fake registry every other test substitutes in.
+        # No `registry=` passed either -- exercises the real
+        # finkritcore.desk.default_registry, not the fake registry every
+        # other test substitutes in.
         assistant = Assistant(model="test", store=InMemoryStore())
         assert isinstance(assistant._registry, DataRegistry)
 
@@ -202,31 +197,3 @@ class TestAssistant:
         assistant = Assistant(model=FunctionModel(script), store=InMemoryStore(), registry=make_registry())
         result = asyncio.run(assistant.parse_portfolio_csv_async("empty,csv"))
         assert result.warnings == ["no rows found"]
-
-
-class TestDefaultRegistry:
-    """
-    _default_registry() wires YFinanceProvider + MemoizingHistoryProvider.
-    Construction never hits the network (only .history()/.snapshot() calls
-    would), so this is safe to test directly without a live fetch.
-    """
-
-    def test_returns_a_data_registry(self):
-        assert isinstance(_default_registry(), DataRegistry)
-
-    def test_history_provider_is_memoized(self):
-        registry = _default_registry()
-        assert isinstance(registry._history_provider, MemoizingHistoryProvider)
-
-    def test_memoized_provider_wraps_yfinance(self):
-        registry = _default_registry()
-        assert isinstance(registry._history_provider._wrapped, YFinanceProvider)
-
-    def test_snapshot_provider_is_ttl_cached_over_yfinance(self):
-        # Snapshots carry a short TTL cache (not the day-keyed history memo):
-        # a prefetch pass and the view reads that follow it must share one
-        # quote per ticker instead of hitting the network twice, while a later
-        # interaction still gets a fresh price.
-        registry = _default_registry()
-        assert isinstance(registry._snapshot_provider, MemoizingSnapshotProvider)
-        assert isinstance(registry._snapshot_provider._wrapped, YFinanceProvider)

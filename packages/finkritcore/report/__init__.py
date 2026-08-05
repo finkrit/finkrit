@@ -1,12 +1,12 @@
-# finagent/report/__init__.py
+# finkritcore/report/__init__.py
 """
-finagent.report — structured risk output and the deterministic composer.
+finkritcore.report — structured risk output and the deterministic composer.
 
-This is finagent's answer to "what does analyzing risk actually return?" One
+This is finkritcore's answer to "what does analyzing risk actually return?" One
 type family serves three consumers at once: the deterministic ``.report()``
 return value, a (future) LLM ``output_type`` for structured extraction, and a
-dashboard payload. Kept here (not in finkritintel) so finkritintel stays
-pydantic-free; these are plain frozen dataclasses.
+dashboard payload. Kept here decoupling finkritintel from AI libs
+these are plain frozen dataclasses.
 
 Contents:
 

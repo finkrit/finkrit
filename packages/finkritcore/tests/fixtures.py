@@ -1,4 +1,4 @@
-# finagent/tests/fixtures.py
+# finkritcore/tests/fixtures.py
 """
 Fixtures for finagent tests. No network: a deterministic fake
 HistoryProvider stands in for YFinanceProvider.

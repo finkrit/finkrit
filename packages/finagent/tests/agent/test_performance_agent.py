@@ -12,9 +12,9 @@ from pydantic_ai.models.function import AgentInfo, FunctionModel
 
 from finagent.agent.performance import PERFORMANCE_INSTRUCTIONS, PerformanceAgent
 from finagent.deps import AgentDeps
-from finagent.report.performance import PerformanceMetric, PortfolioPerformanceReport
-from finagent.store import DEFAULT_PORTFOLIO_ID, InMemoryStore, PortfolioNotFoundError
-from finagent.tests.fixtures import make_portfolio, make_registry
+from finkritcore.report.performance import PerformanceMetric, PortfolioPerformanceReport
+from finkritcore.store import DEFAULT_PORTFOLIO_ID, InMemoryStore, PortfolioNotFoundError
+from finkritcore.tests.fixtures import make_portfolio, make_registry
 
 warnings.filterwarnings("ignore", message="Could not generate return schema")
 

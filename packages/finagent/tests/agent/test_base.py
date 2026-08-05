@@ -19,8 +19,8 @@ from finkritintel.capability.risk import RISK_CAPABILITY
 
 from finagent.agent.base import DEFAULT_USAGE_LIMITS, CapabilityAgent
 from finagent.deps import AgentDeps
-from finagent.store import InMemoryStore
-from finagent.tests.fixtures import make_registry
+from finkritcore.store import InMemoryStore
+from finkritcore.tests.fixtures import make_registry
 
 warnings.filterwarnings("ignore", message="Could not generate return schema")
 
