@@ -9,9 +9,16 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 
 ## [Unreleased]
 
-### finkrit
+## finkrit 0.2.0 — 2026-08-04
 
-#### Added
+The minor rather than a patch: `CSV_ALIASES` and `CSV_DATE_FORMATS` moved from
+`finagent.cli` to `finagent.ingest`, which breaks an import for anyone who
+reached for them at the old address, and under semantic versioning a 0.x break
+bumps here. Nothing else in this release is breaking. `--ai` still parses,
+every endpoint that existed still exists, and `finkritq` and `finkritintel` are
+unchanged at 0.4.0 and 0.2.1.
+
+### Added
 - A run reports what it is doing while it does it. Each step names the
   specialist that was asked and the sub question it was handed, then the tools
   it called, so a question that fans out across four specialists shows its work
@@ -40,7 +47,7 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   there for a narrow terminal or a wide fan out, where wrapped lines bury the
   shape of the trace.
 
-#### Changed
+### Changed
 - A CSV upload whose header names its columns is read in code, not by a model.
   Every upload used to be a one shot LLM extraction, which a hosted model
   answers in a second or two and a local one answers in minutes, with a blank
@@ -83,7 +90,7 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   before it reads the error, and the run used to die with nothing on screen
   but the retry count. The tool budget above stays the real backstop.
 
-#### Fixed
+### Fixed
 - A local model name is no longer split at its own colon. An Ollama tag is
   family and size, so `qwen2.5:14b` reached the endpoint as `14b` and came back
   404. Only a prefix pydantic-ai recognises as a provider is stripped now, so
@@ -94,6 +101,14 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
   web app's argument parser as a stray flag and a source checkout could open
   the dashboard but never the terminal. `./run` and `./run --dev` are
   unchanged, since no subcommand still means web.
+
+- The source distribution no longer ships the web app's `node_modules`. It
+  carried 1857 of them, 21MB of other people's dependencies, in every release
+  from 0.1.3 to 0.1.5. hatchling's discovery honours the repo root `.gitignore`
+  but not the nested one that ignores them. The wheel was never affected, which
+  is why it went unnoticed: pip prefers the wheel and only a source install ever
+  unpacks the sdist. Now 578KB, with the web sources still present so the UI can
+  be rebuilt from it.
 
 ## finkritq 0.4.0 — 2026-08-03
 
