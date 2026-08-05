@@ -9,7 +9,13 @@ from .market import Exchange, MarketIndex
 # (datatype -> transform), so there is no cycle.
 from finkritq.transform.returns import ReturnCalculationMethod
 from .rebalance import RebalanceSizing
-from .risk import VaREstimationMethod, WeightingBasis
+from .risk import (
+    PORTFOLIO_ONLY_METRICS,
+    RiskMetric,
+    VaREstimationMethod,
+    WeightingBasis,
+    asset_metrics,
+)
 from .tax import LotSaleMethod
 from .pricehistory import PriceHistory
 
@@ -20,9 +26,12 @@ __all__ = [
     "Exchange",
     "LotSaleMethod",
     "MarketIndex",
+    "PORTFOLIO_ONLY_METRICS",
     "ReturnCalculationMethod",
     "PriceHistory",
     "RebalanceSizing",
+    "RiskMetric",
     "VaREstimationMethod",
     "WeightingBasis",
+    "asset_metrics",
 ]

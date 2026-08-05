@@ -30,7 +30,7 @@ class WeightingBasis(Enum):
     period in the window:  r_p(t) = Σ_i w_i · r_i(t).
 
     Keeping weights fixed as prices move is only possible if you rebalance every
-    period -- sell the winners, buy the losers, back to `w`. So this basis models
+    period: sell the winners, buy the losers, back to `w`. So this basis models
     a *continuously rebalanced* portfolio. Because it is defined purely by `w`
     and the asset returns, its variance is exactly the quadratic form wᵀΣw (Σ =
     asset covariance matrix), which is why it is the ONLY basis in which
@@ -41,7 +41,7 @@ class WeightingBasis(Enum):
     allocation, if I keep holding these weights."
 
     ------------------------------------------------------------------------
-    BUY_AND_HOLD  -- hold the SHARE COUNTS constant
+    BUY_AND_HOLD: hold the SHARE COUNTS constant
     ------------------------------------------------------------------------
     Fix today's share counts `q` (e.g. 100 shares of A, 50 of B) and let the
     portfolio value be whatever those shares are worth each day:
@@ -69,10 +69,54 @@ class WeightingBasis(Enum):
     Not every metric offers a choice: MCTR/CCTR are CONSTANT_MIX-only (no
     buy-and-hold analogue exists), and drawdown is inherently BUY_AND_HOLD.
     Everything else genuinely supports either. Not every metric commits to a
-    single report-wide default -- that choice is left to the caller.
+    single report wide default: that choice is left to the caller.
     """
 
     # Value strings are stable identifiers (serialization / tool schemas); do not
     # rename without updating any persisted references.
     CONSTANT_MIX = "constant_mix"  # fixed weights  -> ex-ante / rebalanced
     BUY_AND_HOLD = "buy_and_hold"  # fixed shares   -> realized / drifting
+
+
+class RiskMetric(Enum):
+    """The risk metrics the stack computes, named once.
+
+    Cross-layer vocabulary, like ``LotSaleMethod``: the report composers above
+    select with these names and tool contracts carry them in their schemas,
+    and those layers do not import each other, so the shared names have to
+    live down here. The quant functions themselves do not take a
+    ``RiskMetric``, there is one function per metric, so each member is the
+    name of a function's result rather than a parameter to it.
+
+    What does NOT live here is curation. Which metrics a dashboard shows first
+    is a product opinion, and those selections stay in the layers that hold
+    opinions.
+    """
+
+    # Value strings are stable identifiers (serialization / tool schemas); do
+    # not rename without updating any persisted references.
+    VOLATILITY = "volatility"
+    VARIANCE = "variance"
+    SEMIVARIANCE = "semivariance"
+    DOWNSIDE_DEVIATION = "downside_deviation"
+    VALUE_AT_RISK = "value_at_risk"
+    CONDITIONAL_VALUE_AT_RISK = "conditional_value_at_risk"
+    BETA = "beta"
+    MAX_DRAWDOWN = "max_drawdown"
+    DRAWDOWN = "drawdown"
+    MARGINAL_CONTRIBUTION = "marginal_contribution"
+    COMPONENT_CONTRIBUTION = "component_contribution"
+
+
+# Contribution metrics decompose a portfolio's risk across its holdings, so
+# they exist only at portfolio scope: a single asset has nothing to decompose.
+# A semantic fact about the metrics, kept next to them rather than in any one
+# consumer, so every layer agrees on what an asset-scope report can carry.
+PORTFOLIO_ONLY_METRICS: frozenset[RiskMetric] = frozenset(
+    {RiskMetric.MARGINAL_CONTRIBUTION, RiskMetric.COMPONENT_CONTRIBUTION}
+)
+
+
+def asset_metrics(metrics: frozenset[RiskMetric]) -> frozenset[RiskMetric]:
+    """``metrics`` with the portfolio-only ones dropped, for asset scope."""
+    return frozenset(metrics) - PORTFOLIO_ONLY_METRICS
