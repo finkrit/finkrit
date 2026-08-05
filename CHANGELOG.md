@@ -103,12 +103,12 @@ unchanged at 0.4.0 and 0.2.1.
   unchanged, since no subcommand still means web.
 
 - The source distribution no longer ships the web app's `node_modules`. It
-  carried 1857 of them, 21MB of other people's dependencies, in every release
-  from 0.1.3 to 0.1.5. hatchling's discovery honours the repo root `.gitignore`
-  but not the nested one that ignores them. The wheel was never affected, which
-  is why it went unnoticed: pip prefers the wheel and only a source install ever
-  unpacks the sdist. Now 578KB, with the web sources still present so the UI can
-  be rebuilt from it.
+  carried 1857 of them, 21MB of other people's dependencies, in 0.1.3 and 0.1.4,
+  the only two releases so far to publish an sdist at all. hatchling's discovery
+  honours the repo root `.gitignore` but not the nested one that ignores them.
+  The wheel was never affected, which is why it went unnoticed: pip prefers the
+  wheel and only a source install ever unpacks the sdist. Now 578KB, with the
+  web sources still present so the UI can be rebuilt from it.
 
 ## finkritq 0.4.0 — 2026-08-03
 
