@@ -120,6 +120,37 @@ def _specialists_called(messages: list[ModelMessage]) -> list[SpecialistAnswer]:
     ]
 
 
+def answer_of(result: Any) -> str:
+    """The answer a user should see, which is not always the model's last text.
+
+    When exactly one specialist answered, there is nothing to combine. The
+    orchestrator's closing text is then a second generation restating content it
+    was told not to alter, which is all risk and no benefit: it is the longest
+    prose in the run, produced last, over numbers it must copy exactly.
+
+    Both observed failures took that shape. A specialist answered correctly in
+    English and the orchestrator restated one beta as -0.05 where the specialist
+    said -0.06. And a specialist answered correctly in Chinese, whereupon the
+    orchestrator, instructed in English but summarizing Chinese content,
+    followed the content and replied in Thai. Neither rewrite added anything a
+    reader wanted, and passing the specialist's answer through verbatim makes
+    both impossible rather than unlikely.
+
+    A fan out across several specialists still needs combining, so it falls
+    through. So does a plain CapabilityAgent run, which delegates to nobody and
+    finds no specialist calls at all.
+
+    ``new_messages()``, never ``all_messages()``. In a threaded conversation the
+    latter carries every prior turn, so turn two finds turn one's specialist
+    call, counts exactly one, and returns turn one's answer. Every follow up
+    then repeats the first reply verbatim.
+    """
+    answers = _specialists_called(result.new_messages())
+    if len(answers) == 1 and answers[0].answer.strip():
+        return answers[0].answer
+    return result.output
+
+
 def sub_question(part: ToolCallPart) -> str:
     # Every ask_* tool takes a single question argument. args_as_dict raises on
     # malformed JSON from the model, which must not take down a reply that
@@ -193,14 +224,14 @@ class Conversation:
             question, self._deps_for(event_handler), self._messages or None
         )
         self._absorb(result)
-        return result.output
+        return answer_of(result)
 
     async def ask_async(self, question: str, event_handler: Callable | None = None) -> str:
         result = await self._runner.run_async(
             question, self._deps_for(event_handler), self._messages or None
         )
         self._absorb(result)
-        return result.output
+        return answer_of(result)
 
     def _deps_for(self, event_handler: Callable | None) -> AgentDeps:
         """Deps for one turn, with a per-turn progress handler if given.

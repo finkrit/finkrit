@@ -368,6 +368,7 @@ def _load_portfolio_from_csv(path: str, portfolio_id: str = DEFAULT_PORTFOLIO_ID
     # tax analytics need in order to have lots to choose between. Insertion
     # ordered, so positions keep the order the file listed them in.
     lots_by_ticker: dict[str, list[TaxLot]] = {}
+    names: dict[str, str | None] = {}
     with open(path, newline="") as handle:
         for i, row in enumerate(csv.DictReader(handle)):
             ticker = csv_value(row, "ticker")
@@ -380,12 +381,18 @@ def _load_portfolio_from_csv(path: str, portfolio_id: str = DEFAULT_PORTFOLIO_ID
             lot = TaxLot(id=f"lot-{i}", quantity=Decimal(quantity),
                          cost_per_share=Decimal(cost), acquired=acquired)
             lots_by_ticker.setdefault(ticker, []).append(lot)
+            # First row wins. A real export repeats the name on every lot of a
+            # holding, and disagreeing rows are the file's problem, not ours.
+            names.setdefault(ticker, csv_value(row, "name"))
 
     positions = [
         Position(
             id=f"pos-{index}",
-            asset=Stock(ticker=ticker, currency=Currency.USD,
-                        exchange=Exchange.NASDAQ, company_name=f"{ticker} Corp"),
+            # The file's own name when it gave one. Falling back to the
+            # ticker rather than to "{ticker} Corp", which reads like a real
+            # company name and is not one.
+            asset=Stock(ticker=ticker, currency=Currency.USD, exchange=Exchange.NASDAQ,
+                        company_name=names.get(ticker) or ticker),
             lots=tuple(lots),
         )
         for index, (ticker, lots) in enumerate(lots_by_ticker.items())
@@ -415,12 +422,22 @@ def _real_registry() -> DataRegistry:
 
 
 def _print_holdings(portfolio: Portfolio) -> None:
-    # Print the loaded holdings so the user can confirm what was parsed.
+    """Print the loaded holdings so the user can confirm what was parsed.
+
+    One row per lot, not per position. This used to sum the quantity across a
+    position's lots and then print the first lot's cost and acquisition date
+    beside that total, which reads as a single purchase that never happened.
+    A three lot AAPL showed as 180 shares at 120.40, the oldest lot's price,
+    where the blended basis is 151.29. A table whose only job is to confirm
+    what was parsed cannot round the parse off.
+    """
     print(f"  {'Ticker':<8}{'Qty':>10}{'Cost/Share':>14}{'Acquired':>14}")
     for pos in portfolio.positions:
-        qty = sum(lot.quantity for lot in pos.lots)
-        lot = pos.lots[0]
-        print(f"  {pos.asset.ticker:<8}{qty:>10g}{float(lot.cost_per_share):>14.2f}{str(lot.acquired):>14}")
+        for lot in pos.lots:
+            print(
+                f"  {pos.asset.ticker:<8}{float(lot.quantity):>10g}"
+                f"{float(lot.cost_per_share):>14.2f}{str(lot.acquired):>14}"
+            )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -561,6 +578,12 @@ def main(argv: list[str] | None = None) -> None:
     print("  Ask about risk, performance, or the optimal allocation.")
     print("  Type 'quit' to exit.")
 
+    # A thread, not a series of unrelated questions. route()/ask() carry no
+    # memory, so "and in dollars?" arrived with nothing to refer to and the
+    # agent asked what the user meant. The web app has always threaded through
+    # a Conversation; the terminal never did.
+    chat = assistant.conversation(agent=mode)
+
     while True:
         try:
             question = input(f"\n{prompt} > ").strip()
@@ -573,7 +596,7 @@ def main(argv: list[str] | None = None) -> None:
             break
         spinner.start()
         try:
-            answer = assistant.route(question) if mode is None else assistant.ask(question, agent=mode)
+            answer = chat.ask(question)
         except Exception as exc:  # noqa: BLE001 - a CLI should not crash on one bad turn
             spinner.stop()
             print(f"\nerror: {exc}")

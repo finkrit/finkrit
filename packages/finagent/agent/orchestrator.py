@@ -29,8 +29,35 @@ ORCHESTRATOR_INSTRUCTIONS = (
     "synthesize. Pass each specialist a focused sub-question. Never invent or "
     "alter a number, report only what a specialist returned, and if a specialist "
     "cannot answer, say so. Allocations are proposals, not trades. "
-    f"The user has a single portfolio, registered with id '{DEFAULT_PORTFOLIO_ID}', "
-    "reference that id when a specialist asks about the portfolio."
+    # Two rewrites, two different failures, so this one leads with an example
+    # rather than a rule. "Reference that id" was read as "pass portfolio_id",
+    # which these tools do not accept. Replacing it with "write the id inside
+    # the question text" was then taken literally: the model sent the single
+    # word "primary" as the whole question, and the specialist, given nothing
+    # to answer, asked the user for clarification. Talking about arguments and
+    # parameters at all also seems to invite schema shaped output, one run
+    # sending {"type": "string", "value": "..."} in place of the string.
+    f"The user has a single portfolio, registered with id '{DEFAULT_PORTFOLIO_ID}'. "
+    "Hand each specialist a complete question in plain words, with the portfolio "
+    f'id inside it. For example: "what is the volatility of portfolio '
+    f'{DEFAULT_PORTFOLIO_ID}?". Never send the id on its own and never send an '
+    "object or a schema. "
+    # The third failure, and the first that only shows in a threaded
+    # conversation. "Never repeat the same question twice" was written when
+    # every run was fresh, so it could only ever have meant "within this run".
+    # Once history was threaded, the model could see a question it had already
+    # asked on an earlier turn, read the ban as covering that one too, and
+    # resolve the conflict by printing the tool call as a markdown JSON block
+    # and saying "I will proceed by calling these tools now". It never called
+    # anything. Observed on the first turn that needed a call already present
+    # in history, and on every turn after it.
+    "When you need a specialist, call it. Never write a tool call out as text, "
+    "never describe a call you are about to make, and never say you will "
+    "proceed: calling the tool is the only way to reach a specialist. Earlier "
+    "turns are context, not a record of what you are allowed to ask again. "
+    "Asking a specialist the same thing on a later turn is fine when the user "
+    "asks again. What is not fine is asking it the same thing twice while "
+    "answering one question."
 )
 
 
@@ -89,12 +116,14 @@ class Orchestrator:
             @agent.tool
             async def ask_risk(ctx: RunContext[AgentDeps], question: str) -> str:
                 """
-                How risky the portfolio or a single asset is, and what could be lost.
-                Covers volatility, variance, semivariance, downside deviation, drawdown
-                and maximum drawdown, value at risk and conditional VaR, beta to a
-                benchmark, and each holding's marginal and component contribution to
-                risk. Pick this for questions about danger, downside, or spread. Not
-                realized returns, which are performance.
+                How risky the portfolio is, how risky each holding in it is, and
+                what could be lost. Covers volatility, variance, semivariance,
+                downside deviation, drawdown and maximum drawdown, value at risk
+                and conditional VaR, beta to a benchmark, and each holding's
+                marginal and component contribution to risk. Answers questions
+                about every holding at once, so pass those through whole rather
+                than splitting them per ticker. Pick this for danger, downside,
+                or spread. Not realized returns, which are performance.
                 """
                 return await risk.ask_async(question, ctx.deps)
 
@@ -165,9 +194,20 @@ class Orchestrator:
             message_history=message_history,
         )
 
+    # answer_of, not result.output: when only one specialist answered there is
+    # nothing to combine, and the orchestrator's closing text is a second
+    # generation over numbers it must not alter. See conversation.answer_of.
+    # Imported inside the methods because conversation imports the specialist
+    # tool names this module defines, and a module level import would close
+    # that loop.
+
     def ask(self, question: str, deps: AgentDeps) -> str:
-        return self.run(question, deps).output
+        from finagent.conversation import answer_of
+
+        return answer_of(self.run(question, deps))
 
     async def ask_async(self, question: str, deps: AgentDeps) -> str:
+        from finagent.conversation import answer_of
+
         result = await self.run_async(question, deps)
-        return result.output
+        return answer_of(result)
