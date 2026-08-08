@@ -15,15 +15,13 @@ from finagent.deps import AgentDeps
 from finkritcore.report.metric import RiskMetric
 from finkritcore.report.report import PortfolioRiskReport
 from finkritcore.store import DEFAULT_PORTFOLIO_ID, InMemoryStore, PortfolioNotFoundError
-from finkritcore.tests.fixtures import make_portfolio, make_registry, make_stock
+from finkritcore.tests.fixtures import make_portfolio, make_registry, make_stock, make_store
 
 warnings.filterwarnings("ignore", message="Could not generate return schema")
 
 
 def _deps() -> AgentDeps:
-    store = InMemoryStore()
-    store.register_portfolio(make_portfolio())
-    return AgentDeps(store=store, registry=make_registry())
+    return AgentDeps(store=make_store(), registry=make_registry())
 
 
 class TestRiskAgentReport:
@@ -72,7 +70,7 @@ class TestRiskAgentAsk:
             if already:
                 return ModelResponse(parts=[TextPart("Your annualized volatility is computed.")])
             return ModelResponse(
-                parts=[ToolCallPart(tool_name="portfolio_volatility", args={"portfolio_id": "port-1"})]
+                parts=[ToolCallPart(tool_name="portfolio_risk", args={"portfolio_id": "port-1"})]
             )
 
         agent = RiskAgent(model=FunctionModel(script))
@@ -88,7 +86,7 @@ class TestRiskAgentAsk:
             if already:
                 return ModelResponse(parts=[TextPart("Your annualized volatility is computed.")])
             return ModelResponse(
-                parts=[ToolCallPart(tool_name="portfolio_volatility", args={"portfolio_id": "port-1"})]
+                parts=[ToolCallPart(tool_name="portfolio_risk", args={"portfolio_id": "port-1"})]
             )
 
         agent = RiskAgent(model=FunctionModel(script))
@@ -102,9 +100,7 @@ class TestRiskAgentAsk:
         # The portfolio here is registered under that same default id, proving
         # the whole chain (instructions -> model's tool call -> store lookup)
         # is consistent, not just that the constant exists somewhere.
-        store = InMemoryStore()
-        store.register_portfolio(make_portfolio(DEFAULT_PORTFOLIO_ID))
-        deps = AgentDeps(store=store, registry=make_registry())
+        deps = AgentDeps(store=make_store(DEFAULT_PORTFOLIO_ID), registry=make_registry())
 
         def script(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
             already = any(
@@ -114,7 +110,7 @@ class TestRiskAgentAsk:
                 return ModelResponse(parts=[TextPart("Your annualized volatility is computed.")])
             return ModelResponse(
                 parts=[ToolCallPart(
-                    tool_name="portfolio_volatility",
+                    tool_name="portfolio_risk",
                     args={"portfolio_id": DEFAULT_PORTFOLIO_ID},
                 )]
             )

@@ -73,6 +73,13 @@ from .rebalance_live import (
     PORTFOLIO_REBALANCE_COMPARE_LIVE_BINDING,
     PORTFOLIO_TAX_AWARE_REBALANCE_LIVE_BINDING,
 )
+# The two multi-metric risk tools. These are what an agent drives; the per
+# metric bindings above still run and still serve the report composer, they
+# are just no longer what a model chooses between.
+from .risk_live import (
+    ASSET_RISK_LIVE_BINDING,
+    PORTFOLIO_RISK_LIVE_BINDING,
+)
 
 __all__ = [
     # portfolio (PriceHistory)
@@ -141,4 +148,7 @@ __all__ = [
     # rebalance (live)
     "PORTFOLIO_TAX_AWARE_REBALANCE_LIVE_BINDING",
     "PORTFOLIO_REBALANCE_COMPARE_LIVE_BINDING",
+    # multi-metric risk (agent facing)
+    "PORTFOLIO_RISK_LIVE_BINDING",
+    "ASSET_RISK_LIVE_BINDING",
 ]

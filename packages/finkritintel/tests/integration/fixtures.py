@@ -9,6 +9,8 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
+from unittest.mock import MagicMock
+
 import numpy as np
 
 from finkritq.asset import Stock
@@ -96,3 +98,37 @@ def make_portfolio_data() -> PortfolioData:
         },
     )
 
+
+
+def make_stock(ticker: str) -> Stock:
+    """Public alias: the multi-metric risk tests build portfolios of arbitrary
+    size to check that a call costs the same whatever the portfolio holds."""
+    return _make_stock(ticker)
+
+
+def make_portfolio(portfolio_id: str = "port-1") -> Portfolio:
+    """Two-stock portfolio. The live tools take a Portfolio and a registry and
+    fetch for themselves, where the pre-fetched ones take PortfolioData."""
+    return Portfolio(
+        id=portfolio_id,
+        name="Test Portfolio",
+        positions=[
+            _make_position(_make_stock("AAA"), "10", "pos-a", "lot-a"),
+            _make_position(_make_stock("BBB"), "5", "pos-b", "lot-b"),
+        ],
+    )
+
+
+def make_registry():
+    """A registry serving a deterministic history for any asset asked for.
+
+    Seeded per ticker rather than enumerated, so a test can build a portfolio
+    of any size (and reach for the benchmark) without registering each one.
+    """
+    def history(asset, **_):
+        rng = np.random.default_rng(abs(hash(asset.ticker)) % (2**32))
+        return _make_history(100.0 + np.cumsum(rng.normal(0, 1, len(_dates))))
+
+    registry = MagicMock()
+    registry.history.side_effect = history
+    return registry

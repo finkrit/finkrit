@@ -9,6 +9,7 @@ import pytest
 from pydantic_ai import ModelRetry, RunContext
 
 from finkritintel.capability.risk import RISK_CAPABILITY
+from finkritintel.integration import finkritq as _bindings
 from finkritintel.tool.binding import ToolBinding
 from finkritq.asset import Asset
 from finkritq.data import DataRegistry
@@ -19,8 +20,22 @@ from finkritcore.store import InMemoryStore
 from finkritcore.tests.fixtures import make_portfolio, make_registry, make_stock
 
 
+# The per metric live bindings, which are what these tests need: a spread of
+# input schema shapes (resolved portfolio, resolved asset, resolver defaulted
+# benchmark, plain scalars) to exercise the compiler against. They stopped
+# being RISK_CAPABILITY's tools when it collapsed to two multi-metric tools,
+# but they still exist and still run, and the compiler is what is under test
+# here, not the capability's membership.
+RISK_BINDINGS = tuple(
+    getattr(_bindings, name)
+    for name in dir(_bindings)
+    if name.endswith("_LIVE_BINDING")
+    and getattr(_bindings, name).contract.category == "risk"
+)
+
+
 def _binding(name: str):
-    return next(b for b in RISK_CAPABILITY.tools if b.contract.name == name)
+    return next(b for b in RISK_BINDINGS if b.contract.name == name)
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,7 +53,7 @@ class _BenchmarkBeforeAsset:
 class TestCompileTool:
 
     def test_every_binding_compiles_to_a_real_function(self):
-        for binding in RISK_CAPABILITY.tools:
+        for binding in RISK_BINDINGS:
             fn = compile_tool(binding)
             assert callable(fn)
             assert fn.__name__ == binding.contract.name
@@ -88,7 +103,7 @@ class TestCompileTool:
         assert "benchmark_history_or_asset" not in params
 
     def test_registry_never_appears_in_signature(self):
-        for binding in RISK_CAPABILITY.tools:
+        for binding in RISK_BINDINGS:
             fn = compile_tool(binding)
             assert "registry" not in inspect.signature(fn).parameters
 

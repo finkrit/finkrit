@@ -1,53 +1,32 @@
 # finkritintel/capability/risk.py
+"""
+What the risk specialist can do, as two tools rather than twenty.
+
+The per metric bindings still exist in this package and still run. They serve
+the deterministic report composer through their pre-fetched twins, and they are
+the implementation these two call. What changed is that they are no longer
+doors a model opens directly.
+
+Twenty was nine metrics times two scopes plus the two portfolio only
+contribution metrics: twenty near identical descriptions carrying eleven ideas.
+Worse, every asset tool took a single ticker, so "the betas of my holdings" was
+one call per holding against a ceiling of twelve, and the model has no way to
+learn the tickers in the first place (it holds an opaque portfolio id). These
+two take lists and resolve holdings in code.
+"""
 
 from finkritintel.capability.base import Capability
 from finkritintel.integration.finkritq import (
-    ASSET_BETA_LIVE_BINDING,
-    ASSET_CONDITIONAL_VALUE_AT_RISK_LIVE_BINDING,
-    ASSET_DOWNSIDE_DEVIATION_LIVE_BINDING,
-    ASSET_DRAWDOWN_LIVE_BINDING,
-    ASSET_MAXIMUM_DRAWDOWN_LIVE_BINDING,
-    ASSET_SEMIVARIANCE_LIVE_BINDING,
-    ASSET_VALUE_AT_RISK_LIVE_BINDING,
-    ASSET_VARIANCE_LIVE_BINDING,
-    ASSET_VOLATILITY_LIVE_BINDING,
-    PORTFOLIO_BETA_LIVE_BINDING,
-    PORTFOLIO_COMPONENT_CONTRIBUTION_TO_RISK_LIVE_BINDING,
-    PORTFOLIO_CONDITIONAL_VALUE_AT_RISK_LIVE_BINDING,
-    PORTFOLIO_DOWNSIDE_DEVIATION_LIVE_BINDING,
-    PORTFOLIO_DRAWDOWN_LIVE_BINDING,
-    PORTFOLIO_MARGINAL_CONTRIBUTION_TO_RISK_LIVE_BINDING,
-    PORTFOLIO_MAXIMUM_DRAWDOWN_LIVE_BINDING,
-    PORTFOLIO_SEMIVARIANCE_LIVE_BINDING,
-    PORTFOLIO_VALUE_AT_RISK_LIVE_BINDING,
-    PORTFOLIO_VARIANCE_LIVE_BINDING,
-    PORTFOLIO_VOLATILITY_LIVE_BINDING,
+    ASSET_RISK_LIVE_BINDING,
+    PORTFOLIO_RISK_LIVE_BINDING,
 )
 
 
 RISK_CAPABILITY = Capability(
     name="risk_analysis",
-    description="Analyze risk for a portfolio or an individual asset.",
+    description="Analyze risk for a portfolio or its individual holdings.",
     tools=(
-        PORTFOLIO_VOLATILITY_LIVE_BINDING,
-        PORTFOLIO_VARIANCE_LIVE_BINDING,
-        PORTFOLIO_SEMIVARIANCE_LIVE_BINDING,
-        PORTFOLIO_DOWNSIDE_DEVIATION_LIVE_BINDING,
-        PORTFOLIO_DRAWDOWN_LIVE_BINDING,
-        PORTFOLIO_MAXIMUM_DRAWDOWN_LIVE_BINDING,
-        PORTFOLIO_VALUE_AT_RISK_LIVE_BINDING,
-        PORTFOLIO_CONDITIONAL_VALUE_AT_RISK_LIVE_BINDING,
-        PORTFOLIO_BETA_LIVE_BINDING,
-        PORTFOLIO_MARGINAL_CONTRIBUTION_TO_RISK_LIVE_BINDING,
-        PORTFOLIO_COMPONENT_CONTRIBUTION_TO_RISK_LIVE_BINDING,
-        ASSET_VOLATILITY_LIVE_BINDING,
-        ASSET_VARIANCE_LIVE_BINDING,
-        ASSET_SEMIVARIANCE_LIVE_BINDING,
-        ASSET_DOWNSIDE_DEVIATION_LIVE_BINDING,
-        ASSET_DRAWDOWN_LIVE_BINDING,
-        ASSET_MAXIMUM_DRAWDOWN_LIVE_BINDING,
-        ASSET_VALUE_AT_RISK_LIVE_BINDING,
-        ASSET_CONDITIONAL_VALUE_AT_RISK_LIVE_BINDING,
-        ASSET_BETA_LIVE_BINDING,
+        PORTFOLIO_RISK_LIVE_BINDING,
+        ASSET_RISK_LIVE_BINDING,
     ),
 )

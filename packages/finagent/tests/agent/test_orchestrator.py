@@ -13,15 +13,13 @@ from finagent.agent.risk import RiskAgent
 from finagent.agent.tax import TaxAgent
 from finagent.deps import AgentDeps
 from finkritcore.store import DEFAULT_PORTFOLIO_ID, InMemoryStore
-from finkritcore.tests.fixtures import make_portfolio, make_registry
+from finkritcore.tests.fixtures import make_portfolio, make_registry, make_store
 
 warnings.filterwarnings("ignore", message="Could not generate return schema")
 
 
 def _deps() -> AgentDeps:
-    store = InMemoryStore()
-    store.register_portfolio(make_portfolio())
-    return AgentDeps(store=store, registry=make_registry())
+    return AgentDeps(store=make_store(), registry=make_registry())
 
 
 def _has_tool_return(messages) -> bool:
@@ -33,7 +31,7 @@ def _has_tool_return(messages) -> bool:
 def _risk_script(messages, info) -> ModelResponse:
     if _has_tool_return(messages):
         return ModelResponse(parts=[TextPart("Your annualized volatility is 12%.")])
-    return ModelResponse(parts=[ToolCallPart(tool_name="portfolio_volatility",
+    return ModelResponse(parts=[ToolCallPart(tool_name="portfolio_risk",
                                              args={"portfolio_id": "port-1"})])
 
 

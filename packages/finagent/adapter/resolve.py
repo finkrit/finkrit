@@ -52,6 +52,22 @@ def _resolve_asset(deps: AgentDeps, ticker: str) -> Asset:
     return deps.store.get_asset(ticker)
 
 
+def _resolve_assets(deps: AgentDeps, tickers: list[str] | None) -> tuple[Asset, ...] | None:
+    """A list of tickers, or None meaning "whatever the portfolio holds".
+
+    None is passed through rather than expanded here, because this resolver
+    does not know which portfolio the call is about: the tool receives both and
+    substitutes its own holdings. That is the point of the parameter being
+    optional. The model cannot enumerate tickers (it holds an opaque portfolio
+    id and sees a ticker only when one comes back inside a result), so a
+    per holding question has to resolve holdings on this side of the boundary
+    rather than asking the model to name them.
+    """
+    if not tickers:
+        return None
+    return tuple(deps.store.get_asset(ticker) for ticker in tickers)
+
+
 # The S&P 500, the same default the deterministic report composer uses
 # (report/composer.py DEFAULT_BENCHMARK) and the asset the Assistant
 # auto-registers in every store, so resolution of the default never misses.
@@ -61,6 +77,10 @@ DEFAULT_BENCHMARK_TICKER: str = MarketIndex.SP500.ticker
 FIELD_RESOLVERS: dict[str, FieldResolver] = {
     "portfolio": FieldResolver("portfolio_id", str, _resolve_portfolio),
     "asset": FieldResolver("ticker", str, _resolve_asset),
+    # Plural, for the multi-metric asset tool. The schema field defaults to
+    # None, so the compiler emits `tickers: list[str] | None = None` and the
+    # tool reads that as every holding.
+    "assets": FieldResolver("tickers", list[str] | None, _resolve_assets),
     "benchmark": FieldResolver(
         "benchmark_ticker", str, _resolve_asset, default=DEFAULT_BENCHMARK_TICKER
     ),

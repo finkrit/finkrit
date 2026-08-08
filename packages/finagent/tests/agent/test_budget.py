@@ -31,16 +31,10 @@ warnings.filterwarnings("ignore", message="Could not generate return schema")
 # What the orchestrator delegates to. Its budget is a count of these.
 SPECIALIST_COUNT = 4
 
-# The widest honest risk question, the one the specialist budget is sized for.
-WIDEST_RISK_QUESTION = (
-    "portfolio_volatility",
-    "portfolio_value_at_risk",
-    "portfolio_conditional_value_at_risk",
-    "portfolio_maximum_drawdown",
-    "portfolio_beta",
-    "portfolio_marginal_contribution_to_risk",
-    "portfolio_component_contribution_to_risk",
-)
+# The widest risk question, in calls. It used to be seven, one tool per metric.
+# Now portfolio_risk and asset_risk each take a metric list, so the widest
+# question is both of them, once each, whatever it asks for.
+WIDEST_RISK_QUESTION = ("portfolio_risk", "asset_risk")
 
 
 def _tool_names(capability) -> set[str]:
@@ -95,13 +89,22 @@ class TestSpecialistBudget:
 
     def test_it_covers_the_widest_question_with_room_to_correct(self):
         # A rejected call spends a slot, and a call may be retried
-        # DEFAULT_TOOL_RETRIES times. Half the question going wrong once must
-        # still fit.
-        headroom = (
-            SPECIALIST_USAGE_LIMITS.tool_calls_limit - len(WIDEST_RISK_QUESTION)
+        # DEFAULT_TOOL_RETRIES times. Every call in the widest question going
+        # wrong the maximum number of times must still fit.
+        exhaustive_retries = len(WIDEST_RISK_QUESTION) * DEFAULT_TOOL_RETRIES
+        assert SPECIALIST_USAGE_LIMITS.tool_calls_limit >= (
+            len(WIDEST_RISK_QUESTION) + exhaustive_retries
         )
-        assert headroom >= len(WIDEST_RISK_QUESTION) // 2
-        assert headroom >= DEFAULT_TOOL_RETRIES
+
+    def test_the_budget_no_longer_scales_with_holdings(self):
+        # The whole point of the collapse. A per holding question used to cost
+        # one call per holding, which fit at twelve and failed at two hundred,
+        # so no fixed ceiling could ever cover it. asset_risk takes a ticker
+        # list, so the call count is the same either way.
+        asset_tool = next(
+            t for t in RISK_CAPABILITY.tools if t.contract.name == "asset_risk"
+        )
+        assert "assets" in asset_tool.input_schema.__dataclass_fields__
 
     def test_the_narrow_capabilities_can_call_everything_they_have(self):
         # Performance, optimization, and tax are small enough that an
@@ -114,14 +117,18 @@ class TestSpecialistBudget:
                 <= SPECIALIST_USAGE_LIMITS.tool_calls_limit
             )
 
-    def test_risk_is_the_one_capability_it_cannot_exhaust(self):
-        # Twenty risk tools against a budget of twelve is intentional: calling
-        # all twenty is not an answer, it is a model that has not decided what
-        # the question was.
-        assert (
-            len(_tool_names(RISK_CAPABILITY))
-            > SPECIALIST_USAGE_LIMITS.tool_calls_limit
-        )
+    def test_every_capability_now_fits_inside_the_budget(self):
+        # Risk used to be the exception, twenty tools against a ceiling of
+        # twelve, so an exhaustive answer was structurally impossible. With the
+        # collapse there is no capability a specialist cannot work through, and
+        # the ceiling is a runaway backstop rather than a cap on thoroughness.
+        for capability in (
+            RISK_CAPABILITY, PERFORMANCE_CAPABILITY, OPTIMIZATION_CAPABILITY, TAX_CAPABILITY,
+        ):
+            assert (
+                len(_tool_names(capability))
+                <= SPECIALIST_USAGE_LIMITS.tool_calls_limit
+            ), capability.name
 
     def test_a_capability_agent_takes_it_by_default(self):
         agent = CapabilityAgent(capability=RISK_CAPABILITY)
@@ -129,13 +136,22 @@ class TestSpecialistBudget:
         assert DEFAULT_USAGE_LIMITS is SPECIALIST_USAGE_LIMITS
 
 
-class TestPerAssetFanOutIsNotSizedFor:
-    """One call per holding grows with the portfolio, so no fixed ceiling
-    covers it. The budget stays sized to metric breadth and the shape gets
-    fixed by decomposing the question."""
+class TestPerAssetFanOutIsFixedByShapeNotByCeiling:
+    """This used to assert the opposite: that a metric for every holding
+    overflowed by design, and that raising the ceiling was the wrong answer
+    because one call per holding fits at twelve and fails at two hundred.
 
-    def test_a_metric_for_every_holding_overflows_by_design(self):
-        holdings = 12  # the portfolio that first hit this
-        assert holdings > SPECIALIST_USAGE_LIMITS.tool_calls_limit - len(
-            WIDEST_RISK_QUESTION
-        )
+    That was right about the ceiling and wrong to leave the shape alone. The
+    fix was the tool, not the number, so these now pin the property that made
+    the ceiling irrelevant."""
+
+    def test_no_risk_tool_takes_a_single_ticker(self):
+        # The regression that would bring the whole problem back.
+        for tool in RISK_CAPABILITY.tools:
+            assert "asset" not in tool.input_schema.__dataclass_fields__, tool.contract.name
+
+    def test_any_portfolio_size_costs_the_same_two_calls(self):
+        # Twelve holdings or two hundred, the widest question is
+        # portfolio_risk plus asset_risk, and both fit with room to retry.
+        for holdings in (12, 200, 5000):
+            assert len(WIDEST_RISK_QUESTION) <= SPECIALIST_USAGE_LIMITS.tool_calls_limit, holdings

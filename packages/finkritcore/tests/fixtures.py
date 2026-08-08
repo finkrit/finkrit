@@ -16,9 +16,12 @@ from finkritq.data.interfaces import HistoryProvider
 from finkritq.datatype import (
     Currency,
     Exchange,
+    MarketIndex,
     PriceHistory,
 )
 from finkritq.portfolio import Portfolio, Position, TaxLot
+
+from finkritcore.store import InMemoryStore
 
 _DATES = np.array(
     [np.datetime64("2024-01-02", "D") + np.timedelta64(i, "D") for i in range(30)],
@@ -70,3 +73,17 @@ def make_portfolio(portfolio_id: str = "port-1") -> Portfolio:
             _make_position(stock_b, "5", "pos-b", "lot-b"),
         ],
     )
+
+
+def make_store(portfolio_id: str = "port-1") -> InMemoryStore:
+    """A store holding one portfolio and the benchmark, like the real path.
+
+    Desk registers the S&P 500 on construction, because every risk report betas
+    against it and no upload will ever register it. A test that builds a bare
+    InMemoryStore skips that, and then anything resolving the default benchmark
+    fails on a miss that cannot happen in the product.
+    """
+    store = InMemoryStore()
+    store.register_portfolio(make_portfolio(portfolio_id))
+    store.register_asset(MarketIndex.SP500.as_asset())
+    return store

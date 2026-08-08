@@ -26,7 +26,7 @@ def _script_portfolio_volatility_call(messages: list[ModelMessage], info: AgentI
     )
     if already_called:
         return ModelResponse(parts=[TextPart("Your portfolio's volatility has been computed.")])
-    return ModelResponse(parts=[ToolCallPart(tool_name="portfolio_volatility", args={"portfolio_id": "port-1"})])
+    return ModelResponse(parts=[ToolCallPart(tool_name="portfolio_risk", args={"portfolio_id": "port-1"})])
 
 
 @pytest.fixture

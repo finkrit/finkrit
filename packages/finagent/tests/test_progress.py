@@ -67,7 +67,7 @@ async def _specialist_calls_a_tool(messages, info) -> AsyncIterator:
     if _answered(messages):
         yield "done"
     else:
-        yield _tool_call(0, "portfolio_volatility", {"portfolio_id": "port-1"})
+        yield _tool_call(0, "portfolio_risk", {"portfolio_id": "port-1"})
 
 
 def _assistant(script, on_step, detail: StepDetail = StepDetail.SUMMARY) -> Assistant:
@@ -133,8 +133,8 @@ class TestToolSteps:
     def test_a_domain_tool_reports_as_a_tool_not_a_specialist(self):
         steps = _run(_specialist_calls_a_tool, agent="risk")
         assert [(s.kind, s.name, s.status) for s in steps] == [
-            (StepKind.TOOL, "portfolio_volatility", StepStatus.STARTED),
-            (StepKind.TOOL, "portfolio_volatility", StepStatus.FINISHED),
+            (StepKind.TOOL, "portfolio_risk", StepStatus.STARTED),
+            (StepKind.TOOL, "portfolio_risk", StepStatus.FINISHED),
         ]
 
     def test_tool_steps_carry_no_sub_question(self):
