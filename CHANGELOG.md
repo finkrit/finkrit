@@ -27,9 +27,74 @@ web app).
   re-exports `RiskMetric`, so which metrics a PM sees first remains a product
   opinion rather than a math fact.
 
+### finkritintel
+
+#### Changed
+- The risk capability is two tools instead of twenty. Nine metrics across two
+  scopes made twenty near identical descriptions carrying eleven ideas, and
+  every asset tool took a single ticker, so "the betas of my holdings" was one
+  call per holding. `portfolio_risk` and `asset_risk` each take a list of
+  metrics, and `asset_risk` takes a list of tickers that defaults to every
+  holding. That default is the important half: the agent holds an opaque
+  portfolio id and can only ever learn a ticker by receiving one in a result,
+  so left to itself it invented them. Resolving holdings in code keeps that
+  lookup on the correct side of the boundary rather than putting the holdings
+  list in a prompt. A per holding question now costs one call at twelve
+  holdings and one at two hundred.
+
+  Omitting `metrics` computes every metric rather than a curated few. A model
+  that fumbles the list gets a superset of what was asked, which is wasteful
+  and never wrong, where a curated default would return metrics that exclude
+  what was asked and be narrated as though they answered it. Every result names
+  what it `computed` and what was `available` but not requested, so a model can
+  narrow on a second call instead of mistaking an incomplete answer for a whole
+  one. Values carry six significant figures, since rounding a ratio to three
+  decimals renders 28.40% where the dashboard, formatting the unrounded float,
+  says 28.41%. A call covering more holdings than the per call cap says how
+  many it left out rather than truncating silently.
+
+  The per metric bindings are unchanged and still exported. They are what these
+  two call, and they still serve the dashboard's report composer. They are
+  simply no longer doors a model opens directly.
+
+- Every risk result now says what its numbers mean and what period they cover.
+  It used to send bare floats and an `interval` field, leaving a model to infer
+  the rest, and a small one infers confidently. One run reported Value at Risk,
+  which is a fraction, as `$204.77` per holding and `$1,014` for the portfolio,
+  figures that would need position values it was never given. The same run
+  reported every beta as "over past 1 day interval", reading the sampling
+  frequency as the lookback. Results now carry a `window` with real start and
+  end dates alongside a separately named `sampling`, and a `units` line for
+  each metric saying plainly that a fraction is a fraction and not a currency
+  amount. Same principle as the `computed`/`available` keys: never leave a gap,
+  because a model fills gaps rather than asking.
+
+- Results carry the security's own name when the file gave one. A model handed
+  a bare ticker supplies a company name from memory, and one run labelled `V`
+  as "Vanguard Utilities ETF" when it is Visa.
+
 ### finkrit
 
 #### Changed
+- A CSV's security name is read and kept. Most exports print the company beside
+  the symbol in a `Description` column, and that column was parsed and thrown
+  away, storing `AAPL Corp` where the file said `APPLE INC`. It is now read
+  under any of `description`, `name`, `security`, `security name`, `company`, or
+  `company name`, and reaches the agent so it never has to remember one. Still
+  optional: a file without it loads exactly as before, since a name improves an
+  answer rather than making one possible.
+
+- A question answered by one specialist reaches you in that specialist's own
+  words. There is nothing to combine, so the orchestrator's closing text was a
+  second pass restating content it was told not to alter: the longest prose in
+  the run, written last, over numbers it had to copy exactly. Both failures
+  seen on a local model took that shape. One restated a beta as -0.05 where the
+  specialist had said -0.06, and one summarized a Chinese answer into Thai
+  while instructed in English, following the content rather than the
+  instruction. Passing the answer through makes both impossible rather than
+  unlikely, and saves a generation. A question that genuinely spans specialists
+  is still combined, because there the synthesis is the work.
+
 - The deterministic layer is its own package, `finkritcore`. The `Store`, the
   report composers, the deterministic CSV mapper, and a new `Desk`
   facade moved out of finagent, which now composes them with the agents rather
