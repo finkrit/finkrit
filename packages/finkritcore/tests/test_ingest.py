@@ -125,3 +125,35 @@ class TestParseInCodeFormatting:
         text = "Symbol,Shares,Cost,Date\nAAPL,10,150,2023-01-15\nAAPL,5,180,2024-03-09"
         p = parse_portfolio_csv_in_code(text)
         assert [h.quantity for h in p.holdings] == [10, 5]
+
+
+class TestSecurityName:
+    """A real export names the security next to its symbol. We used to drop it
+    and store "{ticker} Corp", so an agent handed a bare ticker supplied a name
+    from memory: one observed run labelled V as "Vanguard Utilities ETF", which
+    is Visa. Reading the column removes the reason to invent."""
+
+    def test_a_description_column_is_read(self):
+        p = parse_portfolio_csv_in_code(
+            "Symbol,Description,Shares,Cost,Date\nAAPL,APPLE INC,10,150,2023-01-15")
+        assert p.holdings[0].name == "APPLE INC"
+
+    def test_the_name_is_optional_and_a_file_without_it_still_loads(self):
+        # It improves an answer, it does not make one possible. Requiring it
+        # would push every file lacking it back to a model.
+        p = parse_portfolio_csv_in_code("Symbol,Shares,Cost,Date\nAAPL,10,150,2023-01-15")
+        assert p is not None
+        assert p.holdings[0].name is None
+
+    def test_the_required_four_do_not_include_it(self):
+        from finkritcore.ingest import CSV_ALIASES, REQUIRED_CSV_FIELDS
+
+        assert "name" in CSV_ALIASES
+        assert "name" not in REQUIRED_CSV_FIELDS
+        assert set(REQUIRED_CSV_FIELDS) < set(CSV_ALIASES)
+
+    def test_alternate_spellings_are_read(self):
+        for column in ("Description", "Security", "Company Name"):
+            p = parse_portfolio_csv_in_code(
+                f"Symbol,{column},Shares,Cost,Date\nV,VISA INC,10,150,2023-01-15")
+            assert p.holdings[0].name == "VISA INC", column

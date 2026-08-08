@@ -50,7 +50,19 @@ CSV_ALIASES: dict[str, tuple[str, ...]] = {
         "average cost basis", "cost", "price", "price paid",
     ),
     "acquired": ("acquired", "date acquired", "purchase date", "date"),
+    # Enrichment, not a requirement. A real export names the security next to
+    # its symbol and we used to drop it, storing "AAPL Corp" while the file
+    # said "APPLE INC". A model handed a ticker with no name supplies one from
+    # memory, and one observed run turned V into "Vanguard Utilities ETF" (it
+    # is Visa). Reading a column already in front of us removes the reason to
+    # invent, which beats catching the invention afterwards.
+    "name": ("description", "name", "security", "security name", "company", "company name"),
 }
+
+# The four a file must label for us to read it without a model. `name` is
+# deliberately absent: it improves an answer, it does not make one possible,
+# and requiring it would push every file that lacks it back to an LLM.
+REQUIRED_CSV_FIELDS: tuple[str, ...] = ("ticker", "quantity", "cost_per_share", "acquired")
 
 # Accepted date layouts, in the order they are tried. "iso" is YYYY-MM-DD.
 CSV_DATE_FORMATS: tuple[str, ...] = ("iso", "%m/%d/%Y", "%m/%d/%y", "%d-%m-%Y")
@@ -116,13 +128,16 @@ def csv_header_covers_every_field(fieldnames) -> bool:
         return False
     lowered = {(name or "").strip().lower() for name in fieldnames}
     return all(
-        any(alias in lowered for alias in aliases)
-        for aliases in CSV_ALIASES.values()
+        any(alias in lowered for alias in CSV_ALIASES[field])
+        for field in REQUIRED_CSV_FIELDS
     )
 
 
 class ParsedHolding(BaseModel):
     ticker: str
+    # The security's own name when the file gave one. None rather than a
+    # manufactured "{ticker} Corp", which reads like a real name and is not.
+    name: str | None = None
     quantity: float
     cost_per_share: float
     acquired: date
@@ -192,6 +207,7 @@ def parse_portfolio_csv_in_code(
         holdings.append(
             ParsedHolding(
                 ticker=ticker.upper(),
+                name=csv_value(row, "name"),
                 quantity=float(csv_number(quantity)),
                 cost_per_share=float(csv_number(cost)),
                 acquired=acquired,

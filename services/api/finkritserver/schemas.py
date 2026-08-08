@@ -37,6 +37,10 @@ class HoldingSpec(BaseModel):
     acquired: date
     exchange: str = "NASDAQ"
     currency: str = "USD"
+    # The security's own name as the upload read it out of the file. Optional
+    # because a file need not carry one, and because every existing client
+    # posts without it.
+    name: str | None = None
 
 
 class PortfolioSpec(BaseModel):

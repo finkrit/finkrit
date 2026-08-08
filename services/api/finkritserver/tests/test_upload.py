@@ -2,7 +2,7 @@
 """
 Tests for POST /api/portfolio/upload. Uses its own Assistant/model fixture
 (not the shared `assistant` fixture in conftest.py, which scripts
-portfolio_volatility tool calls for the /api/ask tests) -- the ingest agent
+portfolio_risk tool calls for the /api/ask tests) -- the ingest agent
 has no tools, only the hidden `final_result` structured-output tool.
 """
 from __future__ import annotations

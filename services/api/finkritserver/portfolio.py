@@ -33,7 +33,10 @@ def _make_stock(holding: HoldingSpec) -> Stock:
         ticker=holding.ticker,
         currency=Currency(holding.currency),
         exchange=Exchange(holding.exchange),
-        company_name=holding.ticker,
+        # What the upload read out of the file, when it read one. The
+        # ticker is the honest fallback: a model handed a nameless ticker
+        # supplies one from memory and can get it wrong.
+        company_name=holding.name or holding.ticker,
     )
 
 

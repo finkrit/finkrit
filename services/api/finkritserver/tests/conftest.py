@@ -30,7 +30,7 @@ def _script_volatility(messages: list[ModelMessage], info: AgentInfo) -> ModelRe
     invoked for two kinds of agent, each with its own tools and its own message
     history, and branches on which tools it was handed. On the orchestrator it
     delegates to the risk specialist via ask_risk. On that specialist it calls
-    portfolio_volatility. Each answers in text once its call has returned.
+    portfolio_risk. Each answers in text once its call has returned.
     """
     tool_names = {t.name for t in info.function_tools}
     answered = any(
@@ -42,9 +42,9 @@ def _script_volatility(messages: list[ModelMessage], info: AgentInfo) -> ModelRe
         return ModelResponse(
             parts=[ToolCallPart(tool_name="ask_risk", args={"question": "What is the volatility?"})]
         )
-    if "portfolio_volatility" in tool_names:
+    if "portfolio_risk" in tool_names:
         return ModelResponse(
-            parts=[ToolCallPart(tool_name="portfolio_volatility", args={"portfolio_id": "port-1"})]
+            parts=[ToolCallPart(tool_name="portfolio_risk", args={"portfolio_id": "port-1"})]
         )
     return ModelResponse(parts=[TextPart("Your portfolio's volatility has been computed.")])
 
@@ -65,9 +65,9 @@ async def _stream_volatility(messages: list[ModelMessage], info: AgentInfo):
             json_args=json.dumps({"question": "What is the volatility?"}),
             tool_call_id="call-ask-risk",
         )}
-    elif "portfolio_volatility" in tool_names:
+    elif "portfolio_risk" in tool_names:
         yield {0: DeltaToolCall(
-            name="portfolio_volatility",
+            name="portfolio_risk",
             json_args=json.dumps({"portfolio_id": "port-1"}),
             tool_call_id="call-vol",
         )}

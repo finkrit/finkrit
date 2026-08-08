@@ -163,6 +163,12 @@ typical brokerage export loads without renaming anything:
 | Quantity | `quantity`, `shares`, `qty`, `units` |
 | Cost per share | `cost_per_share`, `cost per share`, `cost/share`, `cost basis / share`, `cost basis per share`, `price per share`, `cost basis`, `avg cost`, `average cost basis`, `cost`, `price`, `price paid` |
 | Acquired | `acquired`, `date acquired`, `purchase date`, `date` |
+| Name (optional) | `description`, `name`, `security`, `security name`, `company`, `company name` |
+
+The first four are what a file must label. Name is read when it is there and
+skipped when it is not, so a file without it still loads. It is worth having:
+most exports print the security next to its symbol, and an agent handed a bare
+ticker will supply a company name from memory and can get it wrong.
 
 Dates accept `YYYY-MM-DD`, `MM/DD/YYYY`, `MM/DD/YY`, or `DD-MM-YYYY`. Commas in
 numbers are stripped, extra columns are ignored, and a missing or unreadable
