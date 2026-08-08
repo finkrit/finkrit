@@ -30,7 +30,10 @@ def _has_tool_return(messages) -> bool:
 # data), then answer in text.
 def _risk_script(messages, info) -> ModelResponse:
     if _has_tool_return(messages):
-        return ModelResponse(parts=[TextPart("Your annualized volatility is 12%.")])
+        # No figure in a scripted answer. These tests exercise routing, and the
+        # provenance validator would fail a made up 12% against whatever the
+        # fixture registry actually computes, which says nothing about routing.
+        return ModelResponse(parts=[TextPart("Your annualized volatility is computed.")])
     return ModelResponse(parts=[ToolCallPart(tool_name="portfolio_risk",
                                              args={"portfolio_id": "port-1"})])
 
@@ -63,7 +66,7 @@ class TestOrchestratorDelegation:
     def test_routes_a_single_question_to_one_specialist(self):
         def orch_script(messages, info) -> ModelResponse:
             if _has_tool_return(messages):
-                return ModelResponse(parts=[TextPart("Risk summary: volatility is 12%.")])
+                return ModelResponse(parts=[TextPart("Risk summary: volatility computed.")])
             return ModelResponse(parts=[ToolCallPart(tool_name="ask_risk",
                                                      args={"question": "volatility"})])
 

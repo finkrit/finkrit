@@ -11,6 +11,7 @@ from finkritintel.capability.base import Capability as FinkritCapability
 
 from finagent.adapter.compiler import compile_capability
 from finagent.deps import AgentDeps
+from finagent.provenance import install_provenance
 
 # A spiraling tool loop (the model repeatedly re-calling tools without
 # converging) burns tokens unbounded if nothing stops it. Pass
@@ -60,6 +61,17 @@ SPECIALIST_USAGE_LIMITS = _limits(12)
 # The name CapabilityAgent has always defaulted to. A CapabilityAgent is a
 # specialist, the orchestrator is the one exception and asks for its own.
 DEFAULT_USAGE_LIMITS = SPECIALIST_USAGE_LIMITS
+
+# Whether an answer's figures are checked back against the tool results that
+# were meant to produce them (see finagent.provenance). On by default: a
+# fabricated number is the worst failure this stack has, and every other guard
+# against one is an instruction the model may or may not follow.
+#
+# Off is for tests that script a model's prose directly. A scripted answer is
+# written to exercise routing or budgets and its numbers are arbitrary, so the
+# check would fail it for saying 12% when the fixture computed something else,
+# which tests nothing about routing.
+DEFAULT_VERIFY_NUMBERS = True
 
 # How many times a tool may hand the model an error and ask it to try again.
 # pydantic-ai defaults to 1, which is one chance to read a message like
@@ -126,6 +138,9 @@ class CapabilityAgent:
     (see ``with_language``). It is applied here rather than baked into each
     agent's instruction constant, so a caller supplying its own instructions
     still gets the language it asked for.
+
+    ``verify_numbers`` checks the answer's figures back against the tool results
+    behind them (see ``finagent.provenance``).
     """
 
     def __init__(
@@ -135,11 +150,13 @@ class CapabilityAgent:
         instructions: str = "",
         usage_limits: UsageLimits | None = DEFAULT_USAGE_LIMITS,
         language: str = DEFAULT_LANGUAGE,
+        verify_numbers: bool = DEFAULT_VERIFY_NUMBERS,
     ) -> None:
         self._capability = capability
         self._model = model
         self._instructions = with_language(instructions, language)
         self._usage_limits = usage_limits
+        self._verify_numbers = verify_numbers
         self._agent: Agent | None = None
 
     @property
@@ -150,13 +167,16 @@ class CapabilityAgent:
                     "This agent has no model configured, the conversational path "
                     "(ask/ask_async) requires one. The deterministic path does not."
                 )
-            self._agent = Agent(
+            agent = Agent(
                 self._model,
                 deps_type=AgentDeps,
                 instructions=self._instructions,
                 retries=DEFAULT_TOOL_RETRIES,
                 capabilities=[compile_capability(self._capability)],
             )
+            if self._verify_numbers:
+                install_provenance(agent)
+            self._agent = agent
         return self._agent
 
     # run/run_async return the full pydantic-ai result, which carries the

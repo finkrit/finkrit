@@ -75,6 +75,35 @@ web app).
 
 ### finkrit
 
+#### Added
+- Every figure in an answer is checked back against the tool results behind it.
+  Nothing invented a number often, but nothing verified one either: the promise
+  that computed values reach you exactly as the engine produced them rested
+  entirely on instructions the model may or may not follow, and every breach was
+  silent, because a copied number and an invented one look identical on the
+  page. Each number in the reply now has to be a faithful rendering of some
+  number the run actually received, where faithful allows the rewriting a writer
+  legitimately does: `0.250626` may be written `0.2506`, `0.25`, or `25.06%`,
+  and `1471.5` may be written `$1,471.50`. What it does not allow is a digit
+  that changes, which is the failure it was built for, seen when an orchestrator
+  restated a specialist's beta of -0.06 as -0.05.
+
+  The check is deliberately generous. Numbers are harvested from every result in
+  the run, out of nested payloads and out of the prose inside them, so the
+  confidence level in a units line and the dates in a window both count as
+  sources, and bare small integers are exempt because "12 holdings" and "S&P
+  500" are not measurements. A false alarm costs a retry on a correct answer, so
+  the check earns its place only by being quiet.
+
+  An unsupported figure goes back to the model with the offending numbers named
+  and the two acceptable repairs spelled out, quoting the result or dropping the
+  claim. If the retries run out and the figure still has no source, the answer
+  is returned with the doubt attached rather than raised on, because failing the
+  run leaves a reader with nothing over what may be a formatting quirk. Two
+  boundaries worth knowing: it does not check that a number answers the question
+  asked, and it does not check prose, so an invented explanation of a real
+  number still passes.
+
 #### Changed
 - A CSV's security name is read and kept. Most exports print the company beside
   the symbol in a `Description` column, and that column was parsed and thrown

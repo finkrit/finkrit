@@ -11,6 +11,7 @@ from finkritcore.store import DEFAULT_PORTFOLIO_ID
 from finagent.agent.base import (
     DEFAULT_LANGUAGE,
     DEFAULT_TOOL_RETRIES,
+    DEFAULT_VERIFY_NUMBERS,
     ORCHESTRATOR_USAGE_LIMITS,
     with_language,
 )
@@ -19,6 +20,7 @@ from finagent.agent.performance import PerformanceAgent
 from finagent.agent.risk import RiskAgent
 from finagent.agent.tax import TaxAgent
 from finagent.deps import AgentDeps
+from finagent.provenance import install_provenance
 
 
 ORCHESTRATOR_INSTRUCTIONS = (
@@ -83,6 +85,7 @@ class Orchestrator:
         instructions: str = ORCHESTRATOR_INSTRUCTIONS,
         usage_limits=ORCHESTRATOR_USAGE_LIMITS,
         language: str = DEFAULT_LANGUAGE,
+        verify_numbers: bool = DEFAULT_VERIFY_NUMBERS,
     ) -> None:
         self._model = model
         self._risk = risk
@@ -94,6 +97,12 @@ class Orchestrator:
         # a mismatch between the two reads as a bilingual answer.
         self._instructions = with_language(instructions, language)
         self._usage_limits = usage_limits
+        # Checked here as well as on each specialist, and the two catch
+        # different things. A specialist's figures are checked against payload
+        # dicts. The orchestrator's are checked against the specialists' prose,
+        # which is what makes an altered restatement visible: a beta returned
+        # as -0.06 and written up as -0.05 has no source and does not pass.
+        self._verify_numbers = verify_numbers
         self._agent: Agent | None = None
 
     @property
@@ -162,6 +171,8 @@ class Orchestrator:
                 """
                 return await tax.ask_async(question, ctx.deps)
 
+            if self._verify_numbers:
+                install_provenance(agent)
             self._agent = agent
         return self._agent
 
