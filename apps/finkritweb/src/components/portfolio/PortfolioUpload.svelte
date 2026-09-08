@@ -78,7 +78,7 @@
 <style>
 	.upload {
 		width: 100%;
-		max-width: 620px;
+		max-width: 38.75rem;
 	}
 	.drop {
 		display: flex;
@@ -112,8 +112,8 @@
 		margin-bottom: var(--space-1);
 	}
 	.spinner {
-		width: 26px;
-		height: 26px;
+		width: 1.625rem;
+		height: 1.625rem;
 		margin-bottom: var(--space-2);
 		border: 2.5px solid var(--primary-soft);
 		border-top-color: var(--primary);

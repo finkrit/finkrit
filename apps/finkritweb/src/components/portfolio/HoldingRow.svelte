@@ -134,7 +134,7 @@
 		cursor: help;
 	}
 	.w {
-		width: 180px;
+		width: 16%;
 	}
 	.meter {
 		display: flex;
@@ -145,7 +145,7 @@
 		font-size: 0.8438rem;
 		color: var(--text-muted);
 		font-variant-numeric: tabular-nums;
-		min-width: 46px;
+		min-width: 3rem;
 		text-align: right;
 	}
 	.date {
@@ -164,7 +164,7 @@
 		border-color: var(--primary);
 	}
 	.cell.num {
-		width: 96px;
+		width: 6rem;
 		text-align: right;
 	}
 	.remove {

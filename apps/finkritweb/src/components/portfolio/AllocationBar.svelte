@@ -81,8 +81,8 @@
 		font-size: 0.8438rem;
 	}
 	.dot {
-		width: 10px;
-		height: 10px;
+		width: 0.625rem;
+		height: 0.625rem;
 		border-radius: 3px;
 		flex: none;
 	}

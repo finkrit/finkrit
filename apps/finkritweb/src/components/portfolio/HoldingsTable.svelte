@@ -124,7 +124,7 @@
 		text-align: right;
 	}
 	.w {
-		width: 180px;
+		width: 16%;
 	}
 	.all {
 		display: inline-flex;
@@ -151,8 +151,8 @@
 		outline-offset: 3px;
 	}
 	.chevron {
-		width: 9px;
-		height: 9px;
+		width: 0.5625rem;
+		height: 0.5625rem;
 		flex: none;
 		transition: transform 0.15s ease;
 	}

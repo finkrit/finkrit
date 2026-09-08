@@ -53,8 +53,8 @@
 		align-items: center;
 		justify-content: center;
 		flex-shrink: 0;
-		width: 38px;
-		height: 38px;
+		width: 2.375rem;
+		height: 2.375rem;
 		border: none;
 		border-radius: 999px;
 		background: var(--primary);

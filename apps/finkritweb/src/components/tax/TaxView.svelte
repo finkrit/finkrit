@@ -188,7 +188,10 @@
 
 <style>
 	.view {
-		max-width: 860px;
+		/* No max-width, matching the other views. A hard pixel cap left most of
+		   a wide monitor empty. Not a vw value either: this sits inside .center,
+		   a flex child beside a fixed sidebar, with ChatPanel able to take
+		   another 60vw on the right, and a viewport unit measures neither. */
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-5);
@@ -256,8 +259,8 @@
 	.allclear-mark {
 		display: grid;
 		place-items: center;
-		width: 40px;
-		height: 40px;
+		width: 2.5rem;
+		height: 2.5rem;
 		border-radius: 999px;
 		background: var(--positive-soft);
 		color: var(--positive);

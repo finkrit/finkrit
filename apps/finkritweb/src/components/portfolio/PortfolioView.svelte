@@ -125,7 +125,7 @@
 		display: block;
 		margin-top: var(--space-1);
 		width: 100%;
-		max-width: 360px;
+		max-width: 22.5rem;
 		border: 1px solid var(--border-strong);
 		border-radius: var(--radius-sm);
 		padding: 9px 12px;

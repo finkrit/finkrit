@@ -101,8 +101,8 @@
 	}
 	.dot {
 		flex-shrink: 0;
-		width: 7px;
-		height: 7px;
+		width: 0.4375rem;
+		height: 0.4375rem;
 		border-radius: 999px;
 		background: var(--border-strong);
 		align-self: center;

@@ -237,7 +237,14 @@
 
 <style>
 	.view {
-		max-width: 980px;
+		/* No max-width. This view is a seven column table and three cards side
+		   by side, and capping it at 980px left most of a wide monitor empty
+		   while the table it holds was the thing being squeezed.
+		   Deliberately not a vw value: this sits inside .center, a flex child
+		   beside a fixed sidebar, and ChatPanel can take another 60vw on the
+		   right. A viewport unit measures none of that and overflows as soon as
+		   either is present. Filling the parent is what a block element already
+		   does, so the correct answer is to stop constraining it. */
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-5);
@@ -288,7 +295,7 @@
 		border: 1px solid var(--border-strong);
 		border-radius: var(--radius-sm);
 		padding: 7px 10px;
-		width: 160px;
+		width: 10rem;
 	}
 	.controls select:focus,
 	.controls input:focus {

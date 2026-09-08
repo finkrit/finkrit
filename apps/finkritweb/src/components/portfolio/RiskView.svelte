@@ -72,9 +72,6 @@
 </div>
 
 <style>
-	.view {
-		max-width: 760px;
-	}
 	.head {
 		display: flex;
 		align-items: baseline;

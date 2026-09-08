@@ -38,7 +38,7 @@
 <style>
 	.sidebar {
 		flex-shrink: 0;
-		width: 236px;
+		width: 14.75rem;
 		display: flex;
 		flex-direction: column;
 		background: var(--surface);

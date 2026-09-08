@@ -18,7 +18,7 @@
 		background: var(--bg);
 	}
 	.dock-inner {
-		max-width: 720px;
+		max-width: 45rem;
 		margin: 0 auto;
 	}
 </style>

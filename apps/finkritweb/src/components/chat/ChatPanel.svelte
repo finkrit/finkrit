@@ -113,7 +113,7 @@
 		position: absolute;
 		top: 0;
 		left: -3px;
-		width: 7px;
+		width: 0.4375rem;
 		height: 100%;
 		z-index: 2;
 		cursor: col-resize;

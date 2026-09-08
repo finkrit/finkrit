@@ -85,8 +85,8 @@
 	}
 	.spinner {
 		flex-shrink: 0;
-		width: 22px;
-		height: 22px;
+		width: 1.375rem;
+		height: 1.375rem;
 		border-radius: 999px;
 		border: 2.5px solid var(--primary-soft);
 		border-top-color: var(--primary);

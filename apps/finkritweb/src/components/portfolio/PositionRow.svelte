@@ -108,8 +108,8 @@
 		outline-offset: 3px;
 	}
 	.chevron {
-		width: 10px;
-		height: 10px;
+		width: 0.625rem;
+		height: 0.625rem;
 		flex: none;
 		color: var(--text-faint);
 		transition: transform 0.15s ease;
@@ -156,7 +156,7 @@
 		cursor: help;
 	}
 	.w {
-		width: 180px;
+		width: 16%;
 	}
 	.meter {
 		display: flex;
@@ -167,7 +167,7 @@
 		font-size: 0.8438rem;
 		color: var(--text-muted);
 		font-variant-numeric: tabular-nums;
-		min-width: 46px;
+		min-width: 3rem;
 		text-align: right;
 	}
 </style>

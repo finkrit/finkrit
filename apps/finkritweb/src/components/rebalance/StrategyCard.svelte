@@ -49,8 +49,16 @@
 		</div>
 		<div class="stat">
 			<dt>Sells</dt>
-			<dd>
-				{plan.sells.length}{plan.deferred.length > 0 ? ` (+${plan.deferred.length} deferred)` : ''}
+			<!-- The count and the deferred note are two lines, not one string.
+			     As one string this was the widest value in the row by some way,
+			     and since every dd is nowrap inside a 1fr track it had nowhere to
+			     go but past the card's right border. Splitting it also reads
+			     better: the count is the figure, the deferral is a footnote. -->
+			<dd class="sells">
+				{plan.sells.length}
+				{#if plan.deferred.length > 0}
+					<span class="deferred">+{plan.deferred.length} deferred</span>
+				{/if}
 			</dd>
 		</div>
 	</dl>
@@ -136,6 +144,23 @@
 		font-size: 0.875rem;
 		font-weight: 650;
 		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+		/* Room for the deferred note whether or not this strategy has one, so
+		   three cards side by side keep their drift bars on the same line. Same
+		   reason .blurb reserves its height. */
+		min-height: 2.2rem;
+	}
+	/* The one dd allowed to be two lines. Its own children keep nowrap, so the
+	   count and the note each stay whole, they simply stack. */
+	.sells {
+		white-space: normal;
+	}
+	.deferred {
+		display: block;
+		margin-top: 1px;
+		font-size: 0.6875rem;
+		font-weight: 550;
+		color: var(--text-muted);
 		white-space: nowrap;
 	}
 	.cost {
