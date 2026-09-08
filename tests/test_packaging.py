@@ -102,3 +102,29 @@ def test_tests_are_not_packaged():
     # The reason the manifest enumerates instead of including the package whole.
     included = _force_included()
     assert not [source for source in included if "tests" in Path(source).parts]
+
+
+def _sdist_excluded() -> list[str]:
+    with PYPROJECT.open("rb") as handle:
+        config = tomllib.load(handle)
+    return config["tool"]["hatch"]["build"]["targets"]["sdist"]["exclude"]
+
+
+def test_readme_assets_are_not_in_the_sdist():
+    # The README's screenshots and screen recordings are 11MB and climbing. They
+    # are documentation for people reading the repo, and worth nothing to anyone
+    # installing the package, so they stay out of the sdist the way node_modules
+    # does. Same failure mode as that one: the wheel is fine either way, pip
+    # prefers the wheel, and nobody notices the sdist got fat until it is
+    # several releases old.
+    assert "assets" in _sdist_excluded(), (
+        "assets/ is not excluded from the sdist, so every README screenshot "
+        "and video would ship to anyone doing a source install"
+    )
+
+
+def test_the_assets_directory_is_not_reachable_from_the_wheel():
+    # Belt to the exclude's braces. force-include ignores exclude rules, so an
+    # asset added there would ship regardless of the line above.
+    included = _force_included()
+    assert not [source for source in included if Path(source).parts[0] == "assets"]

@@ -84,6 +84,11 @@ exclude = [
     "**/.vite",
     "**/.vscode",
     "apps/finkritweb/private",
+    # README screenshots and screen recordings, 11MB of them. They document the
+    # project on GitHub and do nothing for anyone installing it. Note that they
+    # would not render on PyPI in any case, since a relative path in a long
+    # description has no base to resolve against there.
+    "assets",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -108,6 +113,7 @@ packages = ["finkrit"]
 "packages/finagent/ingest.py" = "finagent/ingest.py"
 "packages/finagent/logging_model.py" = "finagent/logging_model.py"
 "packages/finagent/progress.py" = "finagent/progress.py"
+"packages/finagent/provenance.py" = "finagent/provenance.py"
 "packages/finagent/adapter" = "finagent/adapter"
 # Data, not code, so the module guard in tests/test_packaging.py does not cover
 # it. `finkrit cli --file example` resolves through importlib.resources and
