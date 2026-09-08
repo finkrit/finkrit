@@ -91,6 +91,8 @@ DEFAULT_LANGUAGE = "English"
 def with_language(instructions: str, language: str = DEFAULT_LANGUAGE) -> str:
     """``instructions`` with the answer language pinned.
 
+    Please answer in english unless it's specified otherwise.
+
     Applied to every agent, not only the orchestrator: the orchestrator
     combines specialist replies as they came back, so a specialist answering in
     another language produces a bilingual reply no matter what the orchestrator
