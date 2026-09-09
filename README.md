@@ -20,7 +20,11 @@ volatility at 33.94%. The agent explains the distinction and shows the metrics
 behind the answer, so you can decide whether volatility, downside history, or
 both matter for the decision at hand.
 
-VIDEOPLACEHOLDER
+
+
+https://github.com/user-attachments/assets/aa26a18a-dc8f-4f3e-8dc2-f1833fb9baaf
+
+
 
 ## Try it on the bundled example
 
