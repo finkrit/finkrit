@@ -219,7 +219,7 @@ value rather than a currency amount, the confidence level, and the exact window 
 was computed over. None of that came from the model. It came from the tool result:
 
 <p align="center">
-  <img alt="The chat panel answering a question about conditional value at risk, giving the figure, the 95th percentile threshold, and the window the calculation covers" src="assets/cvar-answer.png" width="640">
+  <img alt="The chat panel answering a question about conditional value at risk, the answer rendering to give the figure, the 95th percentile threshold, and the window the calculation covers" src="assets/cvar-answer.gif" width="700">
 </p>
 
 ## What is in here
