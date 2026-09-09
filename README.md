@@ -9,6 +9,19 @@ Portfolio risk, performance, optimization, and tax analytics. An open core
 quant engine, with an optional conversational agent layer and a web dashboard
 on top.
 
+## Ask a real portfolio question
+
+> Which holdings in my portfolio are the riskiest?
+
+finkrit separates the dimensions of risk instead of forcing them into one score.
+In the bundled portfolio, NVDA has the highest annualized volatility at 38.05%,
+while MSFT has the deepest maximum drawdown at -34.50%. AMZN is next by
+volatility at 33.94%. The agent explains the distinction and shows the metrics
+behind the answer, so you can decide whether volatility, downside history, or
+both matter for the decision at hand.
+
+VIDEOPLACEHOLDER
+
 ## Try it on the bundled example
 
 No file of your own yet? `example` loads a sample that ships with finkrit, so
