@@ -9,6 +9,219 @@ Portfolio risk, performance, optimization, and tax analytics. An open core
 quant engine, with an optional conversational agent layer and a web dashboard
 on top.
 
+## Try it on the bundled example
+
+No file of your own yet? `example` loads a sample that ships with finkrit, so
+this works straight after install:
+
+```bash
+finkrit cli --file example
+
+# against a local model, no key needed
+finkrit cli --file example --url http://localhost:11434/v1 --model qwen2.5:14b-instruct
+
+# from a source checkout, where finkrit is not on the path
+./run cli --file example --url http://localhost:11434/v1 --model qwen2.5:14b-instruct
+```
+
+It opens by asking which agent to use, then prints what it parsed so you can
+check the file was read the way you meant. One row per tax lot, not per holding,
+which is the distinction the whole design turns on:
+
+<p align="center">
+  <img alt="Starting the CLI against the bundled example portfolio, showing the agent picker and the sixteen tax lots that make up twelve holdings" src="assets/cli-start.png" width="820">
+</p>
+
+Then ask it things. Pick `0` for the router and it works out which specialist
+each question belongs to, showing the sub question it delegated, the tool that
+ran, and the answer that came back:
+
+<p align="center">
+  <img alt="A CLI session asking for portfolio beta, tax loss harvesting candidates, and conditional value at risk, each showing the specialist called and the tool it ran" src="assets/cli-session.png" width="820">
+</p>
+
+Note what the answers state without being asked: that beta is unitless, that
+CVaR is a fraction of value rather than a currency amount, the exact window the
+figures cover, and which benchmark was used. Those come from the tool results
+rather than from the model, which is what stops a small model reporting a
+fraction as a dollar figure.
+
+It is a twelve position portfolio built from sixteen tax lots, formatted the way
+a custodian actually exports: dollar signs, quoted thousands separators, and
+`MM/DD/YYYY` dates. Three names were bought more than once, which is the part
+worth paying attention to.
+
+Ask it this:
+
+> Which of my lots are sitting at a loss, and what could I harvest?
+
+AAPL is the case the whole lot level design exists for. It is one holding of 180
+shares, and as a single blended position its cost basis is $27,431.50, about
+$152.40 a share. At that average the position looks like a straightforward
+winner and there is nothing to harvest. But it is really three purchases:
+
+| Lot | Quantity | Cost / share | Acquired |
+| - | - | - | - |
+| 1 | 100 | $120.40 | 2021-05-12 |
+| 2 | 50 | $180.15 | 2023-03-09 |
+| 3 | 30 | $212.80 | 2024-06-03 |
+
+The 2024 lot cost nearly twice what the 2021 lot did. Whenever AAPL trades
+between those two numbers, that third lot is underwater while the position as a
+whole is up, and it is harvestable even though the holding is profitable.
+Averaging the lots together makes that loss invisible. UNH has the same shape at
+$412.60 against $492.30, and MSFT at $238.60 against $362.45.
+
+Those cost figures come from the file and never change. What the lots are worth
+today depends on live prices, so the answer moves with the market.
+
+Worth also trying:
+
+> How much of this portfolio qualifies for long term treatment?
+
+> What is my volatility, and which holding contributes most to it?
+
+The second one fans out to more than one specialist. In the dashboard you can
+click each specialist's name on the reply to see exactly what it returned before
+the answers were combined.
+
+A CSV file has one row per tax lot, with four columns: ticker, quantity, cost
+per share, and acquired date. For example:
+
+| ticker | quantity | cost_per_share | acquired |
+| - | - | - | - |
+| AAPL | 100 | 120.00 | 2021-05-12 |
+| AAPL | 50 | 180.00 | 2023-03-09 |
+| MSFT | 95 | 238.60 | 2021-02-18 |
+| NVDA | 140 | 168.20 | 2023-03-09 |
+
+**Repeat a ticker for each time you bought it.** AAPL above is one holding of
+150 shares made of two lots, and they stay separate all the way through. That
+matters for tax, because a position can be up overall while individual lots are
+underwater, and those are the ones worth harvesting. Blending them into one
+average cost hides exactly the losses you are looking for. Buy once and a single
+row is all you need.
+
+Column names are matched case insensitively against common aliases, so a
+typical brokerage export loads without renaming anything:
+
+| Field | Recognized column names |
+| - | - |
+| Ticker | `ticker`, `symbol` |
+| Quantity | `quantity`, `shares`, `qty`, `units` |
+| Cost per share | `cost_per_share`, `cost per share`, `cost/share`, `cost basis / share`, `cost basis per share`, `price per share`, `cost basis`, `avg cost`, `average cost basis`, `cost`, `price`, `price paid` |
+| Acquired | `acquired`, `date acquired`, `purchase date`, `date` |
+| Name (optional) | `description`, `name`, `security`, `security name`, `company`, `company name` |
+
+The first four are what a file must label. Name is read when it is there and
+skipped when it is not, so a file without it still loads. It is worth having:
+most exports print the security next to its symbol, and an agent handed a bare
+ticker will supply a company name from memory and can get it wrong.
+
+Dates accept `YYYY-MM-DD`, `MM/DD/YYYY`, `MM/DD/YY`, or `DD-MM-YYYY`. Commas in
+numbers are stripped, extra columns are ignored, and a missing or unreadable
+date falls back to a default.
+
+The **web upload** uses that same table. When your header names all four fields
+under any of the spellings above, the file is read in code: instantly, with no
+model involved and no key needed. Only a file that leaves one of the four
+unnamed goes to the model, which maps whatever columns and formats it finds onto
+the same four fields and flags anything it had to guess. So almost any layout
+works, and a tidy one costs nothing.
+
+What differs between the two is the response to a gap. The terminal substitutes
+a default and carries on, since a chat session is throwaway. The upload records
+it on the holding for you to correct before anything is saved.
+
+## The web app
+
+`finkrit` with no subcommand builds the dashboard, serves it, and opens your
+browser at `http://127.0.0.1:8000`:
+
+```bash
+finkrit
+
+# on a local model, no key
+finkrit --url http://localhost:11434/v1 --model qwen2.5:14b-instruct
+
+# from a source checkout
+./run --url http://localhost:11434/v1 --model qwen2.5:14b-instruct
+```
+
+### Your book, lot by lot
+
+Upload a CSV and it parses into positions and the lots underneath them. The
+overview counts positions rather than rows, allocation is by cost basis, and
+every field in the table is editable in place before you commit it with **Save
+portfolio**.
+
+<p align="center">
+  <img alt="The holdings view after uploading a CSV, showing overview cards, allocation by cost basis, and a table of positions expanded into their individual tax lots" src="assets/1uploaded.png" width="900">
+</p>
+
+### Risk
+
+Volatility, value at risk, beta and maximum drawdown, computed in code with no
+model anywhere in the request. The line under the cards states the as of date,
+the sampling interval and that these are log returns, so the numbers are never
+floating free of the window they came from. First load fetches prices for every
+holding plus the benchmark and reports progress per ticker.
+
+<p align="center">
+  <img alt="The risk view showing annualized volatility, 95% historical value at risk, beta against the S&P 500, and maximum drawdown over the lookback" src="assets/risk1.png" width="900">
+</p>
+
+### Tax signals
+
+Every lot trading below cost and clear of the wash sale window, priced at your
+assumed rates so the saving is a dollar figure rather than a hint. Each card
+names the lot, what it cost, what it is worth now, and what realizing it would
+save. As the footer on that screen puts it, the signals are computed from your
+lots in code and nothing there comes from a language model.
+
+<p align="center">
+  <img alt="The tax signals view showing estimated tax saving, total harvestable loss, and two UNH lots flagged as harvestable with their cost basis, current value and estimated saving" src="assets/tax.png" width="900">
+</p>
+
+### Rebalance
+
+Three strategies run against the same target and the same budget, so the
+tradeoff between tax paid and drift left is a table instead of an argument. With
+no gain budget, every overweight sells the whole way and the tax bill is
+whatever it is:
+
+<p align="center">
+  <img alt="The rebalance view with an unlimited gain budget, comparing full rebalance, to band edge, and partial fill, with a five row sell table" src="assets/rebalance0.png" width="900">
+</p>
+
+Set a budget and the plan spends it to the dollar. The same comparison at
+$5,000 sells two names instead of five, names the three it deferred, and the
+residual drift jumps from 1.96% to 21.69%, which is the price of the smaller
+tax bill stated rather than implied:
+
+<p align="center">
+  <img alt="The same rebalance comparison under a five thousand dollar gain budget, with fewer sells, the deferred tickers named, and higher residual drift" src="assets/rebalanced.png" width="900">
+</p>
+
+### Ask it anything
+
+The chat panel opens beside whatever you are looking at and routes through the
+orchestrator, so a question reaches the right specialist without you picking
+one. The pill above each reply names the specialist that answered, and clicking
+it shows what that specialist returned before the answers were combined.
+
+<p align="center">
+  <img alt="The chat panel open beside the holdings table, answering a question about the riskiest holdings with per holding volatility and maximum drawdown" src="assets/chat.png" width="900">
+</p>
+
+Asked in a fresh turn, the CVaR answer states the figure, that it is a fraction of
+value rather than a currency amount, the confidence level, and the exact window it
+was computed over. None of that came from the model. It came from the tool result:
+
+<p align="center">
+  <img alt="The chat panel answering a question about conditional value at risk, giving the figure, the 95th percentile threshold, and the window the calculation covers" src="assets/cvar-answer.png" width="640">
+</p>
+
 ## What is in here
 
 finkrit is a small, layered stack, a quant core with Agentic AI, an API, and a web app built on top.
@@ -127,144 +340,6 @@ Every flag the CLI takes:
 --logs               print finkritq's data fetch logs, every download and cache hit
 ```
 
-### Try it on the bundled example
-
-No file of your own yet? `example` loads a sample that ships with finkrit, so
-this works straight after install:
-
-```bash
-finkrit cli --file example
-
-# against a local model, no key needed
-finkrit cli --file example --url http://localhost:11434/v1 --model qwen2.5:14b-instruct
-
-# from a source checkout, where finkrit is not on the path
-./run cli --file example --url http://localhost:11434/v1 --model qwen2.5:14b-instruct
-```
-
-It opens by asking which agent to use, then prints what it parsed so you can
-check the file was read the way you meant. One row per tax lot, not per holding,
-which is the distinction the whole design turns on:
-
-<p align="center">
-  <img alt="Starting the CLI against the bundled example portfolio, showing the agent picker and the sixteen tax lots that make up twelve holdings" src="assets/cli-start.png" width="820">
-</p>
-
-Then ask it things. Pick `0` for the router and it works out which specialist
-each question belongs to, showing the sub question it delegated, the tool that
-ran, and the answer that came back:
-
-<p align="center">
-  <img alt="A CLI session asking for portfolio beta, tax loss harvesting candidates, and conditional value at risk, each showing the specialist called and the tool it ran" src="assets/cli-session.png" width="820">
-</p>
-
-Note what the answers state without being asked: that beta is unitless, that
-CVaR is a fraction of value rather than a currency amount, the exact window the
-figures cover, and which benchmark was used. Those come from the tool results
-rather than from the model, which is what stops a small model reporting a
-fraction as a dollar figure.
-
-
-It is a twelve position portfolio built from sixteen tax lots, formatted the way
-a custodian actually exports: dollar signs, quoted thousands separators, and
-`MM/DD/YYYY` dates. Three names were bought more than once, which is the part
-worth paying attention to.
-
-Ask it this:
-
-> Which of my lots are sitting at a loss, and what could I harvest?
-
-AAPL is the case the whole lot level design exists for. It is one holding of 180
-shares, and as a single blended position its cost basis is $27,431.50, about
-$152.40 a share. At that average the position looks like a straightforward
-winner and there is nothing to harvest. But it is really three purchases:
-
-| Lot | Quantity | Cost / share | Acquired |
-| - | - | - | - |
-| 1 | 100 | $120.40 | 2021-05-12 |
-| 2 | 50 | $180.15 | 2023-03-09 |
-| 3 | 30 | $212.80 | 2024-06-03 |
-
-The 2024 lot cost nearly twice what the 2021 lot did. Whenever AAPL trades
-between those two numbers, that third lot is underwater while the position as a
-whole is up, and it is harvestable even though the holding is profitable.
-Averaging the lots together makes that loss invisible. UNH has the same shape at
-$412.60 against $492.30, and MSFT at $238.60 against $362.45.
-
-Those cost figures come from the file and never change. What the lots are worth
-today depends on live prices, so the answer moves with the market.
-
-Worth also trying:
-
-> How much of this portfolio qualifies for long term treatment?
-
-> What is my volatility, and which holding contributes most to it?
-
-The second one fans out to more than one specialist. In the dashboard you can
-click each specialist's name on the reply to see exactly what it returned before
-the answers were combined.
-
-A CSV file has one row per tax lot, with four columns: ticker, quantity, cost
-per share, and acquired date. For example:
-
-| ticker | quantity | cost_per_share | acquired |
-| - | - | - | - |
-| AAPL | 100 | 120.00 | 2021-05-12 |
-| AAPL | 50 | 180.00 | 2023-03-09 |
-| MSFT | 95 | 238.60 | 2021-02-18 |
-| NVDA | 140 | 168.20 | 2023-03-09 |
-
-**Repeat a ticker for each time you bought it.** AAPL above is one holding of
-150 shares made of two lots, and they stay separate all the way through. That
-matters for tax, because a position can be up overall while individual lots are
-underwater, and those are the ones worth harvesting. Blending them into one
-average cost hides exactly the losses you are looking for. Buy once and a single
-row is all you need.
-
-Column names are matched case insensitively against common aliases, so a
-typical brokerage export loads without renaming anything:
-
-| Field | Recognized column names |
-| - | - |
-| Ticker | `ticker`, `symbol` |
-| Quantity | `quantity`, `shares`, `qty`, `units` |
-| Cost per share | `cost_per_share`, `cost per share`, `cost/share`, `cost basis / share`, `cost basis per share`, `price per share`, `cost basis`, `avg cost`, `average cost basis`, `cost`, `price`, `price paid` |
-| Acquired | `acquired`, `date acquired`, `purchase date`, `date` |
-| Name (optional) | `description`, `name`, `security`, `security name`, `company`, `company name` |
-
-The first four are what a file must label. Name is read when it is there and
-skipped when it is not, so a file without it still loads. It is worth having:
-most exports print the security next to its symbol, and an agent handed a bare
-ticker will supply a company name from memory and can get it wrong.
-
-Dates accept `YYYY-MM-DD`, `MM/DD/YYYY`, `MM/DD/YY`, or `DD-MM-YYYY`. Commas in
-numbers are stripped, extra columns are ignored, and a missing or unreadable
-date falls back to a default.
-
-The **web upload** uses that same table. When your header names all four fields
-under any of the spellings above, the file is read in code: instantly, with no
-model involved and no key needed. Only a file that leaves one of the four
-unnamed goes to the model, which maps whatever columns and formats it finds onto
-the same four fields and flags anything it had to guess. So almost any layout
-works, and a tidy one costs nothing.
-
-What differs between the two is the response to a gap. The terminal substitutes
-a default and carries on, since a chat session is throwaway. The upload records
-it on the holding for you to correct before anything is saved.
-
-```
--f, --file PATH    load a portfolio CSV, uses live prices
---model openai     provider shortcut, a provider:name string, or a served name
--ag 0|1|2|3|4      router, risk, optimization, performance, tax
---key sk-...       the LLM key
---url URL          an OpenAI compatible endpoint, a local Ollama or LM Studio
---lang Thai        language to answer in, English by default
---logs             show finkritq's data fetch logs, off by default
---steps            also show tool arguments and each specialist's answer
---truncate-steps   cut each step to one terminal row
---quiet            hide the live step trace
-```
-
 ### The agents
 
 Under the chat sit five agents, four specialists and a router. Each specialist
@@ -342,95 +417,6 @@ allows rounding, converting a fraction to a percentage, and thousands
 separators, and does not allow a digit that changes. An unsupported figure is
 sent back to the model with the offending numbers named. If it will not correct
 itself the answer arrives annotated rather than silently wrong.
-
-## The web app
-
-`finkrit` with no subcommand builds the dashboard, serves it, and opens your
-browser at `http://127.0.0.1:8000`:
-
-```bash
-finkrit
-
-# on a local model, no key
-finkrit --url http://localhost:11434/v1 --model qwen2.5:14b-instruct
-
-# from a source checkout
-./run --url http://localhost:11434/v1 --model qwen2.5:14b-instruct
-```
-
-### Your book, lot by lot
-
-Upload a CSV and it parses into positions and the lots underneath them. The
-overview counts positions rather than rows, allocation is by cost basis, and
-every field in the table is editable in place before you commit it with **Save
-portfolio**.
-
-<p align="center">
-  <img alt="The holdings view after uploading a CSV, showing overview cards, allocation by cost basis, and a table of positions expanded into their individual tax lots" src="assets/1uploaded.png" width="900">
-</p>
-
-### Risk
-
-Volatility, value at risk, beta and maximum drawdown, computed in code with no
-model anywhere in the request. The line under the cards states the as of date,
-the sampling interval and that these are log returns, so the numbers are never
-floating free of the window they came from. First load fetches prices for every
-holding plus the benchmark and reports progress per ticker.
-
-<p align="center">
-  <img alt="The risk view showing annualized volatility, 95% historical value at risk, beta against the S&P 500, and maximum drawdown over the lookback" src="assets/risk1.png" width="900">
-</p>
-
-### Tax signals
-
-Every lot trading below cost and clear of the wash sale window, priced at your
-assumed rates so the saving is a dollar figure rather than a hint. Each card
-names the lot, what it cost, what it is worth now, and what realizing it would
-save. As the footer on that screen puts it, the signals are computed from your
-lots in code and nothing there comes from a language model.
-
-<p align="center">
-  <img alt="The tax signals view showing estimated tax saving, total harvestable loss, and two UNH lots flagged as harvestable with their cost basis, current value and estimated saving" src="assets/tax.png" width="900">
-</p>
-
-### Rebalance
-
-Three strategies run against the same target and the same budget, so the
-tradeoff between tax paid and drift left is a table instead of an argument. With
-no gain budget, every overweight sells the whole way and the tax bill is
-whatever it is:
-
-<p align="center">
-  <img alt="The rebalance view with an unlimited gain budget, comparing full rebalance, to band edge, and partial fill, with a five row sell table" src="assets/rebalance0.png" width="900">
-</p>
-
-Set a budget and the plan spends it to the dollar. The same comparison at
-$5,000 sells two names instead of five, names the three it deferred, and the
-residual drift jumps from 1.96% to 21.69%, which is the price of the smaller
-tax bill stated rather than implied:
-
-<p align="center">
-  <img alt="The same rebalance comparison under a five thousand dollar gain budget, with fewer sells, the deferred tickers named, and higher residual drift" src="assets/rebalanced.png" width="900">
-</p>
-
-### Ask it anything
-
-The chat panel opens beside whatever you are looking at and routes through the
-orchestrator, so a question reaches the right specialist without you picking
-one. The pill above each reply names the specialist that answered, and clicking
-it shows what that specialist returned before the answers were combined.
-
-<p align="center">
-  <img alt="The chat panel open beside the holdings table, answering a question about the riskiest holdings with per holding volatility and maximum drawdown" src="assets/chat.png" width="900">
-</p>
-
-Two recorded sessions against a local qwen2.5 14b, both running the whole way
-through with no cloud key:
-
-- [Which holdings are riskiest](assets/riskchat.mp4) — fans out to the risk
-  specialist, which pulls volatility and drawdown for every holding in one call
-- [Conditional value at risk across every asset](assets/cvarchat.mp4) — the same
-  path for CVaR, including the units and the window it was computed over
 
 ## From source
 
