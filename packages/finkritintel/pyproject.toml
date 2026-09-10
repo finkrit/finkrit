@@ -11,7 +11,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finkritintel"
-version = "0.2.1"
+version = "0.3.0"
 description = "finkritq as framework-neutral tool contracts and capabilities for any agent framework."
 readme = "README.md"
 license = "Apache-2.0"
@@ -29,11 +29,13 @@ classifiers = [
 # Contracts over finkritq. Deliberately pydantic-free and agent-framework
 # agnostic, so numpy and finkritq are the only runtime needs.
 dependencies = [
-    # 0.3.0 carries the rebalance sizing enum, the within-gain lot selector, and
-    # compare_rebalance_strategies, all of which the rebalance bindings import
-    # directly. It also carries the 0.1.2 NaN fix, without which the risk and
-    # tax bindings compute off silently nulled numbers.
-    "finkritq>=0.3.0",
+    # 0.5.0 is where RiskMetric and PORTFOLIO_ONLY_METRICS moved into
+    # finkritq.datatype. risk_live.py and risk_schema_live.py import them at
+    # module level, so an older finkritq installs cleanly and then fails the
+    # moment the capability is loaded. Everything the earlier floor bought is
+    # still carried: the rebalance sizing enum, the within-gain lot selector,
+    # compare_rebalance_strategies, and the 0.1.2 NaN fix.
+    "finkritq>=0.5.0",
     "numpy>=2.0",
 ]
 

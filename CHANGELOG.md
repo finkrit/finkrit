@@ -8,11 +8,9 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 `finkrit` (the bundle that ships finkritcore, finagent, finkritserver, and the
 web app).
 
-## [Unreleased]
+## finkritq 0.5.0 — 2026-09-08
 
-### finkritq
-
-#### Added
+### Added
 - `RiskMetric` in `finkritq.datatype`: the names of the risk metrics the stack
   computes, moved down from the report layer above, plus the portfolio-only
   classification (`PORTFOLIO_ONLY_METRICS`, `asset_metrics`). Contribution
@@ -27,9 +25,9 @@ web app).
   re-exports `RiskMetric`, so which metrics a PM sees first remains a product
   opinion rather than a math fact.
 
-### finkritintel
+## finkritintel 0.3.0 — 2026-09-08
 
-#### Changed
+### Changed
 - The risk capability is two tools instead of twenty. Nine metrics across two
   scopes made twenty near identical descriptions carrying eleven ideas, and
   every asset tool took a single ticker, so "the betas of my holdings" was one
@@ -73,9 +71,9 @@ web app).
   a bare ticker supplies a company name from memory, and one run labelled `V`
   as "Vanguard Utilities ETF" when it is Visa.
 
-### finkrit
+## finkrit 0.3.0 — 2026-09-08
 
-#### Added
+### Added
 - Every figure in an answer is checked back against the tool results behind it.
   Nothing invented a number often, but nothing verified one either: the promise
   that computed values reach you exactly as the engine produced them rested
@@ -104,7 +102,32 @@ web app).
   asked, and it does not check prose, so an invented explanation of a real
   number still passes.
 
-#### Changed
+### Changed
+- The terminal chat carries the conversation forward. `route()` and `ask()` hold
+  no memory, so "and in dollars?" arrived with nothing to refer to and the agent
+  asked what you meant. The web app has always threaded through a Conversation
+  and the terminal now does too. Two bugs surfaced with it, both of them correct
+  while every run was fresh. The answer helper read the whole message history
+  rather than the current turn, so turn two found turn one's specialist call and
+  replayed turn one's answer, forever. And the orchestrator was told never to
+  repeat a question, read that as covering earlier turns, and resolved the
+  conflict by printing its tool calls as markdown instead of making them.
+
+- The dashboard fills the window. Three views carried a fixed pixel cap while a
+  fourth carried none, so one screen used a wide monitor and the next hugged the
+  left with its table squeezed. Sizing is relative throughout now, which also
+  means the interface scales when a reader raises their browser font size rather
+  than cramming larger text into fixed boxes. The strategy card's sell count no
+  longer runs past its border when a gain budget defers sells, and the terminal's
+  holdings table prints one row per tax lot instead of showing a position's total
+  quantity beside its oldest lot's price.
+
+- The source distribution no longer carries the README's screenshots and screen
+  recordings, 11MB of them. They document the repo and are worth nothing to
+  anyone installing the package. The wheel was never affected, and a test now
+  fails if either that exclusion or a bundled module goes missing from the
+  manifest.
+
 - A CSV's security name is read and kept. Most exports print the company beside
   the symbol in a `Description` column, and that column was parsed and thrown
   away, storing `AAPL Corp` where the file said `APPLE INC`. It is now read
