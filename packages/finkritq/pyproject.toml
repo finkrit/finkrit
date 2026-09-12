@@ -12,7 +12,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finkritq"
-version = "0.5.0"
+version = "0.5.1"
 description = "Deterministic portfolio quant core: risk, performance, optimization, and tax."
 readme = "README.md"
 license = "Apache-2.0"
@@ -43,9 +43,11 @@ data = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/finkrit/finkrit"
+Homepage = "https://finkrit.com"
+Documentation = "https://github.com/finkrit/finkrit#readme"
 Repository = "https://github.com/finkrit/finkrit"
 Changelog = "https://github.com/finkrit/finkrit/blob/main/CHANGELOG.md"
+Issues = "https://github.com/finkrit/finkrit/issues"
 
 [tool.hatch.build.targets.wheel]
 # The flat package contents, shipped under the finkritq/ prefix (see sources).

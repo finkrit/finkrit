@@ -8,6 +8,28 @@ Packages: `finkritq` (the quant core), `finkritintel` (the tool contracts), and
 `finkrit` (the bundle that ships finkritcore, finagent, finkritserver, and the
 web app).
 
+## finkritq 0.5.1 — 2026-09-12
+
+### Changed
+- Project homepage points at <https://finkrit.com> instead of the GitHub
+  repository, which is still linked under Repository. Documentation and Issues
+  links added. Metadata only, no code change.
+
+## finkritintel 0.3.1 — 2026-09-12
+
+### Changed
+- Same homepage and metadata change as finkritq 0.5.1. No code change.
+
+## finkrit 0.3.1 — 2026-09-12
+
+### Changed
+- Same homepage and metadata change as finkritq 0.5.1.
+
+### Fixed
+- The README lost its documented `-ag 0|1|2|3|4` range when a duplicate copy of
+  the flag list was removed, and that range is what `tests/test_readme.py`
+  parses to check the documentation still covers every agent the CLI offers.
+
 ## finkritq 0.5.0 — 2026-09-08
 
 ### Added

@@ -343,8 +343,9 @@ Every flag the CLI takes:
 ```
 -f, --file PATH      a portfolio CSV, or 'example' for the bundled sample.
                      Left off, the seeded offline portfolio is used
--ag, --agent N       0 router, 1 risk, 2 optimization, 3 performance, 4 tax,
-                     or the name. Left off, a menu asks
+-ag 0|1|2|3|4        router, risk, optimization, performance, tax. --agent is
+                     the long form, and the name works in place of the number.
+                     Left off, a menu asks
 --model NAME         provider shortcut (claude, openai, gemini, groq, mistral),
                      a full provider:name string, or the served name behind --url
 --url URL            an OpenAI compatible endpoint, a local Ollama, LM Studio,
